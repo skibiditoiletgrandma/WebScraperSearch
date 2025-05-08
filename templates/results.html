@@ -66,6 +66,68 @@
                     <div class="summary-content">
                         {% if result.summary %}
                             <p>{{ result.summary }}</p>
+                            <!-- Feedback section -->
+                            <div class="mt-3 pt-3 border-top border-secondary">
+                                <h5 class="h6 mb-2">
+                                    <i class="fas fa-star me-2"></i>
+                                    Rate this summary
+                                </h5>
+                                <form action="{{ url_for('submit_feedback', result_id=result.id) }}" method="POST" class="summary-feedback-form">
+                                    <div class="mb-3">
+                                        <div class="star-rating">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <span class="me-2 small">Rating:</span>
+                                                {% for i in range(1, 6) %}
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="rating" id="rating-{{ result.id }}-{{ i }}" value="{{ i }}" required>
+                                                    <label class="form-check-label" for="rating-{{ result.id }}-{{ i }}">
+                                                        {{ i }}
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="helpful" id="helpful-{{ result.id }}">
+                                                <label class="form-check-label small" for="helpful-{{ result.id }}">
+                                                    Helpful
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="accurate" id="accurate-{{ result.id }}">
+                                                <label class="form-check-label small" for="accurate-{{ result.id }}">
+                                                    Accurate
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="complete" id="complete-{{ result.id }}">
+                                                <label class="form-check-label small" for="complete-{{ result.id }}">
+                                                    Complete
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comment-{{ result.id }}" class="form-label small">Comments (optional):</label>
+                                        <textarea class="form-control form-control-sm" id="comment-{{ result.id }}" name="comment" rows="2" placeholder="Any additional feedback about this summary?"></textarea>
+                                    </div>
+                                    
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-paper-plane me-1"></i> Submit Feedback
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         {% else %}
                             <p class="text-muted fst-italic">No summary available for this website.</p>
                         {% endif %}

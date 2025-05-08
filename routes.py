@@ -3,7 +3,7 @@ from flask import render_template, request, jsonify, flash, redirect, url_for
 from app import app, db
 from scraper import search_google, scrape_website
 from summarizer import summarize_text
-from models import SearchQuery, SearchResult
+from models import SearchQuery, SearchResult, SummaryFeedback
 import traceback
 import time
 import os
@@ -157,3 +157,35 @@ def page_not_found(e):
 def server_error(e):
     """Handle 500 errors"""
     return render_template("index.html", error="Internal server error"), 500
+
+@app.route("/feedback/<int:result_id>", methods=["POST"])
+def submit_feedback(result_id):
+    """Handle summary feedback submission"""
+    try:
+        # Get the search result
+        search_result = SearchResult.query.get_or_404(result_id)
+        
+        # Create a new feedback record
+        feedback = SummaryFeedback()
+        feedback.search_result_id = result_id
+        feedback.rating = int(request.form.get("rating", 0))
+        feedback.comment = request.form.get("comment", "")
+        feedback.helpful = "helpful" in request.form
+        feedback.accurate = "accurate" in request.form
+        feedback.complete = "complete" in request.form
+        feedback.ip_address = request.remote_addr
+        
+        # Save to database
+        db.session.add(feedback)
+        db.session.commit()
+        
+        # Flash success message
+        flash("Thank you for your feedback! It helps us improve our summaries.", "success")
+        
+        # Redirect back to the search results
+        return redirect(url_for("view_search", search_id=search_result.search_query_id))
+    
+    except Exception as e:
+        logging.error(f"Error submitting feedback: {str(e)}")
+        flash("Unable to submit feedback", "danger")
+        return redirect(url_for("history"))

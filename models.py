@@ -1,6 +1,6 @@
 from datetime import datetime
 from app import db
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.orm import relationship
 
 class SearchQuery(db.Model):
@@ -34,8 +34,31 @@ class SearchResult(db.Model):
     rank = Column(Integer)  # Position in search results
     timestamp = Column(DateTime, default=datetime.utcnow)
     
+    # Relationship to feedback
+    feedback = relationship('SummaryFeedback', backref='search_result', lazy=True, cascade="all, delete-orphan")
+    
     def __init__(self):
         super(SearchResult, self).__init__()
     
     def __repr__(self):
         return f"<SearchResult {self.title[:30] if self.title else ''}...>"
+
+class SummaryFeedback(db.Model):
+    """Model for storing user feedback on summaries"""
+    __tablename__ = 'summary_feedback'
+    
+    id = Column(Integer, primary_key=True)
+    search_result_id = Column(Integer, ForeignKey('search_result.id'), nullable=False)
+    rating = Column(Integer)  # Rating from 1 to 5 stars
+    comment = Column(Text)  # Optional comment from user
+    helpful = Column(db.Boolean, default=False)  # Was the summary helpful?
+    accurate = Column(db.Boolean, default=False)  # Was the summary accurate?
+    complete = Column(db.Boolean, default=False)  # Was the summary complete?
+    ip_address = Column(String(45))  # To prevent duplicate ratings
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    
+    def __init__(self):
+        super(SummaryFeedback, self).__init__()
+    
+    def __repr__(self):
+        return f"<SummaryFeedback id={self.id} rating={self.rating}>"

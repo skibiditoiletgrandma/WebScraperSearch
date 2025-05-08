@@ -95,6 +95,35 @@ body {
     color: white;
 }
 
+/* Rating form styles */
+.summary-feedback-form {
+    position: relative;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.summary-feedback-form:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.star-rating .form-check-inline {
+    margin-right: 0.5rem;
+}
+
+.star-rating .form-check-input:checked {
+    background-color: var(--bs-warning);
+    border-color: var(--bs-warning);
+}
+
+[data-bs-theme="light"] .summary-feedback-form {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+[data-bs-theme="dark"] .summary-feedback-form {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
 [data-bs-theme="dark"] .theme-icon-dark,
 [data-bs-theme="dark"] .theme-text-dark {
     display: inline-block;
