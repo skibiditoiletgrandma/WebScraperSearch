@@ -1,13 +1,14 @@
 import logging
-from flask import render_template, request, jsonify, flash, redirect, url_for
+import traceback
+import time
+import os
+from flask import render_template, request, jsonify, flash, redirect, url_for, current_app
+from werkzeug.exceptions import HTTPException, NotFound, InternalServerError  # For error handling
 from app import app, db
 from scraper import search_google, scrape_website
 from summarizer import summarize_text
 from suggestions import get_suggestions_for_ui
 from models import SearchQuery, SearchResult, SummaryFeedback
-import traceback
-import time
-import os
 
 @app.route("/")
 def index():
@@ -50,7 +51,12 @@ def search():
             logging.info(f"Saved search query to database: {query}")
         except Exception as db_error:
             logging.error(f"Error saving search query to database: {str(db_error)}")
-            db.session.rollback()
+            # Set new_search.id to None so we know it wasn't saved
+            new_search.id = None
+            try:
+                db.session.rollback()
+            except:
+                pass
         
         # Process each search result to get summaries
         processed_results = []
@@ -157,12 +163,24 @@ def view_search(search_id):
 @app.errorhandler(404)
 def page_not_found(e):
     """Handle 404 errors"""
-    return render_template("index.html", error="Page not found"), 404
+    logging.warning(f"404 error: {str(e)}")
+    return render_template("error.html", error="Page not found", status_code=404), 404
 
 @app.errorhandler(500)
 def server_error(e):
     """Handle 500 errors"""
-    return render_template("index.html", error="Internal server error"), 500
+    logging.error(f"500 error: {str(e)}")
+    return render_template("error.html", error="Internal server error", status_code=500), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all other exceptions"""
+    logging.error(f"Unhandled exception: {str(e)}")
+    # Pass through HTTP errors
+    if isinstance(e, HTTPException):
+        return e
+    # Handle non-HTTP exceptions with 500 error
+    return render_template("error.html", error=f"Server error: {str(e)}", status_code=500), 500
 
 @app.route("/feedback/<int:result_id>", methods=["POST"])
 def submit_feedback(result_id):

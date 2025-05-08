@@ -25,19 +25,27 @@ app.config["SEARCH_RESULTS_LIMIT"] = 10  # Limit number of search results
 
 # Configure database
 database_url = os.environ.get("DATABASE_URL")
+app.logger.info(f"Database URL detected: {'Yes' if database_url else 'No'}")
+
+# Always set up SQLAlchemy configuration
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Initialize the app with the extension
+db.init_app(app)
+
+# Initialize database tables in app context if database URL is set
 if database_url:
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_recycle": 300,
-        "pool_pre_ping": True,
-    }
-    # Initialize the app with the extension
-    db.init_app(app)
-    
-    # Initialize database tables in app context
-    with app.app_context():
-        from models import SearchQuery, SearchResult, SummaryFeedback
-        db.create_all()
-        app.logger.info("Database tables initialized")
+    try:
+        with app.app_context():
+            from models import SearchQuery, SearchResult, SummaryFeedback
+            db.create_all()
+            app.logger.info("Database tables initialized successfully")
+    except Exception as e:
+        app.logger.error(f"Error initializing database tables: {str(e)}")
 else:
     app.logger.warning("DATABASE_URL not set - database features will not be available")
