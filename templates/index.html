@@ -28,6 +28,12 @@
                         </button>
                     </div>
                 </form>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-info">
+                        <i class="fas fa-history me-2"></i> View Search History
+                    </a>
+                </div>
 
                 {% if error %}
                 <div class="alert alert-danger mt-3">
