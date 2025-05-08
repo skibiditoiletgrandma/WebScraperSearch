@@ -136,16 +136,12 @@
             complexitySlider.value = this.value;
         });
         
-        // Function to toggle the disabled state of summary settings
+        // Function to toggle visual state of summary settings without disabling the fields
         function toggleSummarySettings() {
-            const elementsToToggle = summarySettings.querySelectorAll('input, select, textarea, button');
             const isDisabled = !summaryToggle.checked;
             
-            elementsToToggle.forEach(function(element) {
-                element.disabled = isDisabled;
-            });
-            
-            // Also toggle the whole section's opacity to provide visual feedback
+            // Just change the opacity to provide visual feedback - don't disable the fields
+            // This allows their values to be submitted even when summaries are toggled off
             summarySettings.style.opacity = isDisabled ? 0.6 : 1;
         }
         
