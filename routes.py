@@ -3,10 +3,12 @@ import traceback
 import time
 import os
 import uuid
+import io
 from datetime import datetime, timedelta
-from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session
+from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session, send_file
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError  # For error handling
 from flask_login import login_user, logout_user, current_user, login_required
+from exporters import export_to_pdf, export_to_markdown, export_to_notion
 from functools import wraps
 from app import app, db
 from scraper import search_google, scrape_website
@@ -631,3 +633,171 @@ def settings():
         form.search_pages_limit.data = current_user.search_pages_limit if current_user.search_pages_limit is not None else 1
     
     return render_template('settings.html', form=form)
+
+
+@app.route("/export/<int:search_id>/<format>")
+def export_search(search_id, format):
+    """Export search results in various formats (PDF, Markdown, Notion)"""
+    try:
+        # Get the search query
+        search = SearchQuery.query.get_or_404(search_id)
+        
+        # Check access permissions
+        is_owner = current_user.is_authenticated and search.user_id == current_user.id
+        is_public = search.is_public
+        is_admin = current_user.is_authenticated and current_user.is_admin
+        
+        if not (is_owner or is_public or is_admin):
+            flash("You don't have permission to export this search", "warning")
+            return redirect(url_for("history"))
+        
+        # Get the results for this search
+        results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
+        
+        # Prepare results for export
+        export_results = [{
+            "title": r.title,
+            "link": r.link,
+            "description": r.description,
+            "summary": r.summary
+        } for r in results]
+        
+        # Check if we have any results to export
+        if not export_results:
+            flash("No results to export", "warning")
+            return redirect(url_for("view_search", search_id=search_id))
+        
+        # Handle export based on requested format
+        if format == "pdf":
+            try:
+                # Generate PDF content
+                pdf_bytes = export_to_pdf(search.query_text, export_results)
+                
+                # Return as downloadable file
+                buffer = io.BytesIO(pdf_bytes)
+                buffer.seek(0)
+                
+                # Generate filename based on search query
+                filename = f"search-{search.query_text[:30].replace(' ', '_')}.pdf"
+                
+                return send_file(
+                    buffer,
+                    download_name=filename,
+                    as_attachment=True,
+                    mimetype='application/pdf'
+                )
+            except Exception as e:
+                logging.error(f"Error exporting to PDF: {str(e)}")
+                flash("Error generating PDF export. Please try again later.", "danger")
+                return redirect(url_for("view_search", search_id=search_id))
+                
+        elif format == "markdown":
+            try:
+                # Generate Markdown content
+                md_content = export_to_markdown(search.query_text, export_results)
+                
+                # Return as downloadable file
+                buffer = io.BytesIO(md_content.encode('utf-8'))
+                buffer.seek(0)
+                
+                # Generate filename based on search query
+                filename = f"search-{search.query_text[:30].replace(' ', '_')}.md"
+                
+                return send_file(
+                    buffer,
+                    download_name=filename,
+                    as_attachment=True,
+                    mimetype='text/markdown'
+                )
+            except Exception as e:
+                logging.error(f"Error exporting to Markdown: {str(e)}")
+                flash("Error generating Markdown export. Please try again later.", "danger")
+                return redirect(url_for("view_search", search_id=search_id))
+                
+        elif format == "notion":
+            # For Notion, we need to redirect to a form to get the Notion API token and database ID
+            return redirect(url_for("export_to_notion_form", search_id=search_id))
+            
+        else:
+            flash(f"Unsupported export format: {format}", "warning")
+            return redirect(url_for("view_search", search_id=search_id))
+            
+    except Exception as e:
+        logging.error(f"Error exporting search: {str(e)}")
+        flash("Error exporting search. Please try again later.", "danger")
+        return redirect(url_for("history"))
+
+
+@app.route("/export/notion/<int:search_id>", methods=["GET", "POST"])
+def export_to_notion_form(search_id):
+    """Form to collect Notion API token and database ID for export"""
+    try:
+        # Make sure we have a valid search ID
+        search = SearchQuery.query.get_or_404(search_id)
+        
+        # Check access permissions 
+        is_owner = current_user.is_authenticated and search.user_id == current_user.id
+        is_public = search.is_public
+        is_admin = current_user.is_authenticated and current_user.is_admin
+        
+        if not (is_owner or is_public or is_admin):
+            flash("You don't have permission to export this search", "warning")
+            return redirect(url_for("history"))
+            
+        # Check if user submitted the form
+        if request.method == "POST":
+            notion_token = request.form.get("notion_token", "").strip()
+            database_id = request.form.get("database_id", "").strip()
+            
+            # Basic validation
+            if not notion_token or not database_id:
+                flash("Both Notion API token and database ID are required.", "warning")
+                return render_template("notion_export.html", search_id=search_id)
+                
+            # Get the results for this search
+            results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
+            
+            # Prepare results for export
+            export_results = [{
+                "title": r.title,
+                "link": r.link,
+                "description": r.description,
+                "summary": r.summary
+            } for r in results]
+            
+            # Try to export to Notion
+            try:
+                # Check for environment variables first
+                if os.environ.get("NOTION_INTEGRATION_SECRET") and notion_token == "[ENV]":
+                    notion_token = os.environ.get("NOTION_INTEGRATION_SECRET")
+                
+                if os.environ.get("NOTION_DATABASE_ID") and database_id == "[ENV]":
+                    database_id = os.environ.get("NOTION_DATABASE_ID")
+                    
+                # Check we have valid values
+                if not notion_token or not database_id:
+                    flash("Missing Notion API token or database ID.", "danger")
+                    return render_template("notion_export.html", search_id=search_id)
+                
+                # Perform the export
+                result = export_to_notion(search.query_text, export_results, notion_token, database_id)
+                
+                if result and result.get("success"):
+                    flash(f"Successfully exported to Notion: {result.get('message')}", "success")
+                    return redirect(url_for("view_search", search_id=search_id))
+                else:
+                    flash("Error exporting to Notion. Please check your API token and database ID.", "danger")
+                    return render_template("notion_export.html", search_id=search_id)
+                    
+            except Exception as e:
+                logging.error(f"Error exporting to Notion: {str(e)}")
+                flash(f"Error exporting to Notion: {str(e)}", "danger")
+                return render_template("notion_export.html", search_id=search_id)
+        
+        # Show form for GET requests
+        return render_template("notion_export.html", search_id=search_id)
+        
+    except Exception as e:
+        logging.error(f"Error with Notion export: {str(e)}")
+        flash("An error occurred. Please try again later.", "danger")
+        return redirect(url_for("history"))

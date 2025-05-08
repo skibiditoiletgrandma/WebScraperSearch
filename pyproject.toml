@@ -23,4 +23,7 @@ dependencies = [
     "flask-login>=0.6.3",
     "flask-wtf>=1.2.2",
     "wtforms>=3.2.1",
+    "notion-client>=2.3.0",
+    "weasyprint>=65.1",
+    "markdown>=3.8",
 ]
