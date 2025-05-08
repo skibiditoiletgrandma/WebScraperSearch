@@ -20,6 +20,8 @@ class User(UserMixin, db.Model):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
+    search_count_today = Column(Integer, default=0)  # Number of searches used today
+    search_count_reset_date = Column(DateTime, default=datetime.utcnow)  # When the daily search count was last reset
     
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -33,6 +35,41 @@ class User(UserMixin, db.Model):
     
     def __repr__(self):
         return f'<User {self.username}>'
+        
+    def check_search_limit(self):
+        """Check if user has reached their daily search limit"""
+        # Check if we need to reset the daily counter (new day)
+        if self.search_count_reset_date is None or (datetime.utcnow().date() > self.search_count_reset_date.date()):
+            # It's a new day, reset the counter
+            self.search_count_today = 0
+            self.search_count_reset_date = datetime.utcnow()
+            return True  # User can search
+        
+        # Return True if user has searches remaining, False if limit reached
+        return self.search_count_today < 15  # Daily limit is 15 searches
+    
+    def increment_search_count(self):
+        """Increment the user's search count for today"""
+        # First make sure the daily counter is current
+        self.check_search_limit()
+        # Increment counter
+        self.search_count_today += 1
+        return self.search_count_today
+        
+    def remaining_searches(self):
+        """Return the number of searches remaining for the user today"""
+        self.check_search_limit()  # Make sure the counter is current
+        
+        # Get the current search count as a Python int
+        current_count = 0
+        if self.search_count_today is not None:
+            current_count = int(self.search_count_today)
+            
+        # Calculate remaining searches
+        remaining = 15 - current_count
+        if remaining < 0:
+            return 0
+        return remaining
 
 class SearchQuery(db.Model):
     """Model for storing search queries"""
@@ -115,3 +152,50 @@ class SummaryFeedback(db.Model):
     
     def __repr__(self):
         return f"<SummaryFeedback id={self.id} rating={self.rating}>"
+
+class AnonymousSearchLimit(db.Model):
+    """Model for tracking anonymous user search limits via session IDs"""
+    __tablename__ = 'anonymous_search_limit'
+    
+    id = Column(Integer, primary_key=True)
+    session_id = Column(String(64), unique=True, nullable=False, index=True)
+    search_count = Column(Integer, default=0)  # Number of searches used by this anonymous session
+    first_search_date = Column(DateTime, default=datetime.utcnow)
+    last_search_date = Column(DateTime, default=datetime.utcnow)
+    ip_address = Column(String(45))  # To help identify patterns or abuse
+    
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+    
+    def __repr__(self):
+        return f"<AnonymousSearchLimit session_id={self.session_id} count={self.search_count}>"
+        
+    def increment_search_count(self):
+        """Increment the search count for this anonymous session"""
+        self.search_count += 1
+        self.last_search_date = datetime.utcnow()
+        return self.search_count
+        
+    def check_search_limit(self):
+        """Check if anonymous user has reached their total search limit (3)"""
+        # Get the current count as a Python int
+        current_count = 0
+        if self.search_count is not None:
+            current_count = int(self.search_count)
+        
+        # Anonymous users have a lifetime limit of 3 searches
+        return current_count < 3
+        
+    def remaining_searches(self):
+        """Return the number of searches remaining for anonymous users"""
+        # Get the current count as a Python int
+        current_count = 0
+        if self.search_count is not None:
+            current_count = int(self.search_count)
+            
+        # Calculate remaining searches
+        remaining = 3 - current_count
+        if remaining < 0:
+            return 0
+        return remaining
