@@ -140,11 +140,21 @@ def search():
         hide_wikipedia = False  # Default for anonymous users
         show_feedback = True  # Default for anonymous users
         
+        # Summary settings defaults for anonymous users
+        generate_summaries = True
+        summary_depth = 3
+        summary_complexity = 3
+        
         if current_user.is_authenticated:
             # For logged-in users, use their preferences
             num_pages = current_user.search_pages_limit or 1
             hide_wikipedia = current_user.hide_wikipedia or False
             show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
+            
+            # Summary settings for logged-in users
+            generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
+            summary_depth = current_user.summary_depth if current_user.summary_depth is not None else 3
+            summary_complexity = current_user.summary_complexity if current_user.summary_complexity is not None else 3
         
         # Get search results from Google using SerpAPI
         search_results = search_google(
@@ -200,8 +210,17 @@ def search():
                 # Extract text content from the website
                 content = scrape_website(result["link"])
                 
-                # Generate a summary of the content
-                summary = summarize_text(content, result["title"])
+                # Generate a summary of the content if enabled, otherwise use the description
+                if generate_summaries:
+                    summary = summarize_text(
+                        content, 
+                        result["title"],
+                        depth=summary_depth,
+                        complexity=summary_complexity
+                    )
+                else:
+                    # If summaries are disabled, use the description as the summary
+                    summary = f"[Summary generation disabled] {result['description']}"
                 
                 # Save search result to database (if available)
                 search_result = None
@@ -255,7 +274,8 @@ def search():
                               results=processed_results,
                               research_mode=research_mode,
                               show_feedback=show_feedback,
-                              wikipedia_popup=has_wikipedia_results)
+                              wikipedia_popup=has_wikipedia_results,
+                              generate_summaries=generate_summaries)
     
     except Exception as e:
         error_details = traceback.format_exc()
@@ -307,10 +327,13 @@ def view_search(search_id):
         # Get the results for this search
         results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
         
-        # Determine if feedback should be shown based on user preferences
+        # Determine user preferences based on authentication status
         show_feedback = True
+        generate_summaries = True
+        
         if current_user.is_authenticated:
             show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
+            generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
             
         return render_template("results.html", 
                               query=search.query_text, 
@@ -323,6 +346,7 @@ def view_search(search_id):
                               } for r in results],
                               from_history=True,
                               show_feedback=show_feedback,
+                              generate_summaries=generate_summaries,
                               wikipedia_popup=False)
     except Exception as e:
         logging.error(f"Error retrieving search details: {str(e)}")
