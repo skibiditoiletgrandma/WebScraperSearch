@@ -23,6 +23,8 @@ class User(UserMixin, db.Model):
     search_count_today = Column(Integer, default=0)  # Number of searches used today
     search_count_reset_date = Column(DateTime, default=datetime.utcnow)  # When the daily search count was last reset
     search_pages_limit = Column(Integer, default=1)  # Number of Google search pages to fetch
+    hide_wikipedia = Column(Boolean, default=False)  # Option to hide Wikipedia results
+    show_feedback_features = Column(Boolean, default=True)  # Option to show feedback/rating features
     
     def __init__(self, **kwargs):
         # Set default values for search count fields to ensure they're never None

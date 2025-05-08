@@ -56,6 +56,20 @@ def update_sqlite_schema():
         else:
             print("search_pages_limit column already exists")
             
+        # Add hide_wikipedia column if it doesn't exist
+        if 'hide_wikipedia' not in columns:
+            print("Adding hide_wikipedia column to users table")
+            cursor.execute("ALTER TABLE users ADD COLUMN hide_wikipedia BOOLEAN DEFAULT 0")
+        else:
+            print("hide_wikipedia column already exists")
+            
+        # Add show_feedback_features column if it doesn't exist
+        if 'show_feedback_features' not in columns:
+            print("Adding show_feedback_features column to users table")
+            cursor.execute("ALTER TABLE users ADD COLUMN show_feedback_features BOOLEAN DEFAULT 1")
+        else:
+            print("show_feedback_features column already exists")
+            
         # Check if the citations table exists
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='citations'")
         if not cursor.fetchone():
