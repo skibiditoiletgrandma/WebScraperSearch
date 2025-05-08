@@ -65,6 +65,9 @@ class SearchResult(db.Model):
     summary = Column(Text)
     rank = Column(Integer)  # Position in search results
     timestamp = Column(DateTime, default=datetime.utcnow)
+    share_count = Column(Integer, default=0)  # Track number of times shared
+    last_shared = Column(DateTime)  # Last time this summary was shared
+    shared_by = Column(String(64))  # Username of user who shared it (if applicable)
     
     # Relationship to feedback
     feedback = relationship('SummaryFeedback', backref='search_result', lazy=True, cascade="all, delete-orphan")
@@ -72,6 +75,16 @@ class SearchResult(db.Model):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+    
+    def increment_share_count(self, username=None):
+        """Increment the share count and update last_shared timestamp"""
+        current_count = 0
+        if self.share_count is not None:
+            current_count = self.share_count
+        self.share_count = current_count + 1
+        self.last_shared = datetime.utcnow()
+        if username:
+            self.shared_by = username
     
     def __repr__(self):
         title_value = self.title

@@ -136,7 +136,48 @@
                     </div>
                 </div>
                 
-                <div class="d-flex justify-content-end">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="share-buttons">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="shareDropdown-{{ result.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-share-alt me-1"></i> Share Summary
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="shareDropdown-{{ result.id }}">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('share_summary', result_id=result.id) }}" target="_blank">
+                                        <i class="fas fa-external-link-alt me-2"></i> Open Share Page
+                                    </a>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item copy-link" data-url="{{ url_for('share_summary', result_id=result.id, _external=True) }}">
+                                        <i class="fas fa-link me-2"></i> Copy Link
+                                    </button>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="https://twitter.com/intent/tweet?url={{ url_for('share_summary', result_id=result.id, _external=True)|urlencode }}&text={{ result.title|urlencode }}" target="_blank">
+                                        <i class="fab fa-twitter me-2"></i> Share on Twitter
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('share_summary', result_id=result.id, _external=True)|urlencode }}" target="_blank">
+                                        <i class="fab fa-facebook me-2"></i> Share on Facebook
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="mailto:?subject={{ result.title|urlencode }}&body={{ url_for('share_summary', result_id=result.id, _external=True)|urlencode }}">
+                                        <i class="fas fa-envelope me-2"></i> Email
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        {% if result.share_count and result.share_count > 0 %}
+                        <span class="badge bg-secondary ms-2" title="Shared {{ result.share_count }} times">
+                            <i class="fas fa-share-alt me-1"></i> {{ result.share_count }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
                     <a href="{{ result.link }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">
                         <i class="fas fa-eye me-1"></i> Visit Website
                     </a>
@@ -195,6 +236,57 @@
                         detailsContainer.style.borderTopColor = colors[rating-1];
                     }
                 }
+            });
+        });
+        
+        // Copy link functionality
+        document.querySelectorAll('.copy-link').forEach(button => {
+            button.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                navigator.clipboard.writeText(url).then(() => {
+                    // Show a temporary notification
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-check me-2"></i> Copied!';
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                    }, 2000);
+                    
+                    // Add a toast notification
+                    const toastContainer = document.getElementById('toast-container');
+                    if (!toastContainer) {
+                        // Create a toast container if it doesn't exist
+                        const container = document.createElement('div');
+                        container.id = 'toast-container';
+                        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                        document.body.appendChild(container);
+                    }
+                    
+                    // Create and show the toast
+                    const toastId = 'copy-toast-' + new Date().getTime();
+                    const toast = `
+                        <div id="${toastId}" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="d-flex">
+                                <div class="toast-body">
+                                    <i class="fas fa-check-circle me-2"></i> Link copied to clipboard!
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('toast-container').insertAdjacentHTML('beforeend', toast);
+                    const toastElement = document.getElementById(toastId);
+                    const bsToast = new bootstrap.Toast(toastElement, { delay: 3000 });
+                    bsToast.show();
+                    
+                    // Remove toast element after it's hidden
+                    toastElement.addEventListener('hidden.bs.toast', function () {
+                        toastElement.remove();
+                    });
+                }).catch(err => {
+                    console.error('Could not copy text: ', err);
+                    alert('Could not copy to clipboard. Please try again.');
+                });
             });
         });
     });

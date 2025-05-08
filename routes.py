@@ -332,6 +332,65 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
+@app.route("/share/<int:result_id>")
+def share_summary(result_id):
+    """View a shared summary"""
+    try:
+        # Get the search result
+        result = SearchResult.query.get_or_404(result_id)
+        
+        # Increment share count if accessed directly (not from search results page)
+        referrer = request.referrer or ""
+        if not referrer.endswith(f"/history/{result.search_query_id}") and not referrer.endswith("/results"):
+            username = current_user.username if current_user.is_authenticated else None
+            result.increment_share_count(username)
+            db.session.commit()
+        
+        # Get related results from the same search
+        related_results = SearchResult.query.filter(
+            SearchResult.search_query_id == result.search_query_id,
+            SearchResult.id != result.id
+        ).order_by(SearchResult.rank).limit(5).all()
+        
+        return render_template(
+            "share_summary.html", 
+            result=result, 
+            related_results=related_results
+        )
+    
+    except Exception as e:
+        logging.error(f"Error retrieving shared summary: {str(e)}")
+        flash("Unable to retrieve the requested summary", "warning")
+        return redirect(url_for("index"))
+
+@app.route("/api/share/<int:result_id>", methods=["POST"])
+@login_required
+def api_share_summary(result_id):
+    """API endpoint for sharing a summary"""
+    try:
+        # Get the search result
+        result = SearchResult.query.get_or_404(result_id)
+        
+        # Increment share count
+        result.increment_share_count(current_user.username)
+        db.session.commit()
+        
+        # Generate share URL
+        share_url = url_for('share_summary', result_id=result.id, _external=True)
+        
+        return jsonify({
+            "success": True,
+            "share_url": share_url,
+            "share_count": result.share_count
+        })
+    
+    except Exception as e:
+        logging.error(f"Error sharing summary: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 @app.route("/api/suggestions", methods=["GET"])
 def get_search_suggestions():
     """API endpoint to get search query suggestions"""
