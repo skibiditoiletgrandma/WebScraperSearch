@@ -15,8 +15,9 @@ class SearchQuery(db.Model):
     # Relationship to search results
     results = relationship('SearchResult', backref='search_query', lazy=True, cascade="all, delete-orphan")
     
-    def __init__(self):
-        super(SearchQuery, self).__init__()
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
     
     def __repr__(self):
         return f"<SearchQuery {self.query_text}>"
@@ -37,11 +38,15 @@ class SearchResult(db.Model):
     # Relationship to feedback
     feedback = relationship('SummaryFeedback', backref='search_result', lazy=True, cascade="all, delete-orphan")
     
-    def __init__(self):
-        super(SearchResult, self).__init__()
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
     
     def __repr__(self):
-        return f"<SearchResult {self.title[:30] if self.title else ''}...>"
+        title_value = self.title
+        if isinstance(title_value, str):
+            return f"<SearchResult {title_value[:30]}...>"
+        return f"<SearchResult [No Title]>"
 
 class SummaryFeedback(db.Model):
     """Model for storing user feedback on summaries"""
@@ -51,14 +56,15 @@ class SummaryFeedback(db.Model):
     search_result_id = Column(Integer, ForeignKey('search_result.id'), nullable=False)
     rating = Column(Integer)  # Rating from 1 to 5 stars
     comment = Column(Text)  # Optional comment from user
-    helpful = Column(db.Boolean, default=False)  # Was the summary helpful?
-    accurate = Column(db.Boolean, default=False)  # Was the summary accurate?
-    complete = Column(db.Boolean, default=False)  # Was the summary complete?
+    helpful = Column(Boolean, default=False)  # Was the summary helpful?
+    accurate = Column(Boolean, default=False)  # Was the summary accurate?
+    complete = Column(Boolean, default=False)  # Was the summary complete?
     ip_address = Column(String(45))  # To prevent duplicate ratings
     timestamp = Column(DateTime, default=datetime.utcnow)
     
-    def __init__(self):
-        super(SummaryFeedback, self).__init__()
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
     
     def __repr__(self):
         return f"<SummaryFeedback id={self.id} rating={self.rating}>"
