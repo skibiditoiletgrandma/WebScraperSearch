@@ -42,9 +42,12 @@ class SearchQuery(db.Model):
     query_text = Column(String(255), nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
     ip_address = Column(String(45))  # IPv6 addresses can be up to 45 chars
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)  # Can be null for anonymous searches
+    is_public = Column(Boolean, default=True)  # Whether this search is visible to other users
     
-    # Relationship to search results
+    # Relationships
     results = relationship('SearchResult', backref='search_query', lazy=True, cascade="all, delete-orphan")
+    user = relationship('User', backref='searches', lazy=True)
     
     def __init__(self, **kwargs):
         for key, value in kwargs.items():

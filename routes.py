@@ -56,7 +56,9 @@ def search():
         # Create a new search query record in the database
         new_search = SearchQuery(
             query_text=query,
-            ip_address=request.remote_addr
+            ip_address=request.remote_addr,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            is_public=True  # Default to public searches
         )
         
         # Create a flag to track if search was saved to database
@@ -146,8 +148,18 @@ def search():
 def history():
     """Display search history"""
     try:
-        # Get the most recent searches
-        recent_searches = SearchQuery.query.order_by(SearchQuery.timestamp.desc()).limit(20).all()
+        # Get the most recent searches based on user login status
+        if current_user.is_authenticated:
+            # Show user's own searches
+            recent_searches = SearchQuery.query.filter_by(
+                user_id=current_user.id
+            ).order_by(SearchQuery.timestamp.desc()).limit(20).all()
+        else:
+            # Show only public searches for anonymous users
+            recent_searches = SearchQuery.query.filter_by(
+                is_public=True
+            ).order_by(SearchQuery.timestamp.desc()).limit(20).all()
+            
         return render_template("history.html", searches=recent_searches)
     except Exception as e:
         logging.error(f"Error retrieving search history: {str(e)}")
@@ -160,6 +172,19 @@ def view_search(search_id):
     try:
         # Get the search query
         search = SearchQuery.query.get_or_404(search_id)
+        
+        # Check access permissions:
+        # 1. If user is logged in and is the owner of the search
+        # 2. If search is public
+        # 3. If user is an admin
+        is_owner = current_user.is_authenticated and search.user_id == current_user.id
+        is_public = search.is_public
+        is_admin = current_user.is_authenticated and current_user.is_admin
+        
+        if not (is_owner or is_public or is_admin):
+            flash("You don't have permission to view this search", "warning")
+            return redirect(url_for("history"))
+        
         # Get the results for this search
         results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
         
