@@ -154,9 +154,18 @@ def search():
             hide_wikipedia=hide_wikipedia
         )
         
+        # Check if any of the search results were from Wikipedia before filtering
+        has_wikipedia_results = any(
+            result.get('metadata', {}).get('is_wikipedia', False) 
+            for result in search_results
+        ) if hide_wikipedia else False
+        
         if not search_results:
             flash("No search results found", "info")
-            return render_template("results.html", query=query, results=[])
+            return render_template("results.html", query=query, results=[], 
+                                  show_feedback=show_feedback, 
+                                  research_mode=research_mode,
+                                  wikipedia_popup=False)
         
         # Create a new search query record in the database
         new_search = SearchQuery(
@@ -245,7 +254,8 @@ def search():
                               query=query, 
                               results=processed_results,
                               research_mode=research_mode,
-                              show_feedback=show_feedback)
+                              show_feedback=show_feedback,
+                              wikipedia_popup=has_wikipedia_results)
     
     except Exception as e:
         error_details = traceback.format_exc()
@@ -312,7 +322,8 @@ def view_search(search_id):
                                   "summary": r.summary
                               } for r in results],
                               from_history=True,
-                              show_feedback=show_feedback)
+                              show_feedback=show_feedback,
+                              wikipedia_popup=False)
     except Exception as e:
         logging.error(f"Error retrieving search details: {str(e)}")
         flash("Unable to retrieve search details", "warning")

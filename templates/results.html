@@ -336,8 +336,8 @@
             });
         });
         
-        // Show Wikipedia modal if Wikipedia results are hidden and there are results
-        {% if request.args.get('wikipedia_popup') == 'true' or (current_user.is_authenticated and current_user.hide_wikipedia and results|length > 0) %}
+        // Show Wikipedia modal if Wikipedia results are hidden and there were potential Wikipedia results
+        {% if wikipedia_popup %}
         const wikipediaModal = new bootstrap.Modal(document.getElementById('wikipediaModal'));
         wikipediaModal.show();
         {% endif %}
