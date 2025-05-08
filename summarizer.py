@@ -14,6 +14,13 @@ except LookupError:
     nltk.download('punkt')
     nltk.download('stopwords')
 
+# Fix for punkt_tab error that appears in logs
+try:
+    nltk.data.find('tokenizers/punkt_tab/english')
+except LookupError:
+    # If it's missing, just use the regular punkt tokenizer
+    nltk.download('punkt')
+
 def clean_text(text):
     """
     Clean text by removing special characters, multiple spaces, etc.
