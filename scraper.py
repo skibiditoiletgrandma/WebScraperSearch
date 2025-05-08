@@ -22,13 +22,16 @@ def get_random_user_agent():
     """Returns a random user agent from the list"""
     return random.choice(USER_AGENTS)
 
-def search_google(query, num_results=10):
+def search_google(query, num_results=10, research_mode=False, **kwargs):
     """
     Use SerpAPI to retrieve Google search results for the given query
     
     Args:
         query (str): The search query
         num_results (int): Number of results to return
+        research_mode (bool): If True, limit results to .edu, .org, and .gov domains
+        **kwargs: Additional parameters, such as:
+            hide_wikipedia (bool): If True, filter out Wikipedia results
         
     Returns:
         list: List of dictionaries containing search result data
@@ -69,10 +72,31 @@ def search_google(query, num_results=10):
                 if not link.startswith('http') or 'google.com' in link:
                     continue
                 
+                # Parse the URL to get the domain
+                domain = urlparse(link).netloc.lower()
+                
+                # Store domain in the result metadata
+                result_metadata = {
+                    "is_wikipedia": 'wikipedia.org' in domain
+                }
+                
+                # Check if Research Mode is enabled, and if so, filter by domain
+                if research_mode:
+                    # Check if the domain ends with educational extensions
+                    if not (domain.endswith('.edu') or domain.endswith('.org') or domain.endswith('.gov')):
+                        logging.info(f"Research mode: Skipping non-educational site: {domain}")
+                        continue
+                
+                # Check if filtering out Wikipedia results was requested
+                if kwargs.get('hide_wikipedia', False) and 'wikipedia.org' in domain:
+                    logging.info(f"Wikipedia filter: Skipping Wikipedia result: {domain}")
+                    continue
+                    
                 search_results.append({
                     "title": title,
                     "link": link,
-                    "description": description
+                    "description": description,
+                    "metadata": result_metadata
                 })
                 
                 # Limit the number of results

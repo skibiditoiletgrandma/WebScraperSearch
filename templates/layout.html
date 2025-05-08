@@ -19,23 +19,58 @@
                 <a href="/" class="text-decoration-none">
                     <h1 class="h3 mb-0">
                         <i class="fas fa-search me-2"></i>
-                        <span class="text-light">Google Search Scraper</span>
+                        <span class="text-light header-title">Google Search Scraper</span>
                     </h1>
                 </a>
                 <div class="d-flex align-items-center">
+                    <a href="{{ url_for('citations') }}" class="btn btn-outline-light btn-sm me-2">
+                        <i class="fas fa-quote-left me-md-1"></i>
+                        <span class="d-none d-md-inline">Citations</span>
+                    </a>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a href="{{ url_for('view_feedback') }}" class="btn btn-outline-light btn-sm me-2">
+                        <i class="fas fa-star me-md-1"></i>
+                        <span class="d-none d-md-inline">Feedback</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if current_user.is_authenticated %}
+                    <div class="dropdown me-2">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user me-md-1"></i>
+                            <span class="d-none d-md-inline">{{ current_user.username }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><span class="dropdown-item-text text-muted">{{ current_user.email }}</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% if current_user.is_admin %}
+                            <li><span class="dropdown-item-text text-primary"><i class="fas fa-shield-alt me-2"></i>Admin</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('history') }}"><i class="fas fa-history me-2"></i>History</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                    {% else %}
                     <a href="{{ url_for('history') }}" class="btn btn-outline-light btn-sm me-2">
                         <i class="fas fa-history me-md-1"></i>
                         <span class="d-none d-md-inline">History</span>
                     </a>
-                    <a href="{{ url_for('view_feedback') }}" class="btn btn-outline-light btn-sm me-3">
-                        <i class="fas fa-star me-md-1"></i>
-                        <span class="d-none d-md-inline">Feedback</span>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm me-2">
+                        <i class="fas fa-sign-in-alt me-md-1"></i>
+                        <span class="d-none d-md-inline">Login</span>
                     </a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-sm me-2">
+                        <i class="fas fa-user-plus me-md-1"></i>
+                        <span class="d-none d-md-inline">Register</span>
+                    </a>
+                    {% endif %}
                     <button id="theme-toggle" class="btn btn-outline-light btn-sm">
                         <i class="fas fa-moon theme-icon-dark"></i>
                         <i class="fas fa-sun theme-icon-light d-none"></i>
-                        <span class="theme-text-dark">Dark Mode</span>
-                        <span class="theme-text-light d-none">Light Mode</span>
+                        <span class="theme-text-dark d-none d-md-inline">Dark Mode</span>
+                        <span class="theme-text-light d-none d-md-inline">Light Mode</span>
                     </button>
                 </div>
             </div>
@@ -64,7 +99,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <h5>Google Search Scraper</h5>
+                    <h5 class="footer-title">Google Search Scraper</h5>
                     <p class="text-muted">Search and summarize web content in one place.</p>
                 </div>
                 <div class="col-md-6 text-md-end">

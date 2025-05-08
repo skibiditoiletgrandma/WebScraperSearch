@@ -20,4 +20,10 @@ dependencies = [
     "openai>=1.77.0",
     "sqlalchemy>=2.0.40",
     "anthropic>=0.51.0",
+    "flask-login>=0.6.3",
+    "flask-wtf>=1.2.2",
+    "wtforms>=3.2.1",
+    "notion-client>=2.3.0",
+    "weasyprint>=65.1",
+    "markdown>=3.8",
 ]

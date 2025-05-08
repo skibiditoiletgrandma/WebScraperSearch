@@ -12,6 +12,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const lightTextElement = document.querySelector('.theme-text-light');
     const bootstrapCssLink = document.getElementById('bootstrap-css');
     
+    // Initialize Research Mode toggle style based on current theme
+    const currentTheme = htmlElement.getAttribute('data-bs-theme') || 'light';
+    if (currentTheme === 'dark') {
+        document.querySelectorAll('.form-check-input[type="checkbox"]#research-mode').forEach(toggle => {
+            toggle.classList.add('dark-mode-toggle');
+        });
+    }
+    
     // Check for user's theme preference in local storage
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
@@ -34,21 +42,86 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update button appearance
         if (theme === 'dark') {
-            darkIconElement.classList.remove('d-none');
-            lightIconElement.classList.add('d-none');
-            darkTextElement.classList.remove('d-none');
-            lightTextElement.classList.add('d-none');
+            // Show dark mode icons/text, hide light mode ones
+            if (darkIconElement) darkIconElement.classList.remove('d-none');
+            if (lightIconElement) lightIconElement.classList.add('d-none');
+            if (darkTextElement) darkTextElement.classList.remove('d-none');
+            if (lightTextElement) lightTextElement.classList.add('d-none');
+            
+            // Change theme toggle button style for dark mode
+            if (themeToggleBtn) {
+                themeToggleBtn.classList.remove('btn-outline-dark');
+                themeToggleBtn.classList.add('btn-outline-light');
+            }
+            
+            // Update Research Mode toggle appearance for dark mode
+            document.querySelectorAll('.form-check-input[type="checkbox"]#research-mode').forEach(toggle => {
+                toggle.classList.add('dark-mode-toggle');
+            });
+            
+            // Update all outline-light buttons
+            document.querySelectorAll('.btn-outline-light').forEach(btn => {
+                if (btn.classList.contains('btn-outline-dark')) {
+                    btn.classList.remove('btn-outline-dark');
+                }
+                if (!btn.classList.contains('btn-outline-light')) {
+                    btn.classList.add('btn-outline-light');
+                }
+            });
             
             // Change Bootstrap CSS to dark theme
-            bootstrapCssLink.href = "https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css";
+            if (bootstrapCssLink) {
+                bootstrapCssLink.href = "https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css";
+            }
+            
+            // Change header and footer colors
+            const header = document.querySelector('header');
+            const footer = document.querySelector('footer');
+            if (header) {
+                header.classList.remove('bg-light');
+                header.classList.add('bg-dark');
+            }
+            if (footer) {
+                footer.classList.remove('bg-light');
+                footer.classList.add('bg-dark');
+            }
         } else {
-            darkIconElement.classList.add('d-none');
-            lightIconElement.classList.remove('d-none');
-            darkTextElement.classList.add('d-none');
-            lightTextElement.classList.remove('d-none');
+            // Show light mode icons/text, hide dark mode ones
+            if (darkIconElement) darkIconElement.classList.add('d-none');
+            if (lightIconElement) lightIconElement.classList.remove('d-none');
+            if (darkTextElement) darkTextElement.classList.add('d-none');
+            if (lightTextElement) lightTextElement.classList.remove('d-none');
+            
+            // Change theme toggle button style for light mode
+            if (themeToggleBtn) {
+                themeToggleBtn.classList.remove('btn-outline-light');
+                themeToggleBtn.classList.add('btn-outline-dark');
+            }
+            
+            // Update Research Mode toggle appearance for light mode
+            document.querySelectorAll('.form-check-input[type="checkbox"]#research-mode').forEach(toggle => {
+                toggle.classList.remove('dark-mode-toggle');
+            });
+            
+            // Update all button colors for light mode
+            // Note: We don't change the classes as our CSS handles this with the data-bs-theme attribute
             
             // Change Bootstrap CSS to light theme
-            bootstrapCssLink.href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css";
+            if (bootstrapCssLink) {
+                bootstrapCssLink.href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css";
+            }
+            
+            // Change header and footer colors
+            const header = document.querySelector('header');
+            const footer = document.querySelector('footer');
+            if (header) {
+                header.classList.remove('bg-dark');
+                header.classList.add('bg-light');
+            }
+            if (footer) {
+                footer.classList.remove('bg-dark');
+                footer.classList.add('bg-light');
+            }
         }
     }
     

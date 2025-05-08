@@ -1,0 +1,115 @@
+{% extends "layout.html" %}
+
+{% block title %}Shared Summary - {{ result.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+            <li class="breadcrumb-item active">Shared Summary</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Shared Search Result</h4>
+            <small class="text-white-50">Shared by: {{ result.shared_by or 'Anonymous' }}</small>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">
+                <a href="{{ result.link }}" target="_blank" class="text-decoration-none">
+                    {{ result.title }} <i class="fas fa-external-link-alt ms-1 small"></i>
+                </a>
+            </h5>
+            <p class="text-muted small mb-2">{{ result.link }}</p>
+            
+            <div class="mb-3">
+                <h6 class="text-muted">Original description:</h6>
+                <p>{{ result.description }}</p>
+            </div>
+            
+            <div class="card bg-light">
+                <div class="card-header d-flex justify-content-between">
+                    <span><i class="fas fa-file-alt me-2"></i>Summary</span>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-share-alt me-1"></i> Share
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <button class="dropdown-item copy-link" data-url="{{ request.url }}">
+                                    <i class="fas fa-link me-2"></i> Copy link
+                                </button>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="https://twitter.com/intent/tweet?url={{ request.url|urlencode }}&text={{ result.title|urlencode }}" target="_blank">
+                                    <i class="fab fa-twitter me-2"></i> Share on Twitter
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank">
+                                    <i class="fab fa-facebook me-2"></i> Share on Facebook
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <p class="card-text">{{ result.summary }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-between">
+            <small class="text-muted">Summary generated on: {{ result.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+            <a href="{{ url_for('index') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-search me-1"></i> New Search
+            </a>
+        </div>
+    </div>
+    
+    {% if related_results %}
+    <div class="card shadow mt-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Related Summaries</h5>
+        </div>
+        <div class="card-body">
+            <div class="list-group">
+                {% for item in related_results %}
+                <a href="{{ url_for('share_summary', result_id=item.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ item.title }}</h6>
+                        <small>{{ item.timestamp.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                    <p class="mb-1 text-truncate">{{ item.description }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link functionality
+        document.querySelectorAll('.copy-link').forEach(button => {
+            button.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                navigator.clipboard.writeText(url).then(() => {
+                    // Show a temporary tooltip
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-check me-2"></i> Copied!';
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                    }, 2000);
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,21 +1,30 @@
 import logging
-from app import app, db
-from routes import *
+import os
+from datetime import timedelta
+from app import app
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
 
-# Initialize database tables
-with app.app_context():
-    # Import the models to ensure they're registered with SQLAlchemy
-    import models
-    
+# Configure session lifetime for anonymous users
+app.permanent_session_lifetime = timedelta(days=365)  # Session lasts for 1 year
+
+# Import routes after app is fully configured
+from routes import *
+
+# Check if we have a database connection before starting
+database_url = os.environ.get("DATABASE_URL")
+if not database_url:
+    app.logger.warning("No DATABASE_URL set. Database functionality will be limited.")
+    app.logger.warning("Please set DATABASE_URL to enable full functionality.")
+    # Initialize database tables for SQLite anyway
     try:
-        # Create all tables if they don't exist
-        db.create_all()
-        app.logger.info("Database tables created or already exist")
+        with app.app_context():
+            from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit
+            db.create_all()
+            app.logger.info("SQLite database tables initialized successfully")
     except Exception as e:
-        app.logger.error(f"Error creating database tables: {str(e)}")
+        app.logger.error(f"Error initializing SQLite database tables: {str(e)}")
 
 if __name__ == "__main__":
     # Run the Flask app on port 5000 and bind to all interfaces
