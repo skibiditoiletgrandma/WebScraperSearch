@@ -27,6 +27,10 @@
                         <i class="fas fa-history me-md-1"></i>
                         <span class="d-none d-md-inline">History</span>
                     </a>
+                    <a href="{{ url_for('citations') }}" class="btn btn-outline-light btn-sm me-2">
+                        <i class="fas fa-quote-left me-md-1"></i>
+                        <span class="d-none d-md-inline">Citations</span>
+                    </a>
                     {% if current_user.is_authenticated and current_user.is_admin %}
                     <a href="{{ url_for('view_feedback') }}" class="btn btn-outline-light btn-sm me-2">
                         <i class="fas fa-star me-md-1"></i>
