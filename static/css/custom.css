@@ -116,19 +116,11 @@ body {
     border-color: var(--bs-warning);
 }
 
-/* Feedback details animation */
+/* Feedback details animation - simplified */
 .feedback-details {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
-    opacity: 0;
-}
-
-.feedback-details[style*="display: block"] {
-    max-height: 500px;
-    opacity: 1;
+    display: none;
     padding-top: 1rem;
-    border-top: 1px solid rgba(var(--bs-secondary-rgb), 0.3);
+    border-top: 1px solid rgba(128, 128, 128, 0.3);
     margin-top: 1rem;
 }
 
