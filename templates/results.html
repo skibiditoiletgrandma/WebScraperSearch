@@ -89,42 +89,44 @@
                                         </div>
                                     </div>
                                     
-                                    <div class="row mb-3">
-                                        <div class="col-md-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="helpful" id="helpful-{{ result.id }}">
-                                                <label class="form-check-label small" for="helpful-{{ result.id }}">
-                                                    Helpful
-                                                </label>
+                                    <div id="feedback-details-{{ result.id }}" class="feedback-details mt-3" style="display: none;">
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="helpful" id="helpful-{{ result.id }}">
+                                                    <label class="form-check-label small" for="helpful-{{ result.id }}">
+                                                        Helpful
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="accurate" id="accurate-{{ result.id }}">
+                                                    <label class="form-check-label small" for="accurate-{{ result.id }}">
+                                                        Accurate
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="complete" id="complete-{{ result.id }}">
+                                                    <label class="form-check-label small" for="complete-{{ result.id }}">
+                                                        Complete
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="accurate" id="accurate-{{ result.id }}">
-                                                <label class="form-check-label small" for="accurate-{{ result.id }}">
-                                                    Accurate
-                                                </label>
-                                            </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="comment-{{ result.id }}" class="form-label small">Comments (optional):</label>
+                                            <textarea class="form-control form-control-sm" id="comment-{{ result.id }}" name="comment" rows="2" placeholder="Any additional feedback about this summary?"></textarea>
                                         </div>
-                                        <div class="col-md-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="complete" id="complete-{{ result.id }}">
-                                                <label class="form-check-label small" for="complete-{{ result.id }}">
-                                                    Complete
-                                                </label>
-                                            </div>
+                                        
+                                        <div class="text-end">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-paper-plane me-1"></i> Submit Feedback
+                                            </button>
                                         </div>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="comment-{{ result.id }}" class="form-label small">Comments (optional):</label>
-                                        <textarea class="form-control form-control-sm" id="comment-{{ result.id }}" name="comment" rows="2" placeholder="Any additional feedback about this summary?"></textarea>
-                                    </div>
-                                    
-                                    <div class="text-end">
-                                        <button type="submit" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-paper-plane me-1"></i> Submit Feedback
-                                        </button>
                                     </div>
                                 </form>
                             </div>
@@ -168,6 +170,28 @@
                 html = html.replace(regex, '<span class="highlight">$1</span>');
             });
             summary.innerHTML = html;
+        });
+        
+        // Show feedback details when a rating is selected
+        const ratingInputs = document.querySelectorAll('input[name="rating"]');
+        ratingInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                // Get the result ID from the input ID (format: rating-RESULT_ID-RATING_VALUE)
+                const resultId = this.id.split('-')[1];
+                // Show the feedback details container
+                const detailsContainer = document.getElementById(`feedback-details-${resultId}`);
+                if (detailsContainer) {
+                    // Fade in effect with smooth transition
+                    detailsContainer.style.display = 'block';
+                    
+                    // Set a slightly different border-color based on the rating
+                    const rating = parseInt(this.value);
+                    const colors = ['#dc3545', '#fd7e14', '#6c757d', '#0d6efd', '#198754'];
+                    if (rating >= 1 && rating <= 5) {
+                        detailsContainer.style.borderTopColor = colors[rating-1];
+                    }
+                }
+            });
         });
     });
 </script>
