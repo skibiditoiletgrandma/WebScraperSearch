@@ -539,14 +539,20 @@ def get_search_suggestions():
 def citations():
     """Citation generator page"""
     form = CitationForm()
-    citation_result = None
+    
+    # Check if we have a previously stored citation in the session
+    citation_result = session.get('citation_result', None)
     
     if form.validate_on_submit():
         try:
             # Create a Citation object from form data
+            # Process authors: ensure it's not None and replace line breaks with semicolons
+            authors_data = form.authors.data or ""
+            formatted_authors = authors_data.replace("\r\n", ";").replace("\n", ";")
+            
             citation = Citation(
                 title=form.title.data,
-                authors=form.authors.data.replace("\r\n", ";").replace("\n", ";"),  # Convert line breaks to semicolons
+                authors=formatted_authors,
                 source_type=form.source_type.data,
                 citation_style=form.citation_style.data,
                 publisher=form.publisher.data,
@@ -564,6 +570,9 @@ def citations():
             # Generate the formatted citation based on selected style
             citation_result = citation.get_formatted_citation()
             
+            # Store the citation in the session to persist it between page reloads
+            session['citation_result'] = citation_result
+            
             # Save to database if user is authenticated
             if current_user.is_authenticated:
                 db.session.add(citation)
@@ -577,3 +586,12 @@ def citations():
             logging.error(f"Citation generation error: {str(e)}")
     
     return render_template("citations.html", form=form, citation_result=citation_result)
+
+
+@app.route("/clear-citation")
+def clear_citation():
+    """Clear the citation from the session"""
+    if 'citation_result' in session:
+        session.pop('citation_result')
+        flash("Citation cleared.", "info")
+    return redirect(url_for('citations'))

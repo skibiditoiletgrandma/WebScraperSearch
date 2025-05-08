@@ -23,9 +23,14 @@
                         <h4 class="alert-heading mb-3">Your citation is ready!</h4>
                         <div class="citation-result p-3 bg-light border rounded">
                             <p id="citation-text">{{ citation_result|safe }}</p>
-                            <button class="btn btn-sm btn-primary mt-2" id="copy-citation">
-                                <i class="fas fa-copy me-1"></i> Copy to Clipboard
-                            </button>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-primary" id="copy-citation">
+                                    <i class="fas fa-copy me-1"></i> Copy to Clipboard
+                                </button>
+                                <a href="{{ url_for('clear_citation') }}" class="btn btn-sm btn-outline-secondary ms-2">
+                                    <i class="fas fa-times me-1"></i> Clear Citation
+                                </a>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
