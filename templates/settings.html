@@ -59,6 +59,7 @@
                             <div>
                                 <small class="form-text text-muted">{{ form.generate_summaries.description }}</small>
                             </div>
+                            <div id="summary-toggle-message" class="mt-1"></div>
                         </div>
                         
                         <div id="summarySettings">
@@ -136,13 +137,23 @@
             complexitySlider.value = this.value;
         });
         
-        // Function to toggle visual state of summary settings without disabling the fields
+        // Function to toggle visual appearance without disabling any controls
         function toggleSummarySettings() {
             const isDisabled = !summaryToggle.checked;
             
-            // Just change the opacity to provide visual feedback - don't disable the fields
-            // This allows their values to be submitted even when summaries are toggled off
+            // Only change the opacity to provide visual feedback
+            // Don't disable any of the fields, so they remain interactive
             summarySettings.style.opacity = isDisabled ? 0.6 : 1;
+            
+            // Add a message when disabled to explain that values are still saved
+            const messageContainer = document.getElementById('summary-toggle-message');
+            if (messageContainer) {
+                if (isDisabled) {
+                    messageContainer.innerHTML = '<small class="text-muted">Summary settings will be saved even when summaries are disabled.</small>';
+                } else {
+                    messageContainer.innerHTML = '';
+                }
+            }
         }
         
         // Set initial state
