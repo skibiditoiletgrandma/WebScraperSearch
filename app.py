@@ -4,6 +4,7 @@ from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
+from flask_login import LoginManager
 
 # Create base class for SQLAlchemy models
 class Base(DeclarativeBase):
@@ -11,6 +12,9 @@ class Base(DeclarativeBase):
 
 # Initialize SQLAlchemy with the base class
 db = SQLAlchemy(model_class=Base)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
 
 # Create the Flask application
 app = Flask(__name__)
@@ -22,6 +26,12 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for
 # Configure app settings
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max file size
 app.config["SEARCH_RESULTS_LIMIT"] = 10  # Limit number of search results
+
+# Configure login settings
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # type: ignore
+login_manager.login_message = 'Please log in to access this page'
+login_manager.login_message_category = 'info'
 
 # Configure database
 database_url = os.environ.get("DATABASE_URL")
