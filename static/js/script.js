@@ -40,15 +40,37 @@ document.addEventListener('DOMContentLoaded', function() {
             if (darkTextElement) darkTextElement.classList.remove('d-none');
             if (lightTextElement) lightTextElement.classList.add('d-none');
             
-            // Change button style for dark mode
+            // Change theme toggle button style for dark mode
             if (themeToggleBtn) {
                 themeToggleBtn.classList.remove('btn-outline-dark');
                 themeToggleBtn.classList.add('btn-outline-light');
             }
             
+            // Update all outline-light buttons
+            document.querySelectorAll('.btn-outline-light').forEach(btn => {
+                if (btn.classList.contains('btn-outline-dark')) {
+                    btn.classList.remove('btn-outline-dark');
+                }
+                if (!btn.classList.contains('btn-outline-light')) {
+                    btn.classList.add('btn-outline-light');
+                }
+            });
+            
             // Change Bootstrap CSS to dark theme
             if (bootstrapCssLink) {
                 bootstrapCssLink.href = "https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css";
+            }
+            
+            // Change header and footer colors
+            const header = document.querySelector('header');
+            const footer = document.querySelector('footer');
+            if (header) {
+                header.classList.remove('bg-light');
+                header.classList.add('bg-dark');
+            }
+            if (footer) {
+                footer.classList.remove('bg-light');
+                footer.classList.add('bg-dark');
             }
         } else {
             // Show light mode icons/text, hide dark mode ones
@@ -57,15 +79,30 @@ document.addEventListener('DOMContentLoaded', function() {
             if (darkTextElement) darkTextElement.classList.add('d-none');
             if (lightTextElement) lightTextElement.classList.remove('d-none');
             
-            // Change button style for light mode
+            // Change theme toggle button style for light mode
             if (themeToggleBtn) {
                 themeToggleBtn.classList.remove('btn-outline-light');
                 themeToggleBtn.classList.add('btn-outline-dark');
             }
             
+            // Update all button colors for light mode
+            // Note: We don't change the classes as our CSS handles this with the data-bs-theme attribute
+            
             // Change Bootstrap CSS to light theme
             if (bootstrapCssLink) {
                 bootstrapCssLink.href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css";
+            }
+            
+            // Change header and footer colors
+            const header = document.querySelector('header');
+            const footer = document.querySelector('footer');
+            if (header) {
+                header.classList.remove('bg-dark');
+                header.classList.add('bg-light');
+            }
+            if (footer) {
+                footer.classList.remove('bg-dark');
+                footer.classList.add('bg-light');
             }
         }
     }
