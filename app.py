@@ -1,5 +1,6 @@
 import os
 import secrets
+from datetime import timedelta
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_sqlalchemy import SQLAlchemy
@@ -32,6 +33,11 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'  # type: ignore
 login_manager.login_message = 'Please log in to access this page'
 login_manager.login_message_category = 'info'
+# Set remember cookie duration to 1 year (365 days)
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=365)
+app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
 
 # Configure database
 database_url = os.environ.get("DATABASE_URL")
