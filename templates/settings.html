@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block title %}User Settings{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Search Settings</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('settings') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="form-group mb-3">
+                            {{ form.search_pages_limit.label(class="form-label") }}
+                            {{ form.search_pages_limit(class="form-control") }}
+                            <small class="form-text text-muted">This controls how many pages of Google search results are fetched for each search. More pages will provide more comprehensive results but may take longer to process.</small>
+                            {% if form.search_pages_limit.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {% for error in form.search_pages_limit.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

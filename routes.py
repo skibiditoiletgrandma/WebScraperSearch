@@ -133,8 +133,14 @@ def search():
         # Check if research mode is enabled
         research_mode = bool(request.form.get('research_mode'))
         
+        # Determine number of results pages to fetch
+        num_pages = 1  # Default is 1 page for anonymous users
+        if current_user.is_authenticated:
+            # For logged-in users, use their preference (or default to 1 if not set)
+            num_pages = current_user.search_pages_limit or 1
+        
         # Get search results from Google using SerpAPI
-        search_results = search_google(query, research_mode=research_mode)
+        search_results = search_google(query, num_results=10*num_pages, research_mode=research_mode)
         
         if not search_results:
             flash("No search results found", "info")
@@ -599,3 +605,29 @@ def clear_citation():
         session.pop('citation_result')
         flash("Citation cleared.", "info")
     return redirect(url_for('citations'))
+
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    """User settings page"""
+    form = SettingsForm()
+    
+    # When form is submitted
+    if form.validate_on_submit():
+        try:
+            # Update the user's search pages limit
+            current_user.search_pages_limit = form.search_pages_limit.data
+            db.session.commit()
+            flash("Settings updated successfully", "success")
+            return redirect(url_for('index'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating settings: {str(e)}", "danger")
+    
+    # Pre-populate form with current settings
+    if request.method == 'GET':
+        # Ensure there's a default value if the field is None
+        form.search_pages_limit.data = current_user.search_pages_limit if current_user.search_pages_limit is not None else 1
+    
+    return render_template('settings.html', form=form)
