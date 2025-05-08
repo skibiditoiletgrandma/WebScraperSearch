@@ -25,7 +25,7 @@ class User(UserMixin, db.Model):
     # General settings
     search_pages_limit = Column(Integer, default=1)  # Number of Google search pages to fetch
     hide_wikipedia = Column(Boolean, default=False)  # Option to hide Wikipedia results
-    show_feedback_features = Column(Boolean, default=True)  # Option to show feedback/rating features
+    show_feedback_features = Column(Boolean, default=False)  # Option to show feedback/rating features
     
     # Summary settings
     generate_summaries = Column(Boolean, default=True)  # Option to enable/disable summary generation
