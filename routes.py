@@ -150,7 +150,7 @@ def search():
             # For logged-in users, use their preferences
             num_pages = current_user.search_pages_limit or 1
             hide_wikipedia = current_user.hide_wikipedia or False
-            show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
+            show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
             
             # Summary settings for logged-in users
             generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
@@ -333,7 +333,7 @@ def view_search(search_id):
         generate_summaries = True
         
         if current_user.is_authenticated:
-            show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
+            show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
             generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
             
         return render_template("results.html", 
@@ -708,7 +708,7 @@ def settings():
         # General settings
         form.search_pages_limit.data = current_user.search_pages_limit if current_user.search_pages_limit is not None else 1
         form.hide_wikipedia.data = current_user.hide_wikipedia if current_user.hide_wikipedia is not None else False
-        form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
+        form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
         
         # Summary settings
         form.generate_summaries.data = current_user.generate_summaries if current_user.generate_summaries is not None else True
