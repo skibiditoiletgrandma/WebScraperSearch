@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, TextAreaField, DateField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, URL, Optional
 from models import User
 
 class LoginForm(FlaskForm):
@@ -42,3 +42,43 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user is not None:
             raise ValidationError('Email already registered. Please use a different email address or login.')
+
+
+class CitationForm(FlaskForm):
+    """Form for generating citations"""
+    # Common fields for all citation types
+    title = StringField('Title', validators=[DataRequired(), Length(max=255)])
+    authors = TextAreaField('Authors (one per line)', validators=[DataRequired()])
+    source_type = SelectField('Source Type', 
+        choices=[
+            ('book', 'Book'), 
+            ('journal', 'Journal Article'), 
+            ('website', 'Website')
+        ],
+        validators=[DataRequired()]
+    )
+    citation_style = SelectField('Citation Style', 
+        choices=[
+            ('APA', 'APA (7th Edition)'), 
+            ('MLA', 'MLA (9th Edition)'), 
+            ('Chicago', 'Chicago (17th Edition)')
+        ],
+        validators=[DataRequired()]
+    )
+    
+    # Book-specific fields
+    publisher = StringField('Publisher', validators=[Optional(), Length(max=255)])
+    publication_date = StringField('Publication Date (Year or YYYY-MM-DD)', validators=[Optional(), Length(max=50)])
+    
+    # Journal-specific fields
+    journal_name = StringField('Journal Name', validators=[Optional(), Length(max=255)])
+    volume = StringField('Volume', validators=[Optional(), Length(max=50)])
+    issue = StringField('Issue', validators=[Optional(), Length(max=50)])
+    pages = StringField('Pages (e.g., 125-148)', validators=[Optional(), Length(max=50)])
+    doi = StringField('DOI', validators=[Optional(), Length(max=100)])
+    
+    # Website-specific fields
+    url = StringField('URL', validators=[Optional(), URL(), Length(max=1024)])
+    access_date = StringField('Access Date (YYYY-MM-DD)', validators=[Optional(), Length(max=50)])
+    
+    submit = SubmitField('Generate Citation')

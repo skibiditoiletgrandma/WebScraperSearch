@@ -12,8 +12,8 @@ from app import app, db
 from scraper import search_google, scrape_website
 from summarizer import summarize_text
 from suggestions import get_suggestions_for_ui
-from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit
-from forms import LoginForm, RegistrationForm
+from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit, Citation
+from forms import LoginForm, RegistrationForm, CitationForm
 
 # Admin required decorator
 def admin_required(f):
@@ -533,3 +533,47 @@ def get_search_suggestions():
             "error": str(e),
             "suggestions": []
         })
+
+
+@app.route("/citations", methods=["GET", "POST"])
+def citations():
+    """Citation generator page"""
+    form = CitationForm()
+    citation_result = None
+    
+    if form.validate_on_submit():
+        try:
+            # Create a Citation object from form data
+            citation = Citation(
+                title=form.title.data,
+                authors=form.authors.data.replace("\r\n", ";").replace("\n", ";"),  # Convert line breaks to semicolons
+                source_type=form.source_type.data,
+                citation_style=form.citation_style.data,
+                publisher=form.publisher.data,
+                publication_date=form.publication_date.data,
+                journal_name=form.journal_name.data,
+                volume=form.volume.data,
+                issue=form.issue.data,
+                pages=form.pages.data,
+                url=form.url.data,
+                access_date=form.access_date.data,
+                doi=form.doi.data,
+                user_id=current_user.id if current_user.is_authenticated else None
+            )
+            
+            # Generate the formatted citation based on selected style
+            citation_result = citation.get_formatted_citation()
+            
+            # Save to database if user is authenticated
+            if current_user.is_authenticated:
+                db.session.add(citation)
+                db.session.commit()
+                flash("Citation generated and saved to your account.", "success")
+            else:
+                flash("Citation generated. Create an account to save citations for future reference.", "info")
+                
+        except Exception as e:
+            flash(f"Error generating citation: {str(e)}", "danger")
+            logging.error(f"Citation generation error: {str(e)}")
+    
+    return render_template("citations.html", form=form, citation_result=citation_result)
