@@ -1,4 +1,5 @@
 import os
+import secrets
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_sqlalchemy import SQLAlchemy
@@ -13,7 +14,9 @@ db = SQLAlchemy(model_class=Base)
 
 # Create the Flask application
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "default-secret-key-for-development")
+
+# Set a secure secret key (generate a random one if not provided)
+app.secret_key = os.environ.get("SESSION_SECRET") or secrets.token_hex(16)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
 # Configure app settings
@@ -30,5 +33,11 @@ if database_url:
     }
     # Initialize the app with the extension
     db.init_app(app)
+    
+    # Initialize database tables in app context
+    with app.app_context():
+        from models import SearchQuery, SearchResult, SummaryFeedback
+        db.create_all()
+        app.logger.info("Database tables initialized")
 else:
     app.logger.warning("DATABASE_URL not set - database features will not be available")
