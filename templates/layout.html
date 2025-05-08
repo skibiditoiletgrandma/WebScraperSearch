@@ -27,15 +27,44 @@
                         <i class="fas fa-history me-md-1"></i>
                         <span class="d-none d-md-inline">History</span>
                     </a>
-                    <a href="{{ url_for('view_feedback') }}" class="btn btn-outline-light btn-sm me-3">
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a href="{{ url_for('view_feedback') }}" class="btn btn-outline-light btn-sm me-2">
                         <i class="fas fa-star me-md-1"></i>
                         <span class="d-none d-md-inline">Feedback</span>
                     </a>
+                    {% endif %}
+                    
+                    {% if current_user.is_authenticated %}
+                    <div class="dropdown me-2">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user me-md-1"></i>
+                            <span class="d-none d-md-inline">{{ current_user.username }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><span class="dropdown-item-text text-muted">{{ current_user.email }}</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% if current_user.is_admin %}
+                            <li><span class="dropdown-item-text text-primary"><i class="fas fa-shield-alt me-2"></i>Admin</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm me-2">
+                        <i class="fas fa-sign-in-alt me-md-1"></i>
+                        <span class="d-none d-md-inline">Login</span>
+                    </a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-sm me-2">
+                        <i class="fas fa-user-plus me-md-1"></i>
+                        <span class="d-none d-md-inline">Register</span>
+                    </a>
+                    {% endif %}
                     <button id="theme-toggle" class="btn btn-outline-light btn-sm">
                         <i class="fas fa-moon theme-icon-dark"></i>
                         <i class="fas fa-sun theme-icon-light d-none"></i>
-                        <span class="theme-text-dark">Dark Mode</span>
-                        <span class="theme-text-light d-none">Light Mode</span>
+                        <span class="theme-text-dark d-none d-md-inline">Dark Mode</span>
+                        <span class="theme-text-light d-none d-md-inline">Light Mode</span>
                     </button>
                 </div>
             </div>
