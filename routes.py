@@ -174,7 +174,7 @@ def search():
         if not search_results:
             flash("No search results found", "info")
             return render_template("results.html", query=query, results=[], 
-                                  show_feedback=show_feedback, 
+                                  show_feedback=not show_feedback, 
                                   research_mode=research_mode,
                                   wikipedia_popup=False)
         
@@ -274,7 +274,7 @@ def search():
                               query=query, 
                               results=processed_results,
                               research_mode=research_mode,
-                              show_feedback=show_feedback,
+                              show_feedback=not show_feedback,
                               wikipedia_popup=has_wikipedia_results,
                               generate_summaries=generate_summaries)
     
@@ -346,7 +346,7 @@ def view_search(search_id):
                                   "summary": r.summary
                               } for r in results],
                               from_history=True,
-                              show_feedback=show_feedback,
+                              show_feedback=not show_feedback,
                               generate_summaries=generate_summaries,
                               wikipedia_popup=False)
     except Exception as e:
