@@ -21,6 +21,10 @@ class User(UserMixin, db.Model):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
     
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
         

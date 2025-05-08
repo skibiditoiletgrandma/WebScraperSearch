@@ -52,7 +52,7 @@ db.init_app(app)
 if database_url:
     try:
         with app.app_context():
-            from models import SearchQuery, SearchResult, SummaryFeedback
+            from models import SearchQuery, SearchResult, SummaryFeedback, User
             db.create_all()
             app.logger.info("Database tables initialized successfully")
     except Exception as e:
