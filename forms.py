@@ -96,6 +96,9 @@ class SettingsForm(FlaskForm):
     
     show_feedback_features = BooleanField('Hide Feedback/Rating Features', 
         description='When enabled, feedback and rating options will be hidden from search results')
+        
+    enable_suggestions = BooleanField('Enable Search Suggestions', 
+        description='When enabled, AI-powered suggestions for better search queries will be shown')
     
     # Summary settings
     generate_summaries = BooleanField('Generate Summaries', 

@@ -50,6 +50,14 @@
                             </div>
                         </div>
                         
+                        <div class="form-check form-switch mb-3">
+                            {{ form.enable_suggestions(class="form-check-input") }}
+                            {{ form.enable_suggestions.label(class="form-check-label") }}
+                            <div>
+                                <small class="form-text text-muted">{{ form.enable_suggestions.description }}</small>
+                            </div>
+                        </div>
+                        
                         <!-- Summaries Category -->
                         <h3 class="mt-5 mb-3 border-bottom pb-2">Summaries</h3>
                         
