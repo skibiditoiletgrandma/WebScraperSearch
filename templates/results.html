@@ -78,7 +78,9 @@
                     <div class="summary-content">
                         {% if result.summary %}
                             <p>{{ result.summary }}</p>
-                            <!-- Feedback section -->
+                            
+                            <!-- Feedback section - only shown if feedback features are enabled -->
+                            {% if show_feedback %}
                             <div class="mt-3 pt-3 border-top border-secondary">
                                 <h5 class="h6 mb-2">
                                     <i class="fas fa-star me-2"></i>
@@ -142,6 +144,7 @@
                                     </div>
                                 </form>
                             </div>
+                            {% endif %}
                         {% else %}
                             <p class="text-muted fst-italic">No summary available for this website.</p>
                         {% endif %}
@@ -204,6 +207,37 @@
         No search results were found for your query. Please try a different search term.
     </div>
 {% endif %}
+
+<!-- Wikipedia Suggestion Modal -->
+<div class="modal fade" id="wikipediaModal" tabindex="-1" aria-labelledby="wikipediaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="wikipediaModalLabel">
+                    <i class="fas fa-lightbulb text-warning me-2"></i>
+                    Wikipedia Results Hidden
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You have enabled the <strong>Hide Wikipedia Results</strong> setting in your preferences.</p>
+                <p>Wikipedia results have been filtered from your search results. If you're looking for general knowledge or background information, Wikipedia can be a valuable resource.</p>
+                <p>Would you like to:</p>
+                <div class="d-grid gap-2">
+                    <a href="https://wikipedia.org/wiki/Special:Search?search={{ query|urlencode }}" class="btn btn-outline-primary" target="_blank">
+                        <i class="fab fa-wikipedia-w me-2"></i> Search Wikipedia for "{{ query }}"
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{{ url_for('settings') }}" class="btn btn-primary">
+                    <i class="fas fa-cog me-1"></i> Change Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -301,6 +335,12 @@
                 });
             });
         });
+        
+        // Show Wikipedia modal if Wikipedia results are hidden and there are results
+        {% if request.args.get('wikipedia_popup') == 'true' or (current_user.is_authenticated and current_user.hide_wikipedia and results|length > 0) %}
+        const wikipediaModal = new bootstrap.Modal(document.getElementById('wikipediaModal'));
+        wikipediaModal.show();
+        {% endif %}
     });
 </script>
 {% endblock %}

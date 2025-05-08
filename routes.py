@@ -137,12 +137,22 @@ def search():
         
         # Determine number of results pages to fetch
         num_pages = 1  # Default is 1 page for anonymous users
+        hide_wikipedia = False  # Default for anonymous users
+        show_feedback = True  # Default for anonymous users
+        
         if current_user.is_authenticated:
-            # For logged-in users, use their preference (or default to 1 if not set)
+            # For logged-in users, use their preferences
             num_pages = current_user.search_pages_limit or 1
+            hide_wikipedia = current_user.hide_wikipedia or False
+            show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
         
         # Get search results from Google using SerpAPI
-        search_results = search_google(query, num_results=10*num_pages, research_mode=research_mode)
+        search_results = search_google(
+            query, 
+            num_results=10*num_pages, 
+            research_mode=research_mode, 
+            hide_wikipedia=hide_wikipedia
+        )
         
         if not search_results:
             flash("No search results found", "info")
@@ -234,7 +244,8 @@ def search():
         return render_template("results.html", 
                               query=query, 
                               results=processed_results,
-                              research_mode=research_mode)
+                              research_mode=research_mode,
+                              show_feedback=show_feedback)
     
     except Exception as e:
         error_details = traceback.format_exc()
@@ -286,6 +297,11 @@ def view_search(search_id):
         # Get the results for this search
         results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
         
+        # Determine if feedback should be shown based on user preferences
+        show_feedback = True
+        if current_user.is_authenticated:
+            show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
+            
         return render_template("results.html", 
                               query=search.query_text, 
                               results=[{
@@ -295,7 +311,8 @@ def view_search(search_id):
                                   "description": r.description,
                                   "summary": r.summary
                               } for r in results],
-                              from_history=True)
+                              from_history=True,
+                              show_feedback=show_feedback)
     except Exception as e:
         logging.error(f"Error retrieving search details: {str(e)}")
         flash("Unable to retrieve search details", "warning")
