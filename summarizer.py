@@ -45,7 +45,7 @@ def clean_text(text):
     
     return text
 
-def summarize_text(text, title="", max_sentences=5, min_sentences=2):
+def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, complexity=3):
     """
     Generate a summary of the provided text using extractive summarization
     
@@ -54,6 +54,8 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2):
         title (str): The title of the text (optional)
         max_sentences (int): Maximum number of sentences in the summary
         min_sentences (int): Minimum number of sentences in the summary
+        depth (int): The depth of the summary (1-5 scale, where 5 is most detailed)
+        complexity (int): The complexity level of the summary (1-5 scale, where 5 is most complex)
         
     Returns:
         str: The generated summary
@@ -107,8 +109,11 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2):
             
             sentence_scores[i] = score
         
+        # Adjust max_sentences based on depth setting (1-5)
+        depth_adjusted_max = max(2, min(10, max_sentences + (depth - 3) * 2))
+        
         # Get top-scoring sentences
-        num_sentences = min(max_sentences, max(min_sentences, len(sentences) // 5))
+        num_sentences = min(depth_adjusted_max, max(min_sentences, len(sentences) // (6 - depth)))
         top_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[:num_sentences]
         
         # Sort sentences by their original position
@@ -117,7 +122,25 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2):
         # Generate the summary
         summary = " ".join(sentences[i] for i, _ in top_sentences)
         
-        # If summary is too short, add more sentences
+        # Adjust for complexity (1-5)
+        # For lower complexity (1-2), simplify by keeping only the most important sentences
+        if complexity <= 2 and len(top_sentences) > 3:
+            # Keep only the highest-scoring sentences for simpler summaries
+            simple_count = max(3, num_sentences // 2)
+            simple_sentences = sorted(top_sentences, key=lambda x: x[1], reverse=True)[:simple_count]
+            simple_sentences = sorted(simple_sentences, key=lambda x: x[0])
+            summary = " ".join(sentences[i] for i, _ in simple_sentences)
+        
+        # For higher complexity (4-5), add more context
+        elif complexity >= 4 and len(sentences) > num_sentences:
+            # Add more sentences for complex summaries
+            additional = min(len(sentences) - num_sentences, complexity - 2)
+            more_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[num_sentences:num_sentences+additional]
+            more_sentences = sorted(more_sentences, key=lambda x: x[0])
+            for i, _ in more_sentences:
+                summary += " " + sentences[i]
+        
+        # If summary is still too short, add more sentences regardless of complexity
         if len(summary.split()) < 30 and len(sentences) > num_sentences:
             additional = min(len(sentences) - num_sentences, 2)
             more_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[num_sentences:num_sentences+additional]

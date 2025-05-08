@@ -14,6 +14,9 @@
                     <form method="POST" action="{{ url_for('settings') }}">
                         {{ form.hidden_tag() }}
                         
+                        <!-- General Settings Category -->
+                        <h3 class="mb-3 border-bottom pb-2">General</h3>
+                        
                         <div class="form-group mb-3">
                             {{ form.search_pages_limit.label(class="form-label") }}
                             {{ form.search_pages_limit(class="form-control") }}
@@ -27,7 +30,6 @@
                             {% endif %}
                         </div>
                         
-                        <hr class="my-4">
                         <h4 class="mb-3">Content Filtering</h4>
                         
                         <div class="form-check form-switch mb-3">
@@ -38,7 +40,6 @@
                             </div>
                         </div>
                         
-                        <hr class="my-4">
                         <h4 class="mb-3">User Interface</h4>
                         
                         <div class="form-check form-switch mb-3">
@@ -46,6 +47,53 @@
                             {{ form.show_feedback_features.label(class="form-check-label") }}
                             <div>
                                 <small class="form-text text-muted">{{ form.show_feedback_features.description }}</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Summaries Category -->
+                        <h3 class="mt-5 mb-3 border-bottom pb-2">Summaries</h3>
+                        
+                        <div class="form-check form-switch mb-4">
+                            {{ form.generate_summaries(class="form-check-input", id="summaryToggle") }}
+                            {{ form.generate_summaries.label(class="form-check-label") }}
+                            <div>
+                                <small class="form-text text-muted">{{ form.generate_summaries.description }}</small>
+                            </div>
+                        </div>
+                        
+                        <div id="summarySettings">
+                            <div class="form-group mb-3">
+                                {{ form.summary_depth.label(class="form-label") }}
+                                <div class="d-flex align-items-center">
+                                    <input type="range" class="form-range" min="1" max="5" step="1" 
+                                           id="summary_depth_slider" value="{{ form.summary_depth.data }}">
+                                    {{ form.summary_depth(class="form-control ms-3", style="width: 70px;") }}
+                                </div>
+                                <small class="form-text text-muted">{{ form.summary_depth.description }}</small>
+                                {% if form.summary_depth.errors %}
+                                <div class="alert alert-danger mt-2">
+                                    {% for error in form.summary_depth.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                {{ form.summary_complexity.label(class="form-label") }}
+                                <div class="d-flex align-items-center">
+                                    <input type="range" class="form-range" min="1" max="5" step="1" 
+                                           id="summary_complexity_slider" value="{{ form.summary_complexity.data }}">
+                                    {{ form.summary_complexity(class="form-control ms-3", style="width: 70px;") }}
+                                </div>
+                                <small class="form-text text-muted">{{ form.summary_complexity.description }}</small>
+                                {% if form.summary_complexity.errors %}
+                                <div class="alert alert-danger mt-2">
+                                    {% for error in form.summary_complexity.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                         
@@ -59,4 +107,53 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Connect sliders to their input fields
+        const depthSlider = document.getElementById('summary_depth_slider');
+        const depthInput = document.getElementById('summary_depth');
+        const complexitySlider = document.getElementById('summary_complexity_slider');
+        const complexityInput = document.getElementById('summary_complexity');
+        const summaryToggle = document.getElementById('summaryToggle');
+        const summarySettings = document.getElementById('summarySettings');
+        
+        // Update input values when sliders change
+        depthSlider.addEventListener('input', function() {
+            depthInput.value = this.value;
+        });
+        
+        complexitySlider.addEventListener('input', function() {
+            complexityInput.value = this.value;
+        });
+        
+        // Update sliders when input values change
+        depthInput.addEventListener('input', function() {
+            depthSlider.value = this.value;
+        });
+        
+        complexityInput.addEventListener('input', function() {
+            complexitySlider.value = this.value;
+        });
+        
+        // Function to toggle the disabled state of summary settings
+        function toggleSummarySettings() {
+            const elementsToToggle = summarySettings.querySelectorAll('input, select, textarea, button');
+            const isDisabled = !summaryToggle.checked;
+            
+            elementsToToggle.forEach(function(element) {
+                element.disabled = isDisabled;
+            });
+            
+            // Also toggle the whole section's opacity to provide visual feedback
+            summarySettings.style.opacity = isDisabled ? 0.6 : 1;
+        }
+        
+        // Set initial state
+        toggleSummarySettings();
+        
+        // Toggle settings when the summary toggle changes
+        summaryToggle.addEventListener('change', toggleSummarySettings);
+    });
+</script>
 {% endblock %}

@@ -646,10 +646,15 @@ def settings():
     # When form is submitted
     if form.validate_on_submit():
         try:
-            # Update the user's settings
+            # Update general settings
             current_user.search_pages_limit = form.search_pages_limit.data
             current_user.hide_wikipedia = form.hide_wikipedia.data
             current_user.show_feedback_features = form.show_feedback_features.data
+            
+            # Update summary settings
+            current_user.generate_summaries = form.generate_summaries.data
+            current_user.summary_depth = form.summary_depth.data
+            current_user.summary_complexity = form.summary_complexity.data
             
             db.session.commit()
             flash("Settings updated successfully", "success")
