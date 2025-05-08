@@ -20,7 +20,8 @@ def update_sqlite_schema():
     
     print(f"Updating SQLite database at {db_path}")
     
-    # Connect to the SQLite database
+    # Initialize connection to None
+    conn = None
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -91,12 +92,12 @@ def update_sqlite_schema():
         
     except Exception as e:
         print(f"Error updating SQLite database: {str(e)}")
-        # Close the connection if it's been opened
-        if 'conn' in locals():
-            try:
+        # Close the connection if it's been opened and is not None
+        try:
+            if conn is not None:
                 conn.close()
-            except:
-                pass
+        except Exception:
+            pass
 
 if __name__ == '__main__':
     update_sqlite_schema()
