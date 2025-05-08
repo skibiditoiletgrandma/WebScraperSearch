@@ -116,6 +116,22 @@ body {
     border-color: var(--bs-warning);
 }
 
+/* Feedback details animation */
+.feedback-details {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+    opacity: 0;
+}
+
+.feedback-details[style*="display: block"] {
+    max-height: 500px;
+    opacity: 1;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(var(--bs-secondary-rgb), 0.3);
+    margin-top: 1rem;
+}
+
 [data-bs-theme="light"] .summary-feedback-form {
     background-color: rgba(0, 0, 0, 0.02);
 }
