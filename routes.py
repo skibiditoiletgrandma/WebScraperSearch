@@ -3,6 +3,7 @@ from flask import render_template, request, jsonify, flash, redirect, url_for
 from app import app, db
 from scraper import search_google, scrape_website
 from summarizer import summarize_text
+from suggestions import get_suggestions_for_ui
 from models import SearchQuery, SearchResult, SummaryFeedback
 import traceback
 import time
@@ -235,3 +236,31 @@ def view_feedback():
         logging.error(f"Error retrieving feedback: {str(e)}")
         flash("Unable to retrieve feedback", "warning")
         return redirect(url_for("index"))
+
+@app.route("/api/suggestions", methods=["GET"])
+def get_search_suggestions():
+    """API endpoint to get search query suggestions"""
+    query = request.args.get("query", "").strip()
+    
+    if not query or len(query) < 3:
+        return jsonify({
+            "success": False,
+            "suggestions": []
+        })
+    
+    try:
+        # Get suggestions using our suggestions module
+        suggestions = get_suggestions_for_ui(query, db)
+        
+        return jsonify({
+            "success": True,
+            "suggestions": suggestions
+        })
+    
+    except Exception as e:
+        logging.error(f"Error generating suggestions: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "suggestions": []
+        })
