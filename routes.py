@@ -546,24 +546,28 @@ def citations():
     if form.validate_on_submit():
         try:
             # Create a Citation object from form data
-            # Process authors: ensure it's not None and replace line breaks with semicolons
-            authors_data = form.authors.data or ""
-            formatted_authors = authors_data.replace("\r\n", ";").replace("\n", ";")
+            # Create a Citation object with data from the form
+            # For each field, ensure it's not None before accessing
+            title = form.title.data or ""
+            authors = form.authors.data or ""
+            formatted_authors = authors.replace("\r\n", ";").replace("\n", ";")
+            source_type = form.source_type.data or ""
+            citation_style = form.citation_style.data or ""
             
             citation = Citation(
-                title=form.title.data,
+                title=title,
                 authors=formatted_authors,
-                source_type=form.source_type.data,
-                citation_style=form.citation_style.data,
-                publisher=form.publisher.data,
-                publication_date=form.publication_date.data,
-                journal_name=form.journal_name.data,
-                volume=form.volume.data,
-                issue=form.issue.data,
-                pages=form.pages.data,
-                url=form.url.data,
-                access_date=form.access_date.data,
-                doi=form.doi.data,
+                source_type=source_type,
+                citation_style=citation_style,
+                publisher=form.publisher.data or "",
+                publication_date=form.publication_date.data or "",
+                journal_name=form.journal_name.data or "",
+                volume=form.volume.data or "",
+                issue=form.issue.data or "",
+                pages=form.pages.data or "",
+                url=form.url.data or "",
+                access_date=form.access_date.data or "",
+                doi=form.doi.data or "",
                 user_id=current_user.id if current_user.is_authenticated else None
             )
             
