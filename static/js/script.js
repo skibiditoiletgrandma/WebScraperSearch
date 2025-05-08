@@ -12,6 +12,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const lightTextElement = document.querySelector('.theme-text-light');
     const bootstrapCssLink = document.getElementById('bootstrap-css');
     
+    // Initialize Research Mode toggle style based on current theme
+    const currentTheme = htmlElement.getAttribute('data-bs-theme') || 'light';
+    if (currentTheme === 'dark') {
+        document.querySelectorAll('.form-check-input[type="checkbox"]#research-mode').forEach(toggle => {
+            toggle.classList.add('dark-mode-toggle');
+        });
+    }
+    
     // Check for user's theme preference in local storage
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
@@ -45,6 +53,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 themeToggleBtn.classList.remove('btn-outline-dark');
                 themeToggleBtn.classList.add('btn-outline-light');
             }
+            
+            // Update Research Mode toggle appearance for dark mode
+            document.querySelectorAll('.form-check-input[type="checkbox"]#research-mode').forEach(toggle => {
+                toggle.classList.add('dark-mode-toggle');
+            });
             
             // Update all outline-light buttons
             document.querySelectorAll('.btn-outline-light').forEach(btn => {
@@ -84,6 +97,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 themeToggleBtn.classList.remove('btn-outline-light');
                 themeToggleBtn.classList.add('btn-outline-dark');
             }
+            
+            // Update Research Mode toggle appearance for light mode
+            document.querySelectorAll('.form-check-input[type="checkbox"]#research-mode').forEach(toggle => {
+                toggle.classList.remove('dark-mode-toggle');
+            });
             
             // Update all button colors for light mode
             // Note: We don't change the classes as our CSS handles this with the data-bs-theme attribute

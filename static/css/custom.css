@@ -283,6 +283,64 @@ img {
     z-index: 1090;
 }
 
+/* Research Mode Toggle Styling */
+.form-switch .form-check-input {
+    width: 2.5em;
+    cursor: pointer;
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+/* Dark theme form switch */
+[data-bs-theme="dark"] .form-check-input {
+    background-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-bs-theme="dark"] .form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+/* Special class for dark mode toggle */
+.dark-mode-toggle {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.dark-mode-toggle:checked {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+}
+
+/* Light theme form switch */
+[data-bs-theme="light"] .form-check-input {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.25);
+}
+
+[data-bs-theme="light"] .form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+/* Research Mode badge styling */
+.badge.bg-info {
+    transition: all 0.2s ease;
+}
+
+[data-bs-theme="light"] .badge.bg-info {
+    background-color: var(--bs-info) !important;
+    color: #fff;
+}
+
+[data-bs-theme="dark"] .badge.bg-info {
+    background-color: var(--bs-info) !important;
+    color: #212529;
+}
+
 /* Better spacing for mobile */
 @media (max-width: 768px) {
     .container {
