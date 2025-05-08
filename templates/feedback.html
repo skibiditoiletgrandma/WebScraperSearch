@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+
+{% block title %}Feedback Management - Google Search Scraper{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Summary Feedback Management</h2>
+    <p class="text-muted">View and analyze user feedback for summaries</p>
+    
+    <div class="mb-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i> Back to Home
+        </a>
+        
+        <a href="{{ url_for('history') }}" class="btn btn-info">
+            <i class="fas fa-history me-1"></i> View Search History
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Feedback Statistics</h5>
+                <div class="stats mt-3">
+                    <p><strong>Total Feedback:</strong> {{ feedback_count }}</p>
+                    <p><strong>Average Rating:</strong> {{ average_rating|round(1) }} / 5</p>
+                    <p><strong>Helpful Summaries:</strong> {{ helpful_count }}</p>
+                    <p><strong>Accurate Summaries:</strong> {{ accurate_count }}</p>
+                    <p><strong>Complete Summaries:</strong> {{ complete_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Rating Distribution</h5>
+                <div class="rating-bars mt-4">
+                    {% for rating, count in rating_distribution.items() %}
+                    <div class="rating-bar mb-3">
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="me-2">{{ rating }} star{% if rating != 1 %}s{% endif %}:</span>
+                            <div class="flex-grow-1">
+                                <div class="progress">
+                                    <div 
+                                        class="progress-bar bg-{{ ['danger', 'warning', 'info', 'primary', 'success'][rating-1] }}" 
+                                        role="progressbar" 
+                                        style="width: {% if feedback_count > 0 %}{{ (count / feedback_count * 100)|round }}{% else %}0{% endif %}%"
+                                        aria-valuenow="{% if feedback_count > 0 %}{{ (count / feedback_count * 100)|round }}{% else %}0{% endif %}" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100">
+                                        {{ count }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if feedback_list %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Recent Feedback</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Rating</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Summary</th>
+                        <th scope="col">Attributes</th>
+                        <th scope="col">Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feedback in feedback_list %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-{{ ['danger', 'warning', 'info', 'primary', 'success'][feedback.rating-1] }} px-2 py-1">
+                                {{ feedback.rating }} <i class="fas fa-star"></i>
+                            </span>
+                        </td>
+                        <td><small>{{ feedback.timestamp.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                        <td>
+                            <a href="{{ url_for('view_search', search_id=feedback.search_result.search_query_id) }}" class="text-decoration-none">
+                                {{ feedback.search_result.title[:50] + '...' if feedback.search_result.title|length > 50 else feedback.search_result.title }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if feedback.helpful %}
+                            <span class="badge bg-success me-1">Helpful</span>
+                            {% endif %}
+                            {% if feedback.accurate %}
+                            <span class="badge bg-info me-1">Accurate</span>
+                            {% endif %}
+                            {% if feedback.complete %}
+                            <span class="badge bg-primary me-1">Complete</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if feedback.comment %}
+                            <small>{{ feedback.comment }}</small>
+                            {% else %}
+                            <small class="text-muted">No comment</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    No feedback has been submitted yet.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Any specific JavaScript for the feedback page here
+</script>
+{% endblock %}
