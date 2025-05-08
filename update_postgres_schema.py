@@ -104,6 +104,20 @@ def update_database_schema():
             else:
                 logging.info("summary_complexity column already exists.")
                 
+            # Check if enable_suggestions exists
+            column_check = connection.execute(text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'users' AND column_name = 'enable_suggestions'"
+            )).fetchall()
+            
+            if not column_check:
+                logging.info("Adding enable_suggestions column to users table...")
+                connection.execute(text(
+                    "ALTER TABLE users ADD COLUMN enable_suggestions BOOLEAN DEFAULT TRUE"
+                ))
+            else:
+                logging.info("enable_suggestions column already exists.")
+                
             # Commit the transaction
             transaction.commit()
             logging.info("Database schema update completed successfully!")
