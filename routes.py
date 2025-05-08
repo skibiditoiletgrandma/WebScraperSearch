@@ -63,16 +63,8 @@ def search():
                 # Generate a summary of the content
                 summary = summarize_text(content, result["title"])
                 
-                processed_result = {
-                    "title": result["title"],
-                    "link": result["link"],
-                    "description": result["description"],
-                    "summary": summary
-                }
-                
-                processed_results.append(processed_result)
-                
                 # Save search result to database (if available)
+                search_result = None
                 try:
                     # Only save to database if the search query was successfully saved
                     if new_search.id:
@@ -84,8 +76,20 @@ def search():
                         search_result.summary = summary
                         search_result.rank = index + 1
                         db.session.add(search_result)
+                        db.session.flush()  # Flush to get the ID without committing
+                        
                 except Exception as db_error:
                     logging.error(f"Error saving search result to database: {str(db_error)}")
+                
+                processed_result = {
+                    "id": search_result.id if search_result else None,
+                    "title": result["title"],
+                    "link": result["link"],
+                    "description": result["description"],
+                    "summary": summary
+                }
+                
+                processed_results.append(processed_result)
                 
                 # Add a short delay to avoid overwhelming target servers
                 time.sleep(0.5)
@@ -137,6 +141,7 @@ def view_search(search_id):
         return render_template("results.html", 
                               query=search.query_text, 
                               results=[{
+                                  "id": r.id,
                                   "title": r.title,
                                   "link": r.link,
                                   "description": r.description,
@@ -189,3 +194,44 @@ def submit_feedback(result_id):
         logging.error(f"Error submitting feedback: {str(e)}")
         flash("Unable to submit feedback", "danger")
         return redirect(url_for("history"))
+
+@app.route("/feedback")
+def view_feedback():
+    """View all feedback for developers"""
+    try:
+        # Get all feedback with related search results
+        feedback_list = SummaryFeedback.query.order_by(SummaryFeedback.timestamp.desc()).limit(50).all()
+        
+        # Calculate statistics
+        feedback_count = SummaryFeedback.query.count()
+        
+        # Average rating (default to 0 if no feedback)
+        average_rating = 0
+        if feedback_count > 0:
+            average_rating = db.session.query(db.func.avg(SummaryFeedback.rating)).scalar() or 0
+            
+        # Count attributes
+        helpful_count = SummaryFeedback.query.filter_by(helpful=True).count()
+        accurate_count = SummaryFeedback.query.filter_by(accurate=True).count()
+        complete_count = SummaryFeedback.query.filter_by(complete=True).count()
+        
+        # Rating distribution
+        rating_distribution = {}
+        for i in range(1, 6):
+            rating_distribution[i] = SummaryFeedback.query.filter_by(rating=i).count()
+        
+        return render_template(
+            "feedback.html",
+            feedback_list=feedback_list,
+            feedback_count=feedback_count,
+            average_rating=average_rating,
+            helpful_count=helpful_count,
+            accurate_count=accurate_count,
+            complete_count=complete_count,
+            rating_distribution=rating_distribution
+        )
+    
+    except Exception as e:
+        logging.error(f"Error retrieving feedback: {str(e)}")
+        flash("Unable to retrieve feedback", "warning")
+        return redirect(url_for("index"))
