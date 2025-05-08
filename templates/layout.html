@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Google Search Scraper{% endblock %}</title>
     <!-- Bootstrap CSS (Replit theme) -->
-    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" id="bootstrap-css">
     <!-- Font Awesome icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Custom CSS -->
@@ -22,6 +22,14 @@
                         <span class="text-light">Google Search Scraper</span>
                     </h1>
                 </a>
+                <div>
+                    <button id="theme-toggle" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-moon theme-icon-dark"></i>
+                        <i class="fas fa-sun theme-icon-light d-none"></i>
+                        <span class="theme-text-dark">Dark Mode</span>
+                        <span class="theme-text-light d-none">Light Mode</span>
+                    </button>
+                </div>
             </div>
         </div>
     </header>

@@ -3,6 +3,55 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Theme Toggle Functionality
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const htmlElement = document.documentElement;
+    const darkIconElement = document.querySelector('.theme-icon-dark');
+    const lightIconElement = document.querySelector('.theme-icon-light');
+    const darkTextElement = document.querySelector('.theme-text-dark');
+    const lightTextElement = document.querySelector('.theme-text-light');
+    const bootstrapCssLink = document.getElementById('bootstrap-css');
+    
+    // Check for user's theme preference in local storage
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    }
+    
+    // Handle theme toggle button click
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', function() {
+            const currentTheme = htmlElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme); // Save preference
+        });
+    }
+    
+    // Function to apply the theme
+    function applyTheme(theme) {
+        htmlElement.setAttribute('data-bs-theme', theme);
+        
+        // Update button appearance
+        if (theme === 'dark') {
+            darkIconElement.classList.remove('d-none');
+            lightIconElement.classList.add('d-none');
+            darkTextElement.classList.remove('d-none');
+            lightTextElement.classList.add('d-none');
+            
+            // Change Bootstrap CSS to dark theme
+            bootstrapCssLink.href = "https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css";
+        } else {
+            darkIconElement.classList.add('d-none');
+            lightIconElement.classList.remove('d-none');
+            darkTextElement.classList.add('d-none');
+            lightTextElement.classList.remove('d-none');
+            
+            // Change Bootstrap CSS to light theme
+            bootstrapCssLink.href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css";
+        }
+    }
+    
     // Search form validation
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-query');
