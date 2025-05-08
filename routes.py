@@ -16,6 +16,7 @@ from summarizer import summarize_text
 from suggestions import get_suggestions_for_ui
 from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit, Citation
 from forms import LoginForm, RegistrationForm, CitationForm, SettingsForm
+from db_migrations import handle_db_error
 
 # Admin required decorator
 def admin_required(f):
@@ -369,9 +370,23 @@ def server_error(e):
 def handle_exception(e):
     """Handle all other exceptions"""
     logging.error(f"Unhandled exception: {str(e)}")
+    
     # Pass through HTTP errors
     if isinstance(e, HTTPException):
         return e
+    
+    # Try to handle database schema errors
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+    if isinstance(e, (OperationalError, ProgrammingError)):
+        # Try to fix database errors
+        if handle_db_error(e):
+            # If the error was successfully handled, redirect to the previous page
+            logging.info("Database error was automatically fixed, redirecting...")
+            flash("The system has been updated. Please try again.", "info")
+            # Try to get the referrer URL
+            referrer = request.referrer or url_for('index')
+            return redirect(referrer)
+    
     # Handle non-HTTP exceptions with 500 error
     return render_template("error.html", error=f"Server error: {str(e)}", status_code=500), 500
 
