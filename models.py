@@ -199,3 +199,294 @@ class AnonymousSearchLimit(db.Model):
         if remaining < 0:
             return 0
         return remaining
+
+
+class Citation(db.Model):
+    """Model for storing generated citations"""
+    __tablename__ = 'citations'
+    
+    id = Column(Integer, primary_key=True)
+    
+    # Citation metadata
+    title = Column(String(255), nullable=False)
+    authors = Column(String(512), nullable=False)  # Semicolon-separated author names
+    source_type = Column(String(50), nullable=False)  # book, journal, website, etc.
+    citation_style = Column(String(20), nullable=False)  # APA, MLA, Chicago, etc.
+    
+    # Source-specific fields
+    publisher = Column(String(255))
+    publication_date = Column(String(50))  # Store as string for flexibility
+    journal_name = Column(String(255))
+    volume = Column(String(50))
+    issue = Column(String(50))
+    pages = Column(String(50))
+    url = Column(String(1024))
+    access_date = Column(String(50))
+    doi = Column(String(100))
+    
+    # User relation (optional - for saving citations)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    user = relationship('User', backref='citations', lazy=True)
+    
+    # Generation metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    def __init__(self, **kwargs):
+        super(Citation, self).__init__(**kwargs)
+        
+    def generate_apa_citation(self):
+        """Generate APA style citation"""
+        if self.source_type == 'journal':
+            author_list = self.format_authors_apa()
+            citation = f"{author_list} ({self.publication_date}). {self.title}. "
+            if self.journal_name:
+                citation += f"<em>{self.journal_name}</em>"
+                if self.volume:
+                    citation += f", {self.volume}"
+                    if self.issue:
+                        citation += f"({self.issue})"
+                if self.pages:
+                    citation += f", {self.pages}"
+            if self.doi:
+                citation += f". https://doi.org/{self.doi}"
+            elif self.url:
+                citation += f". Retrieved from {self.url}"
+            return citation
+            
+        elif self.source_type == 'book':
+            author_list = self.format_authors_apa()
+            citation = f"{author_list} ({self.publication_date}). <em>{self.title}</em>. "
+            if self.publisher:
+                citation += f"{self.publisher}."
+            return citation
+            
+        elif self.source_type == 'website':
+            author_list = self.format_authors_apa()
+            citation = f"{author_list} ({self.publication_date}). {self.title}. "
+            if self.url:
+                citation += f"Retrieved from {self.url}"
+            return citation
+        
+        # Default format if source type is not recognized
+        return f"{self.authors} ({self.publication_date}). {self.title}."
+        
+    def generate_mla_citation(self):
+        """Generate MLA style citation"""
+        if self.source_type == 'journal':
+            author_list = self.format_authors_mla()
+            citation = f"{author_list}. \"{self.title}.\" "
+            if self.journal_name:
+                citation += f"<em>{self.journal_name}</em>"
+                if self.volume:
+                    citation += f", vol. {self.volume}"
+                    if self.issue:
+                        citation += f", no. {self.issue}"
+                if self.publication_date:
+                    citation += f", {self.publication_date}"
+                if self.pages:
+                    citation += f", pp. {self.pages}"
+            if self.doi:
+                citation += f". DOI: {self.doi}"
+            elif self.url:
+                citation += f". {self.url}"
+                if self.access_date:
+                    citation += f". Accessed {self.access_date}"
+            return citation
+            
+        elif self.source_type == 'book':
+            author_list = self.format_authors_mla()
+            citation = f"{author_list}. <em>{self.title}</em>. "
+            if self.publisher:
+                citation += f"{self.publisher}"
+                if self.publication_date:
+                    citation += f", {self.publication_date}"
+            citation += "."
+            return citation
+            
+        elif self.source_type == 'website':
+            author_list = self.format_authors_mla()
+            citation = f"{author_list}. \"{self.title}.\" "
+            if self.url:
+                citation += f"{self.url}"
+                if self.access_date:
+                    citation += f". Accessed {self.access_date}"
+            citation += "."
+            return citation
+        
+        # Default format if source type is not recognized
+        return f"{self.authors}. \"{self.title}.\" {self.publication_date}."
+        
+    def generate_chicago_citation(self):
+        """Generate Chicago style citation"""
+        if self.source_type == 'journal':
+            author_list = self.format_authors_chicago()
+            citation = f"{author_list}. \"{self.title}.\" "
+            if self.journal_name:
+                citation += f"<em>{self.journal_name}</em>"
+                if self.volume:
+                    citation += f" {self.volume}"
+                    if self.issue:
+                        citation += f", no. {self.issue}"
+                if self.publication_date:
+                    citation += f" ({self.publication_date})"
+                if self.pages:
+                    citation += f": {self.pages}"
+            citation += "."
+            if self.doi:
+                citation += f" https://doi.org/{self.doi}."
+            elif self.url:
+                citation += f" {self.url}."
+            return citation
+            
+        elif self.source_type == 'book':
+            author_list = self.format_authors_chicago()
+            citation = f"{author_list}. <em>{self.title}</em>. "
+            if self.publisher:
+                citation += f"{self.publisher}"
+                if self.publication_date:
+                    citation += f", {self.publication_date}"
+            citation += "."
+            return citation
+            
+        elif self.source_type == 'website':
+            author_list = self.format_authors_chicago()
+            citation = f"{author_list}. \"{self.title}.\" "
+            if self.publication_date:
+                citation += f"{self.publication_date}. "
+            if self.url:
+                citation += f"{self.url}"
+                if self.access_date:
+                    citation += f" (accessed {self.access_date})"
+            citation += "."
+            return citation
+        
+        # Default format if source type is not recognized
+        return f"{self.authors}. \"{self.title}.\" {self.publication_date}."
+        
+    def format_authors_apa(self):
+        """Format author names for APA style"""
+        if not self.authors:
+            return ""
+            
+        author_list = self.authors.split(";")
+        if len(author_list) == 1:
+            # Single author: Last, F. M.
+            return self._format_author_apa(author_list[0])
+        elif len(author_list) == 2:
+            # Two authors: Last, F. M., & Last, F. M.
+            return f"{self._format_author_apa(author_list[0])}, & {self._format_author_apa(author_list[1])}"
+        else:
+            # Multiple authors: Last, F. M., Last, F. M., & Last, F. M.
+            formatted_authors = ", ".join([self._format_author_apa(a) for a in author_list[:-1]])
+            return f"{formatted_authors}, & {self._format_author_apa(author_list[-1])}"
+            
+    def _format_author_apa(self, author):
+        """Helper to format a single author name for APA"""
+        parts = author.strip().split()
+        if len(parts) == 1:
+            return parts[0]
+        elif len(parts) == 2:
+            last_name, first_name = parts[1], parts[0]
+            return f"{last_name}, {first_name[0]}."
+        else:
+            # Assume first name, middle name, last name format
+            first_name, middle_name, last_name = parts[0], parts[1], parts[2]
+            return f"{last_name}, {first_name[0]}. {middle_name[0]}."
+            
+    def format_authors_mla(self):
+        """Format author names for MLA style"""
+        if not self.authors:
+            return ""
+            
+        author_list = self.authors.split(";")
+        if len(author_list) == 1:
+            # Single author: Last, First
+            return self._format_author_mla(author_list[0])
+        elif len(author_list) == 2:
+            # Two authors: Last, First, and First Last
+            first_author = self._format_author_mla(author_list[0])
+            parts = author_list[1].strip().split()
+            if len(parts) == 1:
+                second_author = parts[0]
+            else:
+                first_name = parts[0]
+                last_name = " ".join(parts[1:])
+                second_author = f"{first_name} {last_name}"
+            return f"{first_author}, and {second_author}"
+        else:
+            # More than two authors: Last, First, et al.
+            return f"{self._format_author_mla(author_list[0])}, et al."
+            
+    def _format_author_mla(self, author):
+        """Helper to format a single author name for MLA"""
+        parts = author.strip().split()
+        if len(parts) == 1:
+            return parts[0]
+        elif len(parts) == 2:
+            first_name, last_name = parts[0], parts[1]
+            return f"{last_name}, {first_name}"
+        else:
+            # Assume first name, middle name, last name format
+            first_name, middle_name, last_name = parts[0], parts[1], parts[2]
+            return f"{last_name}, {first_name} {middle_name}"
+            
+    def format_authors_chicago(self):
+        """Format author names for Chicago style"""
+        if not self.authors:
+            return ""
+            
+        author_list = self.authors.split(";")
+        if len(author_list) == 1:
+            # Single author: Last, First
+            return self._format_author_chicago(author_list[0])
+        elif len(author_list) <= 3:
+            # Up to three authors: Last, First, First Last, and First Last
+            formatted_authors = self._format_author_chicago(author_list[0])
+            for i in range(1, len(author_list)-1):
+                formatted_authors += f", {self._format_author_name_chicago(author_list[i])}"
+            formatted_authors += f", and {self._format_author_name_chicago(author_list[-1])}"
+            return formatted_authors
+        else:
+            # More than three authors: First author et al.
+            return f"{self._format_author_chicago(author_list[0])} et al."
+            
+    def _format_author_chicago(self, author):
+        """Helper to format first author name for Chicago"""
+        parts = author.strip().split()
+        if len(parts) == 1:
+            return parts[0]
+        elif len(parts) == 2:
+            first_name, last_name = parts[0], parts[1]
+            return f"{last_name}, {first_name}"
+        else:
+            # Assume first name, middle name, last name format
+            first_name, middle_name, last_name = parts[0], parts[1], parts[2]
+            return f"{last_name}, {first_name} {middle_name}"
+            
+    def _format_author_name_chicago(self, author):
+        """Helper to format non-first author name for Chicago"""
+        parts = author.strip().split()
+        if len(parts) == 1:
+            return parts[0]
+        elif len(parts) == 2:
+            first_name, last_name = parts[0], parts[1]
+            return f"{first_name} {last_name}"
+        else:
+            # Assume first name, middle name, last name format
+            first_name, middle_name, last_name = parts[0], parts[1], parts[2]
+            return f"{first_name} {middle_name} {last_name}"
+            
+    def get_formatted_citation(self):
+        """Return the citation formatted according to the selected style"""
+        if self.citation_style == "APA":
+            return self.generate_apa_citation()
+        elif self.citation_style == "MLA":
+            return self.generate_mla_citation()
+        elif self.citation_style == "Chicago":
+            return self.generate_chicago_citation()
+        else:
+            # Default to APA if style not recognized
+            return self.generate_apa_citation()
+            
+    def __repr__(self):
+        return f"<Citation {self.id}: {self.title}>"
