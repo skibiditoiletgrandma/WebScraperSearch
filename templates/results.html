@@ -1,0 +1,99 @@
+{% extends "layout.html" %}
+
+{% block title %}Search Results for "{{ query }}" - Google Search Scraper{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Search Results for "{{ query }}"</h2>
+    <p class="text-muted">Found {{ results|length }} results</p>
+    
+    <form action="{{ url_for('search') }}" method="POST" class="mb-4">
+        <div class="input-group">
+            <input 
+                type="text" 
+                name="query" 
+                class="form-control" 
+                value="{{ query }}"
+                placeholder="Enter a new search query..."
+                required
+            >
+            <button class="btn btn-primary" type="submit">
+                <i class="fas fa-search me-1"></i> Search
+            </button>
+        </div>
+    </form>
+    
+    <a href="{{ url_for('index') }}" class="btn btn-secondary mb-4">
+        <i class="fas fa-arrow-left me-1"></i> Back to Home
+    </a>
+</div>
+
+{% if results %}
+    <div class="results-container">
+        {% for result in results %}
+        <div class="card mb-4 shadow-sm result-card">
+            <div class="card-body">
+                <h3 class="card-title h5">
+                    <a href="{{ result.link }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                        {{ result.title }}
+                        <i class="fas fa-external-link-alt ms-1 small"></i>
+                    </a>
+                </h3>
+                <p class="text-muted small mb-2">{{ result.link }}</p>
+                
+                <div class="mb-3">
+                    <p class="card-text text-muted">{{ result.description }}</p>
+                </div>
+                
+                <div class="card bg-dark bg-opacity-25 p-3 mb-3">
+                    <h4 class="h6 mb-2">
+                        <i class="fas fa-file-alt me-2"></i>
+                        Website Summary
+                    </h4>
+                    <div class="summary-content">
+                        {% if result.summary %}
+                            <p>{{ result.summary }}</p>
+                        {% else %}
+                            <p class="text-muted fst-italic">No summary available for this website.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <a href="{{ result.link }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-eye me-1"></i> Visit Website
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        No search results were found for your query. Please try a different search term.
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Add any specific JavaScript for the results page here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Highlight the search terms in the summaries
+        const query = "{{ query }}";
+        const terms = query.split(' ').filter(term => term.length > 3);
+        
+        const summaries = document.querySelectorAll('.summary-content p');
+        
+        summaries.forEach(summary => {
+            let html = summary.innerHTML;
+            terms.forEach(term => {
+                const regex = new RegExp('(' + term + ')', 'gi');
+                html = html.replace(regex, '<span class="highlight">$1</span>');
+            });
+            summary.innerHTML = html;
+        });
+    });
+</script>
+{% endblock %}
