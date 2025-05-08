@@ -22,9 +22,15 @@ class User(UserMixin, db.Model):
     last_login = Column(DateTime)
     search_count_today = Column(Integer, default=0)  # Number of searches used today
     search_count_reset_date = Column(DateTime, default=datetime.utcnow)  # When the daily search count was last reset
+    # General settings
     search_pages_limit = Column(Integer, default=1)  # Number of Google search pages to fetch
     hide_wikipedia = Column(Boolean, default=False)  # Option to hide Wikipedia results
     show_feedback_features = Column(Boolean, default=True)  # Option to show feedback/rating features
+    
+    # Summary settings
+    generate_summaries = Column(Boolean, default=True)  # Option to enable/disable summary generation
+    summary_depth = Column(Integer, default=3)  # Depth of summary (1-5 scale)
+    summary_complexity = Column(Integer, default=3)  # Complexity of summary (1-5 scale)
     
     def __init__(self, **kwargs):
         # Set default values for search count fields to ensure they're never None

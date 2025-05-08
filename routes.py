@@ -661,9 +661,15 @@ def settings():
     # Pre-populate form with current settings
     if request.method == 'GET':
         # Ensure there are default values if fields are None
+        # General settings
         form.search_pages_limit.data = current_user.search_pages_limit if current_user.search_pages_limit is not None else 1
         form.hide_wikipedia.data = current_user.hide_wikipedia if current_user.hide_wikipedia is not None else False
         form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
+        
+        # Summary settings
+        form.generate_summaries.data = current_user.generate_summaries if current_user.generate_summaries is not None else True
+        form.summary_depth.data = current_user.summary_depth if current_user.summary_depth is not None else 3
+        form.summary_complexity.data = current_user.summary_complexity if current_user.summary_complexity is not None else 3
     
     return render_template('settings.html', form=form)
 

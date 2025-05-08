@@ -85,6 +85,7 @@ class CitationForm(FlaskForm):
     
 class SettingsForm(FlaskForm):
     """Form for user settings"""
+    # General settings
     search_pages_limit = IntegerField('Google Search Pages Limit', validators=[
         DataRequired(),
         NumberRange(min=1, max=10, message='Please select a value between 1 and 10 pages.')
@@ -95,5 +96,17 @@ class SettingsForm(FlaskForm):
     
     show_feedback_features = BooleanField('Show Feedback/Rating Features', 
         description='When enabled, feedback and rating options will be shown for search results')
+    
+    # Summary settings
+    generate_summaries = BooleanField('Generate Summaries', 
+        description='When enabled, AI-powered summaries will be generated for search results')
+    
+    summary_depth = IntegerField('Summary Depth', validators=[
+        NumberRange(min=1, max=5, message='Please select a value between 1 and 5.')
+    ], description='Depth of generated summaries (1-5 scale, where 5 is most detailed)')
+    
+    summary_complexity = IntegerField('Summary Complexity', validators=[
+        NumberRange(min=1, max=5, message='Please select a value between 1 and 5.')
+    ], description='Complexity level of generated summaries (1-5 scale, where 5 is most complex)')
     
     submit = SubmitField('Save Settings')
