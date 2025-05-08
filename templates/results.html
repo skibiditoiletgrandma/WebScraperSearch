@@ -89,7 +89,7 @@
                                         </div>
                                     </div>
                                     
-                                    <div id="feedback-details-{{ result.id }}" class="feedback-details mt-3" style="display: none;">
+                                    <div id="feedback-details-{{ result.id }}" class="feedback-details mt-3">
                                         <div class="row mb-3">
                                             <div class="col-md-4">
                                                 <div class="form-check">
@@ -172,6 +172,11 @@
             summary.innerHTML = html;
         });
         
+        // Initialize - hide all feedback details sections
+        document.querySelectorAll('.feedback-details').forEach(el => {
+            el.style.display = 'none';
+        });
+        
         // Show feedback details when a rating is selected
         const ratingInputs = document.querySelectorAll('input[name="rating"]');
         ratingInputs.forEach(input => {
@@ -181,10 +186,9 @@
                 // Show the feedback details container
                 const detailsContainer = document.getElementById(`feedback-details-${resultId}`);
                 if (detailsContainer) {
-                    // Fade in effect with smooth transition
                     detailsContainer.style.display = 'block';
                     
-                    // Set a slightly different border-color based on the rating
+                    // Simple color coding based on rating
                     const rating = parseInt(this.value);
                     const colors = ['#dc3545', '#fd7e14', '#6c757d', '#0d6efd', '#198754'];
                     if (rating >= 1 && rating <= 5) {
