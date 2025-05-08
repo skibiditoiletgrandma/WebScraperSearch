@@ -18,8 +18,27 @@
 }
 
 /* Theme-specific styling for result cards */
+[data-bs-theme="light"] .result-card {
+    background-color: #fff;
+    border-color: rgba(0, 0, 0, 0.125);
+}
+
 [data-bs-theme="light"] .result-card:hover {
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-bs-theme="light"] .card {
+    background-color: #fff;
+    border-color: rgba(0, 0, 0, 0.125);
+}
+
+[data-bs-theme="light"] .card-header {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.125);
+}
+
+[data-bs-theme="light"] .card-header.bg-primary {
+    background-color: var(--bs-primary) !important;
 }
 
 /* Improve spacing and readability */
@@ -160,7 +179,9 @@ body {
 }
 
 [data-bs-theme="light"] header .text-light,
-[data-bs-theme="light"] header .header-title {
+[data-bs-theme="light"] header .header-title,
+[data-bs-theme="light"] footer .text-light,
+[data-bs-theme="light"] footer .footer-title {
     color: #212529 !important;
 }
 
