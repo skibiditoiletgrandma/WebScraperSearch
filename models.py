@@ -147,10 +147,20 @@ class SearchResult(db.Model):
     
     def increment_share_count(self, username=None):
         """Increment the share count and update last_shared timestamp"""
-        current_count = 0
-        if self.share_count is not None:
-            current_count = self.share_count
+        # Ensure we have a valid share count
+        if self.share_count is None:
+            self.share_count = 0
+            
+        # Convert to integer safely
+        try:
+            current_count = int(self.share_count)
+        except (ValueError, TypeError):
+            current_count = 0
+            
+        # Increment the counter
         self.share_count = current_count + 1
+        
+        # Update timestamp and username
         self.last_shared = datetime.utcnow()
         if username:
             self.shared_by = username
@@ -202,8 +212,20 @@ class AnonymousSearchLimit(db.Model):
         
     def increment_search_count(self):
         """Increment the search count for this anonymous session"""
-        self.search_count += 1
+        # Ensure we have valid search count
+        if self.search_count is None:
+            self.search_count = 0
+            
+        # Increment counter
+        try:
+            self.search_count = int(self.search_count) + 1
+        except (ValueError, TypeError):
+            # If there was a conversion error, reset counter to 1
+            self.search_count = 1
+            
+        # Update last search date
         self.last_search_date = datetime.utcnow()
+        
         return self.search_count
         
     def check_search_limit(self):

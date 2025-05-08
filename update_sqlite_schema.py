@@ -47,6 +47,35 @@ def update_sqlite_schema():
             cursor.execute("ALTER TABLE users ADD COLUMN search_count_reset_date TIMESTAMP")
         else:
             print("search_count_reset_date column already exists")
+            
+        # Check if the citations table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='citations'")
+        if not cursor.fetchone():
+            print("Creating citations table")
+            cursor.execute("""
+                CREATE TABLE citations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title VARCHAR(255) NOT NULL,
+                    authors VARCHAR(512) NOT NULL,
+                    source_type VARCHAR(50) NOT NULL,
+                    citation_style VARCHAR(20) NOT NULL,
+                    publisher VARCHAR(255),
+                    publication_date VARCHAR(50),
+                    journal_name VARCHAR(255),
+                    volume VARCHAR(50),
+                    issue VARCHAR(50),
+                    pages VARCHAR(50),
+                    url VARCHAR(1024),
+                    access_date VARCHAR(50),
+                    doi VARCHAR(100),
+                    user_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """)
+            print("Citations table created successfully")
+        else:
+            print("Citations table already exists")
         
         # Commit the changes
         conn.commit()
@@ -55,8 +84,12 @@ def update_sqlite_schema():
         
     except Exception as e:
         print(f"Error updating SQLite database: {str(e)}")
-        if 'conn' in locals() and conn:
-            conn.close()
+        # Close the connection if it's been opened
+        if 'conn' in locals():
+            try:
+                conn.close()
+            except:
+                pass
 
 if __name__ == '__main__':
     update_sqlite_schema()
