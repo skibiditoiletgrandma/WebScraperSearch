@@ -1,0 +1,82 @@
+/* Custom styles for Google Search Scraper */
+
+/* Highlight search terms in summaries */
+.highlight {
+    background-color: rgba(var(--bs-primary-rgb), 0.2);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Result card hover effect */
+.result-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.result-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Improve spacing and readability */
+.summary-content {
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bs-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bs-secondary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-primary);
+}
+
+/* Loading animation */
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.loading {
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+/* Add some padding to the body */
+body {
+    padding-bottom: 2rem;
+}
+
+/* Make sure images don't overflow */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Improve form controls */
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Better spacing for mobile */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+}

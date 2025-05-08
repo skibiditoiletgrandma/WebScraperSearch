@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+
+{% block title %}Google Search Scraper - Search and Summarize{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="text-center mb-4">Search and Summarize Websites</h2>
+                <p class="text-center text-muted mb-4">
+                    Enter a search query below to scrape Google results and get summaries of the top websites.
+                </p>
+
+                <form action="{{ url_for('search') }}" method="POST" id="search-form">
+                    <div class="input-group mb-3">
+                        <input 
+                            type="text" 
+                            name="query" 
+                            id="search-query" 
+                            class="form-control form-control-lg" 
+                            placeholder="Enter your search query..."
+                            required
+                            autofocus
+                        >
+                        <button class="btn btn-primary" type="submit" id="search-button">
+                            <i class="fas fa-search me-2"></i> Search
+                        </button>
+                    </div>
+                </form>
+
+                {% if error %}
+                <div class="alert alert-danger mt-3">
+                    {{ error }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mt-4 shadow">
+            <div class="card-body p-4">
+                <h3 class="h5 mb-3">How it works</h3>
+                <div class="d-flex mb-3">
+                    <div class="text-primary me-3">
+                        <i class="fas fa-search fa-2x"></i>
+                    </div>
+                    <div>
+                        <h4 class="h6 mb-1">Search Google</h4>
+                        <p class="text-muted small mb-0">Enter your query to search Google</p>
+                    </div>
+                </div>
+                <div class="d-flex mb-3">
+                    <div class="text-primary me-3">
+                        <i class="fas fa-globe fa-2x"></i>
+                    </div>
+                    <div>
+                        <h4 class="h6 mb-1">Scrape Websites</h4>
+                        <p class="text-muted small mb-0">The app scrapes results from the first page</p>
+                    </div>
+                </div>
+                <div class="d-flex">
+                    <div class="text-primary me-3">
+                        <i class="fas fa-file-alt fa-2x"></i>
+                    </div>
+                    <div>
+                        <h4 class="h6 mb-1">Generate Summaries</h4>
+                        <p class="text-muted small mb-0">Get concise summaries for each website</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
