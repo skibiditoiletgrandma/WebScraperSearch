@@ -59,14 +59,15 @@ else:
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
 
-# Initialize database tables in app context if database URL is set
-if database_url:
-    try:
-        with app.app_context():
-            from models import SearchQuery, SearchResult, SummaryFeedback, User
-            db.create_all()
-            app.logger.info("Database tables initialized successfully")
-    except Exception as e:
-        app.logger.error(f"Error initializing database tables: {str(e)}")
-else:
-    app.logger.warning("DATABASE_URL not set - database features will not be available")
+# Initialize database tables in app context
+try:
+    with app.app_context():
+        from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit
+        db.create_all()
+        app.logger.info("Database tables initialized successfully")
+except Exception as e:
+    app.logger.error(f"Error initializing database tables: {str(e)}")
+    
+if not database_url:
+    app.logger.warning("No DATABASE_URL set. Database functionality will be limited.")
+    app.logger.warning("Please set DATABASE_URL to enable full functionality.")

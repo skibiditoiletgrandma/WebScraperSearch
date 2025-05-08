@@ -30,7 +30,30 @@ def index():
     """Route for the home page"""
     # Check if API key is available
     has_api_key = bool(os.environ.get("SERPAPI_API_KEY"))
-    return render_template("index.html", has_api_key=has_api_key)
+    
+    # Get remaining searches based on authentication status
+    remaining_searches = 0
+    
+    if current_user.is_authenticated:
+        # For logged-in users: Daily limit of 15 searches
+        remaining_searches = current_user.remaining_searches()
+    else:
+        # For anonymous users: Total limit of 3 searches
+        # Get the anonymous session ID
+        if 'anon_id' in session:
+            session_id = session['anon_id']
+            # Check for existing search limit record
+            anon_limit = AnonymousSearchLimit.query.filter_by(session_id=session_id).first()
+            if anon_limit:
+                remaining_searches = anon_limit.remaining_searches()
+            else:
+                # No searches used yet
+                remaining_searches = 3
+        else:
+            # New anonymous session
+            remaining_searches = 3
+    
+    return render_template("index.html", has_api_key=has_api_key, remaining_searches=remaining_searches)
 
 @app.route("/search", methods=["POST"])
 def search():
