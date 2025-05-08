@@ -130,8 +130,11 @@ def search():
             db.session.rollback()
     
     try:
+        # Check if research mode is enabled
+        research_mode = bool(request.form.get('research_mode'))
+        
         # Get search results from Google using SerpAPI
-        search_results = search_google(query)
+        search_results = search_google(query, research_mode=research_mode)
         
         if not search_results:
             flash("No search results found", "info")
@@ -220,7 +223,10 @@ def search():
         # Log the total number of processed results
         logging.info(f"Processed {len(processed_results)} results out of {len(search_results)} search results")
         
-        return render_template("results.html", query=query, results=processed_results)
+        return render_template("results.html", 
+                              query=query, 
+                              results=processed_results,
+                              research_mode=research_mode)
     
     except Exception as e:
         error_details = traceback.format_exc()
