@@ -618,8 +618,11 @@ def settings():
     # When form is submitted
     if form.validate_on_submit():
         try:
-            # Update the user's search pages limit
+            # Update the user's settings
             current_user.search_pages_limit = form.search_pages_limit.data
+            current_user.hide_wikipedia = form.hide_wikipedia.data
+            current_user.show_feedback_features = form.show_feedback_features.data
+            
             db.session.commit()
             flash("Settings updated successfully", "success")
             return redirect(url_for('index'))
@@ -629,8 +632,10 @@ def settings():
     
     # Pre-populate form with current settings
     if request.method == 'GET':
-        # Ensure there's a default value if the field is None
+        # Ensure there are default values if fields are None
         form.search_pages_limit.data = current_user.search_pages_limit if current_user.search_pages_limit is not None else 1
+        form.hide_wikipedia.data = current_user.hide_wikipedia if current_user.hide_wikipedia is not None else False
+        form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else True
     
     return render_template('settings.html', form=form)
 

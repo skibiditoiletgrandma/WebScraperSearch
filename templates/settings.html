@@ -27,6 +27,28 @@
                             {% endif %}
                         </div>
                         
+                        <hr class="my-4">
+                        <h4 class="mb-3">Content Filtering</h4>
+                        
+                        <div class="form-check form-switch mb-3">
+                            {{ form.hide_wikipedia(class="form-check-input") }}
+                            {{ form.hide_wikipedia.label(class="form-check-label") }}
+                            <div>
+                                <small class="form-text text-muted">{{ form.hide_wikipedia.description }}</small>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        <h4 class="mb-3">User Interface</h4>
+                        
+                        <div class="form-check form-switch mb-3">
+                            {{ form.show_feedback_features(class="form-check-input") }}
+                            {{ form.show_feedback_features.label(class="form-check-label") }}
+                            <div>
+                                <small class="form-text text-muted">{{ form.show_feedback_features.description }}</small>
+                            </div>
+                        </div>
+                        
                         <div class="form-group mt-4">
                             {{ form.submit(class="btn btn-primary") }}
                             <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
