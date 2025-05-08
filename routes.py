@@ -478,11 +478,11 @@ def login():
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
         
-        # Log in the user
-        login_user(user, remember=form.remember_me.data)
+        # Log in the user with remember=True to ensure persistence across updates
+        login_user(user, remember=True)
         
-        # Update last login time
-        user.last_login = datetime.utcnow()
+        # Update last login time using query to avoid type errors
+        db.session.query(User).filter_by(id=user.id).update({"last_login": datetime.utcnow()})
         db.session.commit()
         
         # Redirect to requested page or index
@@ -509,8 +509,15 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        flash('Registration successful! You can now log in.', 'success')
-        return redirect(url_for('login'))
+        # Automatically log in the user after registration with remember=True
+        login_user(user, remember=True)
+        
+        # Update last login time using query to avoid type errors
+        db.session.query(User).filter_by(id=user.id).update({"last_login": datetime.utcnow()})
+        db.session.commit()
+        
+        flash('Registration successful! You are now logged in.', 'success')
+        return redirect(url_for('index'))
     
     return render_template('register.html', form=form)
 
