@@ -23,10 +23,6 @@
                     </h1>
                 </a>
                 <div class="d-flex align-items-center">
-                    <a href="{{ url_for('history') }}" class="btn btn-outline-light btn-sm me-2">
-                        <i class="fas fa-history me-md-1"></i>
-                        <span class="d-none d-md-inline">History</span>
-                    </a>
                     <a href="{{ url_for('citations') }}" class="btn btn-outline-light btn-sm me-2">
                         <i class="fas fa-quote-left me-md-1"></i>
                         <span class="d-none d-md-inline">Citations</span>
@@ -51,11 +47,16 @@
                             <li><span class="dropdown-item-text text-primary"><i class="fas fa-shield-alt me-2"></i>Admin</span></li>
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('history') }}"><i class="fas fa-history me-2"></i>History</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                         </ul>
                     </div>
                     {% else %}
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-light btn-sm me-2">
+                        <i class="fas fa-history me-md-1"></i>
+                        <span class="d-none d-md-inline">History</span>
+                    </a>
                     <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm me-2">
                         <i class="fas fa-sign-in-alt me-md-1"></i>
                         <span class="d-none d-md-inline">Login</span>
