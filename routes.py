@@ -146,6 +146,9 @@ def search():
         summary_depth = 3
         summary_complexity = 3
         
+        # Suggestions feature default for anonymous users
+        enable_suggestions = True
+        
         if current_user.is_authenticated:
             # For logged-in users, use their preferences
             num_pages = current_user.search_pages_limit or 1
@@ -156,6 +159,9 @@ def search():
             generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
             summary_depth = current_user.summary_depth if current_user.summary_depth is not None else 3
             summary_complexity = current_user.summary_complexity if current_user.summary_complexity is not None else 3
+            
+            # Suggestions setting for logged-in users
+            enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
         
         # Get search results from Google using SerpAPI
         search_results = search_google(
@@ -276,7 +282,8 @@ def search():
                               research_mode=research_mode,
                               show_feedback=not show_feedback,
                               wikipedia_popup=has_wikipedia_results,
-                              generate_summaries=generate_summaries)
+                              generate_summaries=generate_summaries,
+                              enable_suggestions=enable_suggestions)
     
     except Exception as e:
         error_details = traceback.format_exc()
@@ -331,10 +338,12 @@ def view_search(search_id):
         # Determine user preferences based on authentication status
         show_feedback = True
         generate_summaries = True
+        enable_suggestions = True
         
         if current_user.is_authenticated:
             show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
             generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
+            enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
             
         return render_template("results.html", 
                               query=search.query_text, 
@@ -696,6 +705,7 @@ def settings():
             current_user.search_pages_limit = form.search_pages_limit.data
             current_user.hide_wikipedia = form.hide_wikipedia.data
             current_user.show_feedback_features = form.show_feedback_features.data
+            current_user.enable_suggestions = form.enable_suggestions.data
             
             # Update summary settings
             current_user.generate_summaries = form.generate_summaries.data
@@ -716,6 +726,7 @@ def settings():
         form.search_pages_limit.data = current_user.search_pages_limit if current_user.search_pages_limit is not None else 1
         form.hide_wikipedia.data = current_user.hide_wikipedia if current_user.hide_wikipedia is not None else False
         form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
+        form.enable_suggestions.data = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
         
         # Summary settings
         form.generate_summaries.data = current_user.generate_summaries if current_user.generate_summaries is not None else True
