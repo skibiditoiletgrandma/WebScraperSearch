@@ -24,6 +24,11 @@ class User(UserMixin, db.Model):
     search_count_reset_date = Column(DateTime, default=datetime.utcnow)  # When the daily search count was last reset
     
     def __init__(self, **kwargs):
+        # Set default values for search count fields to ensure they're never None
+        self.search_count_today = 0
+        self.search_count_reset_date = datetime.utcnow()
+        
+        # Set other attributes from kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
     
@@ -38,38 +43,62 @@ class User(UserMixin, db.Model):
         
     def check_search_limit(self):
         """Check if user has reached their daily search limit"""
+        # Ensure we have valid values for the search count fields
+        if self.search_count_today is None:
+            self.search_count_today = 0
+            
+        if self.search_count_reset_date is None:
+            self.search_count_reset_date = datetime.utcnow()
+            
         # Check if we need to reset the daily counter (new day)
-        if self.search_count_reset_date is None or (datetime.utcnow().date() > self.search_count_reset_date.date()):
+        current_date = datetime.utcnow().date()
+        reset_date = self.search_count_reset_date.date() if self.search_count_reset_date else current_date
+        
+        if current_date > reset_date:
             # It's a new day, reset the counter
             self.search_count_today = 0
             self.search_count_reset_date = datetime.utcnow()
             return True  # User can search
         
+        # Convert to int to be safe
+        search_count = int(self.search_count_today) if self.search_count_today is not None else 0
+        
         # Return True if user has searches remaining, False if limit reached
-        return self.search_count_today < 15  # Daily limit is 15 searches
+        return search_count < 15  # Daily limit is 15 searches
     
     def increment_search_count(self):
         """Increment the user's search count for today"""
         # First make sure the daily counter is current
         self.check_search_limit()
+        
+        # Ensure we have a valid search count
+        if self.search_count_today is None:
+            self.search_count_today = 0
+            
         # Increment counter
-        self.search_count_today += 1
+        try:
+            self.search_count_today = int(self.search_count_today) + 1
+        except (ValueError, TypeError):
+            # If there was a conversion error, reset counter to 1
+            self.search_count_today = 1
+            
         return self.search_count_today
         
     def remaining_searches(self):
         """Return the number of searches remaining for the user today"""
-        self.check_search_limit()  # Make sure the counter is current
+        # This will ensure all fields are properly set and the counter is current
+        self.check_search_limit()
         
         # Get the current search count as a Python int
-        current_count = 0
-        if self.search_count_today is not None:
-            current_count = int(self.search_count_today)
+        try:
+            current_count = int(self.search_count_today) if self.search_count_today is not None else 0
+        except (ValueError, TypeError):
+            # Handle any conversion errors by defaulting to 0
+            current_count = 0
             
         # Calculate remaining searches
         remaining = 15 - current_count
-        if remaining < 0:
-            return 0
-        return remaining
+        return max(0, remaining)  # Ensure we never return a negative number
 
 class SearchQuery(db.Model):
     """Model for storing search queries"""
@@ -179,26 +208,34 @@ class AnonymousSearchLimit(db.Model):
         
     def check_search_limit(self):
         """Check if anonymous user has reached their total search limit (3)"""
+        # Ensure we have valid search count
+        if self.search_count is None:
+            self.search_count = 0
+            
         # Get the current count as a Python int
-        current_count = 0
-        if self.search_count is not None:
+        try:
             current_count = int(self.search_count)
+        except (ValueError, TypeError):
+            current_count = 0
         
         # Anonymous users have a lifetime limit of 3 searches
         return current_count < 3
         
     def remaining_searches(self):
         """Return the number of searches remaining for anonymous users"""
+        # Ensure we have valid search count
+        if self.search_count is None:
+            self.search_count = 0
+            
         # Get the current count as a Python int
-        current_count = 0
-        if self.search_count is not None:
+        try:
             current_count = int(self.search_count)
+        except (ValueError, TypeError):
+            current_count = 0
             
         # Calculate remaining searches
         remaining = 3 - current_count
-        if remaining < 0:
-            return 0
-        return remaining
+        return max(0, remaining)  # Ensure we never return a negative number
 
 
 class Citation(db.Model):

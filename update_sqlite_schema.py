@@ -44,7 +44,7 @@ def update_sqlite_schema():
         
         if 'search_count_reset_date' not in columns:
             print("Adding search_count_reset_date column to users table")
-            cursor.execute("ALTER TABLE users ADD COLUMN search_count_reset_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            cursor.execute("ALTER TABLE users ADD COLUMN search_count_reset_date TIMESTAMP")
         else:
             print("search_count_reset_date column already exists")
         
