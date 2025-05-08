@@ -2,8 +2,9 @@ import logging
 import traceback
 import time
 import os
-from datetime import datetime
-from flask import render_template, request, jsonify, flash, redirect, url_for, current_app
+import uuid
+from datetime import datetime, timedelta
+from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError  # For error handling
 from flask_login import login_user, logout_user, current_user, login_required
 from functools import wraps
@@ -11,7 +12,7 @@ from app import app, db
 from scraper import search_google, scrape_website
 from summarizer import summarize_text
 from suggestions import get_suggestions_for_ui
-from models import SearchQuery, SearchResult, SummaryFeedback, User
+from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit
 from forms import LoginForm, RegistrationForm
 
 # Admin required decorator
@@ -44,6 +45,66 @@ def search():
     if not os.environ.get("SERPAPI_API_KEY"):
         flash("Search API key is not configured. Please contact the administrator.", "danger")
         return redirect(url_for("index"))
+        
+    # Check search limits based on authentication status
+    if current_user.is_authenticated:
+        # For logged-in users: Check daily search limit (15 searches per day)
+        if not current_user.check_search_limit():
+            flash("You have reached your daily search limit of 15 searches. Please try again tomorrow.", "warning")
+            return redirect(url_for("index"))
+        # Increment the user's search count if they are under the limit
+        current_user.increment_search_count()
+        
+        # Display remaining searches for the user
+        remaining = current_user.remaining_searches()
+        flash(f"You have {remaining} searches remaining today.", "info")
+        
+    else:
+        # For anonymous users: Check lifetime search limit (3 searches)
+        # Make sure we have a unique identifier in the session
+        if 'anon_id' not in session:
+            # Create a unique ID for this anonymous user's session
+            session.permanent = True  # Make the session persistent
+            app.permanent_session_lifetime = timedelta(days=365)  # Session lasts for 1 year
+            session['anon_id'] = str(uuid.uuid4())
+            
+        # Use our unique session ID as the identifier
+        session_id = session['anon_id']
+            
+        # Get or create an anonymous search limit record
+        anon_limit = AnonymousSearchLimit.query.filter_by(session_id=session_id).first()
+        
+        if not anon_limit:
+            # Create new record if none exists
+            anon_limit = AnonymousSearchLimit(
+                session_id=session_id,
+                ip_address=request.remote_addr,
+                search_count=0
+            )
+            try:
+                db.session.add(anon_limit)
+                db.session.commit()
+            except Exception as e:
+                logging.error(f"Error creating anonymous search limit record: {str(e)}")
+                db.session.rollback()
+        
+        # Check if anonymous user has reached their search limit
+        if not anon_limit.check_search_limit():
+            flash("You have used all 3 of your anonymous searches. Please register for a free account to get 15 searches per day.", "warning")
+            return redirect(url_for("index"))
+            
+        # Increment the anonymous user's search count
+        anon_limit.increment_search_count()
+        
+        # Display remaining searches for the anonymous user
+        remaining = anon_limit.remaining_searches()
+        flash(f"You have {remaining} anonymous searches remaining. Register for a free account to get 15 searches per day.", "info")
+        
+        try:
+            db.session.commit()
+        except Exception as e:
+            logging.error(f"Error updating anonymous search limit: {str(e)}")
+            db.session.rollback()
     
     try:
         # Get search results from Google using SerpAPI
