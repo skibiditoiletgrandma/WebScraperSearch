@@ -6,6 +6,8 @@ import logging
 import trafilatura
 import random
 import time
+import os
+from serpapi import GoogleSearch
 
 # List of user agents to rotate for requests to avoid being blocked
 USER_AGENTS = [
@@ -22,7 +24,7 @@ def get_random_user_agent():
 
 def search_google(query, num_results=10):
     """
-    Scrape Google search results for the given query
+    Use SerpAPI to retrieve Google search results for the given query
     
     Args:
         query (str): The search query
@@ -31,51 +33,41 @@ def search_google(query, num_results=10):
     Returns:
         list: List of dictionaries containing search result data
     """
-    # Prepare the Google search URL
-    search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}&num={num_results}"
-    
-    headers = {
-        "User-Agent": get_random_user_agent(),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Referer": "https://www.google.com/",
-        "DNT": "1",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-    }
-    
     try:
-        # Send the request to Google
-        response = requests.get(search_url, headers=headers, timeout=10)
-        response.raise_for_status()
+        api_key = os.environ.get("SERPAPI_API_KEY")
+        if not api_key:
+            logging.error("SERPAPI_API_KEY environment variable not set")
+            raise Exception("API key for search service not configured")
         
-        # Parse the HTML response
-        soup = BeautifulSoup(response.text, 'html.parser')
+        logging.info(f"Searching for: {query}")
+        # Set up the search parameters
+        params = {
+            "engine": "google",
+            "q": query,
+            "api_key": api_key,
+            "num": num_results
+        }
         
-        # Find search result elements
+        # Execute the search
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        
+        if "error" in results:
+            logging.error(f"SerpAPI error: {results['error']}")
+            raise Exception(f"Search API error: {results['error']}")
+        
+        # Process the organic search results
         search_results = []
-        for div in soup.find_all('div', class_='g'):
-            # Extract link, title and description
-            link_element = div.find('a')
-            title_element = div.find('h3')
-            
-            if link_element and title_element:
-                link = link_element.get('href')
-                
-                # Clean the link (Google prepends links with /url?q=)
-                if link.startswith('/url?'):
-                    parsed_url = urlparse(link)
-                    link = parse_qs(parsed_url.query)['q'][0]
+        if "organic_results" in results:
+            for result in results["organic_results"]:
+                # Extract relevant data
+                title = result.get("title", "No title")
+                link = result.get("link", "")
+                description = result.get("snippet", "No description available")
                 
                 # Skip if not a valid link or from Google itself
                 if not link.startswith('http') or 'google.com' in link:
                     continue
-                
-                title = title_element.get_text()
-                
-                # Get the description if available
-                description_element = div.find('div', class_=['VwiC3b', 'yXK7lf', 'MUxGbd', 'yDYNvb', 'lyLwlc'])
-                description = description_element.get_text() if description_element else "No description available"
                 
                 search_results.append({
                     "title": title,
@@ -87,15 +79,12 @@ def search_google(query, num_results=10):
                 if len(search_results) >= num_results:
                     break
         
+        logging.info(f"Found {len(search_results)} search results")
         return search_results
     
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error making request to Google: {str(e)}")
-        raise Exception(f"Failed to retrieve search results: {str(e)}")
-    
     except Exception as e:
-        logging.error(f"Error scraping Google search results: {str(e)}")
-        raise Exception(f"Error processing search results: {str(e)}")
+        logging.error(f"Error retrieving search results: {str(e)}")
+        raise Exception(f"Failed to retrieve search results: {str(e)}")
 
 def scrape_website(url):
     """
@@ -117,8 +106,9 @@ def scrape_website(url):
     }
     
     try:
+        logging.info(f"Scraping website: {url}")
         # Use trafilatura to get the website content
-        downloaded = trafilatura.fetch_url(url, headers=headers)
+        downloaded = trafilatura.fetch_url(url)
         if not downloaded:
             logging.warning(f"Failed to download content from {url}")
             return "Could not retrieve content from this website."
@@ -127,6 +117,7 @@ def scrape_website(url):
         text = trafilatura.extract(downloaded)
         
         if not text or text.strip() == "":
+            logging.info(f"Trafilatura failed for {url}, using fallback method")
             # Fallback to manual extraction if trafilatura fails
             response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
@@ -144,6 +135,10 @@ def scrape_website(url):
             lines = (line.strip() for line in text.splitlines())
             chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
             text = '\n'.join(chunk for chunk in chunks if chunk)
+        
+        # Log the length of the extracted text
+        text_length = len(text)
+        logging.info(f"Extracted {text_length} characters from {url}")
         
         return text
     

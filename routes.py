@@ -5,11 +5,14 @@ from scraper import search_google, scrape_website
 from summarizer import summarize_text
 import traceback
 import time
+import os
 
 @app.route("/")
 def index():
     """Route for the home page"""
-    return render_template("index.html")
+    # Check if API key is available
+    has_api_key = bool(os.environ.get("SERPAPI_API_KEY"))
+    return render_template("index.html", has_api_key=has_api_key)
 
 @app.route("/search", methods=["POST"])
 def search():
@@ -20,8 +23,13 @@ def search():
         flash("Please enter a search query", "warning")
         return redirect(url_for("index"))
     
+    # Check if API key is available
+    if not os.environ.get("SERPAPI_API_KEY"):
+        flash("Search API key is not configured. Please contact the administrator.", "danger")
+        return redirect(url_for("index"))
+    
     try:
-        # Get search results from Google
+        # Get search results from Google using SerpAPI
         search_results = search_google(query)
         
         if not search_results:
@@ -32,6 +40,8 @@ def search():
         processed_results = []
         for result in search_results:
             try:
+                logging.info(f"Processing result: {result['link']}")
+                
                 # Extract text content from the website
                 content = scrape_website(result["link"])
                 
@@ -51,6 +61,9 @@ def search():
             except Exception as e:
                 logging.error(f"Error processing {result['link']}: {str(e)}")
                 continue
+        
+        # Log the total number of processed results
+        logging.info(f"Processed {len(processed_results)} results out of {len(search_results)} search results")
         
         return render_template("results.html", query=query, results=processed_results)
     
