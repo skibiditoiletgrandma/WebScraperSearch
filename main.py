@@ -13,6 +13,14 @@ database_url = os.environ.get("DATABASE_URL")
 if not database_url:
     app.logger.warning("No DATABASE_URL set. Database functionality will be limited.")
     app.logger.warning("Please set DATABASE_URL to enable full functionality.")
+    # Initialize database tables for SQLite anyway
+    try:
+        with app.app_context():
+            from models import SearchQuery, SearchResult, SummaryFeedback, User
+            db.create_all()
+            app.logger.info("SQLite database tables initialized successfully")
+    except Exception as e:
+        app.logger.error(f"Error initializing SQLite database tables: {str(e)}")
 
 if __name__ == "__main__":
     # Run the Flask app on port 5000 and bind to all interfaces

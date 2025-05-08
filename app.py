@@ -37,16 +37,27 @@ login_manager.login_message_category = 'info'
 database_url = os.environ.get("DATABASE_URL")
 app.logger.info(f"Database URL detected: {'Yes' if database_url else 'No'}")
 
-# Always set up SQLAlchemy configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,
-    "pool_pre_ping": True,
-}
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-# Initialize the app with the extension
-db.init_app(app)
+# Set up SQLAlchemy configuration
+if database_url:
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_recycle": 300,
+        "pool_pre_ping": True,
+    }
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    
+    # Initialize the app with the extension
+    db.init_app(app)
+else:
+    app.logger.error("DATABASE_URL is not set. Using SQLite for development only.")
+    # Use SQLite as a fallback for development
+    import os
+    instance_path = os.path.join(app.root_path, 'instance')
+    if not os.path.exists(instance_path):
+        os.makedirs(instance_path)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(instance_path, "dev.db")
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    db.init_app(app)
 
 # Initialize database tables in app context if database URL is set
 if database_url:

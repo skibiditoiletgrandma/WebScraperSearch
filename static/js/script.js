@@ -34,21 +34,39 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update button appearance
         if (theme === 'dark') {
-            darkIconElement.classList.remove('d-none');
-            lightIconElement.classList.add('d-none');
-            darkTextElement.classList.remove('d-none');
-            lightTextElement.classList.add('d-none');
+            // Show dark mode icons/text, hide light mode ones
+            if (darkIconElement) darkIconElement.classList.remove('d-none');
+            if (lightIconElement) lightIconElement.classList.add('d-none');
+            if (darkTextElement) darkTextElement.classList.remove('d-none');
+            if (lightTextElement) lightTextElement.classList.add('d-none');
+            
+            // Change button style for dark mode
+            if (themeToggleBtn) {
+                themeToggleBtn.classList.remove('btn-outline-dark');
+                themeToggleBtn.classList.add('btn-outline-light');
+            }
             
             // Change Bootstrap CSS to dark theme
-            bootstrapCssLink.href = "https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css";
+            if (bootstrapCssLink) {
+                bootstrapCssLink.href = "https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css";
+            }
         } else {
-            darkIconElement.classList.add('d-none');
-            lightIconElement.classList.remove('d-none');
-            darkTextElement.classList.add('d-none');
-            lightTextElement.classList.remove('d-none');
+            // Show light mode icons/text, hide dark mode ones
+            if (darkIconElement) darkIconElement.classList.add('d-none');
+            if (lightIconElement) lightIconElement.classList.remove('d-none');
+            if (darkTextElement) darkTextElement.classList.add('d-none');
+            if (lightTextElement) lightTextElement.classList.remove('d-none');
+            
+            // Change button style for light mode
+            if (themeToggleBtn) {
+                themeToggleBtn.classList.remove('btn-outline-light');
+                themeToggleBtn.classList.add('btn-outline-dark');
+            }
             
             // Change Bootstrap CSS to light theme
-            bootstrapCssLink.href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css";
+            if (bootstrapCssLink) {
+                bootstrapCssLink.href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css";
+            }
         }
     }
     
