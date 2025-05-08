@@ -48,6 +48,13 @@ def update_sqlite_schema():
         else:
             print("search_count_reset_date column already exists")
             
+        # Add search_pages_limit column if it doesn't exist
+        if 'search_pages_limit' not in columns:
+            print("Adding search_pages_limit column to users table")
+            cursor.execute("ALTER TABLE users ADD COLUMN search_pages_limit INTEGER DEFAULT 1")
+        else:
+            print("search_pages_limit column already exists")
+            
         # Check if the citations table exists
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='citations'")
         if not cursor.fetchone():

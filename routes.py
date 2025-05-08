@@ -13,7 +13,7 @@ from scraper import search_google, scrape_website
 from summarizer import summarize_text
 from suggestions import get_suggestions_for_ui
 from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit, Citation
-from forms import LoginForm, RegistrationForm, CitationForm
+from forms import LoginForm, RegistrationForm, CitationForm, SettingsForm
 
 # Admin required decorator
 def admin_required(f):

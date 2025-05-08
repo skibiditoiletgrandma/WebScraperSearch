@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, TextAreaField, DateField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, URL, Optional
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, TextAreaField, DateField, IntegerField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, URL, Optional, NumberRange
 from models import User
 
 class LoginForm(FlaskForm):
@@ -82,3 +82,11 @@ class CitationForm(FlaskForm):
     access_date = StringField('Access Date (YYYY-MM-DD)', validators=[Optional(), Length(max=50)])
     
     submit = SubmitField('Generate Citation')
+    
+class SettingsForm(FlaskForm):
+    """Form for user settings"""
+    search_pages_limit = IntegerField('Google Search Pages Limit', validators=[
+        DataRequired(),
+        NumberRange(min=1, max=10, message='Please select a value between 1 and 10 pages.')
+    ], description='Number of Google search results pages to fetch per search (1-10)')
+    submit = SubmitField('Save Settings')
