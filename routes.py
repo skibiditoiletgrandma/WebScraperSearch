@@ -38,10 +38,9 @@ def search():
             return render_template("results.html", query=query, results=[])
         
         # Create a new search query record in the database
-        new_search = SearchQuery(
-            query_text=query,
-            ip_address=request.remote_addr
-        )
+        new_search = SearchQuery()
+        new_search.query_text = query
+        new_search.ip_address = request.remote_addr
         
         # Save to database (if available)
         try:
@@ -77,14 +76,13 @@ def search():
                 try:
                     # Only save to database if the search query was successfully saved
                     if new_search.id:
-                        search_result = SearchResult(
-                            search_query_id=new_search.id,
-                            title=result["title"],
-                            link=result["link"],
-                            description=result["description"],
-                            summary=summary,
-                            rank=index + 1
-                        )
+                        search_result = SearchResult()
+                        search_result.search_query_id = new_search.id
+                        search_result.title = result["title"]
+                        search_result.link = result["link"]
+                        search_result.description = result["description"]
+                        search_result.summary = summary
+                        search_result.rank = index + 1
                         db.session.add(search_result)
                 except Exception as db_error:
                     logging.error(f"Error saving search result to database: {str(db_error)}")
