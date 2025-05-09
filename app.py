@@ -39,21 +39,13 @@ app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
 
-# Configure primary database
-database_url = os.environ.get("DATABASE_URL")
-app.logger.info(f"Primary Database URL detected: {'Yes' if database_url else 'No'}")
-
-# Configure secondary database
-database_url_2 = os.environ.get("DATABASE_URL_2")
-app.logger.info(f"Secondary Database URL detected: {'Yes' if database_url_2 else 'No'}")
+# Configure database connection
+database_url = os.environ.get("DATABASE_URL_2")  # Use second database as primary
+app.logger.info(f"Database URL detected: {'Yes' if database_url else 'No'}")
 
 # Set up SQLAlchemy configuration
 if database_url:
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-    app.config["SQLALCHEMY_BINDS"] = {}
-    
-    if database_url_2:
-        app.config["SQLALCHEMY_BINDS"]["db2"] = database_url_2
         
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "pool_recycle": 300,
