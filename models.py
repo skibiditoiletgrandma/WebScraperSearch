@@ -12,7 +12,11 @@ login_manager = LoginManager()
 
 @login_manager.user_loader
 def load_user(user_id):
+    """Load a user from the database by user_id"""
     return User.query.get(int(user_id))
+
+# We'll use a request hook to handle token-based authentication
+# This is handled in routes.py with @app.before_request
 
 class User(UserMixin, db.Model):
     """Model for user accounts"""
@@ -53,6 +57,18 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(str(self.password_hash), password)
+        
+    # Flask-Login required methods for "remember me" functionality
+    def get_id(self):
+        """Return the user ID as a unicode string"""
+        return str(self.id)
+        
+    def get_auth_token(self):
+        """Generate and return a secure token for "remember me" functionality"""
+        if not self.remember_token:
+            import secrets
+            self.remember_token = secrets.token_hex(64)
+        return self.remember_token
 
     def __repr__(self):
         return f'<User {self.username}>'
