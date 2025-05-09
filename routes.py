@@ -548,12 +548,22 @@ def login():
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
 
-        # Log in the user with remember=True to ensure persistence across updates
-        login_user(user, remember=True)
-
-        # Update last login time using query to avoid type errors
-        db.session.query(User).filter_by(id=user.id).update({"last_login": datetime.utcnow()})
-        db.session.commit()
+        try:
+            # Log in the user with remember=True and force cookie refresh
+            login_user(user, remember=True, force=True)
+            
+            # Update last login time and remember token using query
+            db.session.query(User).filter_by(id=user.id).update({
+                "last_login": datetime.utcnow(),
+                "remember_token": user.get_id()
+            })
+            db.session.commit()
+            
+            # Make session permanent
+            session.permanent = True
+        except Exception as e:
+            logging.error(f"Error during login persistence: {str(e)}")
+            db.session.rollback()
 
         # Redirect to requested page or index
         next_page = request.args.get('next')
