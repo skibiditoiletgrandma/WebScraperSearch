@@ -241,6 +241,51 @@ img {
     box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
 }
 
+/* Search Suggestions Styling */
+#suggestions-container {
+    position: relative;
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+#suggestions-container .card {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+#suggestions-container .card-header {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+}
+
+#suggestions-list .list-group-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+#suggestions-list .list-group-item:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+#suggestions-list .list-group-item small {
+    font-size: 0.75rem;
+    display: block;
+    margin-top: 0.25rem;
+}
+
+/* Light theme specific styles for suggestions */
+[data-bs-theme="light"] #suggestions-container .card {
+    border-color: rgba(0, 0, 0, 0.125);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="light"] #suggestions-list .list-group-item:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+}
+
 /* Share functionality */
 .share-buttons {
     display: flex;
