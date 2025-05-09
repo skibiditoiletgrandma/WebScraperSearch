@@ -164,12 +164,31 @@ def search():
             enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
         
         # Get search results from Google using SerpAPI
-        search_results = search_google(
-            query, 
-            num_results=10*num_pages, 
-            research_mode=research_mode, 
-            hide_wikipedia=hide_wikipedia
-        )
+        try:
+            search_results = search_google(
+                query, 
+                num_results=10*num_pages, 
+                research_mode=research_mode, 
+                hide_wikipedia=hide_wikipedia,
+                timeout=30  # 30-second timeout for API requests
+            )
+        except TimeoutError:
+            # Handle timeout specifically with user-friendly message
+            flash("The search took too long to complete. Please try a more specific search query or try again later.", "warning")
+            return redirect(url_for("index"))
+        except ValueError as ve:
+            # Handle API key or parameter errors with specific message
+            flash(f"Search API error: {str(ve)}", "danger")
+            return redirect(url_for("index"))
+        except ConnectionError:
+            # Handle network connection issues
+            flash("Network connection error. Please check your internet connection and try again.", "warning")
+            return redirect(url_for("index"))
+        except Exception as e:
+            # Generic handler for other exceptions
+            logging.error(f"Error in search_google: {str(e)}")
+            flash("An error occurred while processing your search. Please try again later.", "danger")
+            return redirect(url_for("index"))
         
         # Check if any of the search results were from Wikipedia before filtering
         has_wikipedia_results = any(
@@ -214,8 +233,8 @@ def search():
             try:
                 logging.info(f"Processing result: {result['link']}")
                 
-                # Extract text content from the website
-                content = scrape_website(result["link"])
+                # Extract text content from the website with timeout
+                content = scrape_website(result["link"], timeout=15)  # 15-second timeout for website scraping
                 
                 # Generate a summary of the content if enabled, otherwise use the description
                 if generate_summaries:
@@ -375,6 +394,13 @@ def server_error(e):
     logging.error(f"500 error: {str(e)}")
     return render_template("error.html", error="Internal server error", status_code=500), 500
 
+@app.errorhandler(TimeoutError)
+def timeout_error(e):
+    """Handle timeout errors specifically"""
+    error_msg = str(e) or "The operation timed out"
+    logging.error(f"Timeout error: {error_msg}")
+    return render_template("error.html", error=error_msg, status_code=408), 408
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     """Handle all other exceptions"""
@@ -384,6 +410,14 @@ def handle_exception(e):
     if isinstance(e, HTTPException):
         return e
     
+    # Handle timeout errors with a specific template and status code
+    if isinstance(e, TimeoutError) or "timeout" in str(e).lower() or "time out" in str(e).lower():
+        return timeout_error(e)
+    
+    # Handle API key errors with a specific template
+    if "api key" in str(e).lower() or "authentication" in str(e).lower():
+        return render_template("error.html", error=f"API Configuration Error: {str(e)}", status_code=503), 503
+        
     # Try to handle database schema errors
     from sqlalchemy.exc import OperationalError, ProgrammingError
     if isinstance(e, (OperationalError, ProgrammingError)):
@@ -395,6 +429,10 @@ def handle_exception(e):
             # Try to get the referrer URL
             referrer = request.referrer or url_for('index')
             return redirect(referrer)
+    
+    # Handle connection errors with a user-friendly message
+    if isinstance(e, requests.exceptions.ConnectionError) or "connection" in str(e).lower():
+        return render_template("error.html", error="Network connection error. Please check your internet connection.", status_code=503), 503
     
     # Handle non-HTTP exceptions with 500 error
     return render_template("error.html", error=f"Server error: {str(e)}", status_code=500), 500
