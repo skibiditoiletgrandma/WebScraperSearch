@@ -1,7 +1,8 @@
 import logging
 import os
 from datetime import timedelta
-from app import app
+from configure_database_url import configure_database_url
+from app import app, db
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -9,6 +10,10 @@ logging.basicConfig(level=logging.DEBUG)
 # Configure session lifetime for anonymous users
 app.permanent_session_lifetime = timedelta(days=365)  # Session lasts for 1 year
 
+# Try to configure DATABASE_URL if it's not set
+if not os.environ.get("DATABASE_URL"):
+    configure_database_url()
+    
 # Import routes after app is fully configured
 from routes import *
 
