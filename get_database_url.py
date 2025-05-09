@@ -20,7 +20,11 @@ def ensure_database_url():
     # Try to configure it from individual PostgreSQL environment variables
     if configure_database_url():
         database_url = os.environ.get("DATABASE_URL")
-        logger.info(f"Set DATABASE_URL: {database_url.split('@')[0].split(':')[0]}:*****@*****")
+        if database_url and '@' in database_url:
+            masked_url = f"{database_url.split('@')[0].split(':')[0]}:*****@*****"
+            logger.info(f"Set DATABASE_URL: {masked_url}")
+        else:
+            logger.info("Set DATABASE_URL (format not recognized)")
         return database_url
     
     # Couldn't set DATABASE_URL
@@ -30,6 +34,10 @@ def ensure_database_url():
 if __name__ == "__main__":
     # This is useful to run as a standalone script to set DATABASE_URL
     if url := ensure_database_url():
-        print(f"DATABASE_URL is set: {url.split('@')[0].split(':')[0]}:*****@*****")
+        if '@' in url:
+            masked_url = f"{url.split('@')[0].split(':')[0]}:*****@*****"
+            print(f"DATABASE_URL is set: {masked_url}")
+        else:
+            print("DATABASE_URL is set (format not recognized)")
     else:
         print("Could not set DATABASE_URL. Missing PostgreSQL environment variables.")
