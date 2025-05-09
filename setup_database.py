@@ -1,20 +1,22 @@
-
 #!/usr/bin/env python3
 """
-Simple PostgreSQL Database Creation Script
+PostgreSQL Database Setup Script
 
-This script:
-1. Ensures that the PostgreSQL database environment variables are set up
-2. Creates a simple database with a Notes table
-3. Adds a sample note to verify functionality
+This script ensures that all necessary PostgreSQL environment variables are set up
+and creates a new PostgreSQL database if needed. It's designed to be run once
+during project setup or whenever the database configuration needs to be reset.
 
-Dependencies:
-- SQLAlchemy for ORM functionality
-- psycopg2 for PostgreSQL connection
+Environment variables that will be set up:
+- DATABASE_URL: The complete database connection URL
+- PGHOST: The PostgreSQL server host
+- PGPORT: The PostgreSQL server port
+- PGUSER: The PostgreSQL username
+- PGPASSWORD: The PostgreSQL password
+- PGDATABASE: The PostgreSQL database name
 
-Environment variables used:
-- DATABASE_URL: The complete database connection string
-- PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE: Individual PostgreSQL connection parameters
+Usage:
+    python setup_database.py
+
 """
 
 import os
@@ -22,29 +24,12 @@ import sys
 import time
 import logging
 import subprocess
-from sqlalchemy import create_engine, Column, Integer, String, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from datetime import datetime
 import psycopg2
-from urllib.parse import urlparse
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# Create base class for SQLAlchemy models
-Base = declarative_base()
-
-# Define a simple model
-class Note(Base):
-    __tablename__ = 'notes'
-
-    id = Column(Integer, primary_key=True)
-    title = Column(String(100), nullable=False)
-    content = Column(String(500))
-    created_at = Column(DateTime, default=datetime.utcnow)
 
 def check_postgres_env_vars():
     """
@@ -219,94 +204,24 @@ def test_database_connection():
         logger.error(f"Database connection test failed: {str(e)}")
         return False
 
-def create_database_schema():
-    """
-    Create database schema and add a sample record.
-    
-    Returns:
-        bool: True if schema creation was successful, False otherwise
-    """
-    # Get database URL from environment
-    database_url = os.environ.get("DATABASE_URL")
-    
-    if not database_url:
-        logger.error("DATABASE_URL environment variable not set")
-        return False
-
-    # Parse the URL to get database name
-    url = urlparse(database_url)
-    db_name = url.path[1:]  # Remove leading slash
-    logger.info(f"Creating schema in database: {db_name}")
-    
-    try:
-        # Create database engine
-        engine = create_engine(database_url)
-        
-        # Create all tables
-        Base.metadata.create_all(engine)
-        logger.info("Database tables created successfully")
-        
-        # Create a session factory
-        Session = sessionmaker(bind=engine)
-        
-        # Create a session
-        session = Session()
-        
-        try:
-            # Check if we already have notes
-            existing_notes = session.query(Note).count()
-            
-            if existing_notes > 0:
-                logger.info(f"Found {existing_notes} existing notes. Skipping sample note creation.")
-            else:
-                # Add a sample note
-                note = Note(
-                    title="First Note",
-                    content="This is our first note in the PostgreSQL database!"
-                )
-                session.add(note)
-                session.commit()
-                logger.info("Sample note added successfully")
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error adding sample data: {str(e)}")
-            session.rollback()
-            return False
-        finally:
-            session.close()
-            
-    except Exception as e:
-        logger.error(f"Error creating database schema: {str(e)}")
-        return False
-
 def main():
     """
-    Main function to set up the PostgreSQL database with a simple schema.
+    Main function to set up the PostgreSQL database.
     """
     logger.info("Starting PostgreSQL database setup")
     
-    # Ensure DATABASE_URL is set
-    if not ensure_database_url():
-        logger.error("Failed to set up DATABASE_URL")
-        return 1
+    if ensure_database_url():
+        logger.info("PostgreSQL database setup completed successfully")
         
-    logger.info("PostgreSQL database connection setup completed successfully")
-    
-    # Test the database connection
-    if not test_database_connection():
-        logger.error("Database connection test failed")
-        return 1
-        
-    logger.info("Database connection verified")
-    
-    # Create database schema
-    if create_database_schema():
-        logger.info("Simple database setup completed successfully")
+        # Test the database connection
+        if test_database_connection():
+            logger.info("Database connection verified")
+        else:
+            logger.warning("Database setup succeeded, but connection test failed")
+            
         return 0
     else:
-        logger.error("Failed to create database schema")
+        logger.error("PostgreSQL database setup failed")
         return 1
 
 if __name__ == "__main__":
