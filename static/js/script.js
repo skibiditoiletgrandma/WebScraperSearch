@@ -20,11 +20,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Check for user's theme preference in local storage
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        applyTheme(savedTheme);
-    }
+    // Check for user's theme preference in local storage or default to light
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
 
     // Handle theme toggle button click
     if (themeToggleBtn) {
@@ -32,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentTheme = htmlElement.getAttribute('data-bs-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             applyTheme(newTheme);
-            localStorage.setItem('theme', newTheme); // Save preference
+            localStorage.setItem('theme', newTheme);
         });
     }
 
