@@ -106,10 +106,10 @@ class SettingsForm(FlaskForm):
     
     summary_depth = IntegerField('Summary Depth', validators=[
         NumberRange(min=1, max=5, message='Please select a value between 1 and 5.')
-    ], description='Depth of generated summaries (1-5 scale, where 5 is most detailed)')
+    ], description='Depth of generated summaries (1=very concise, 3=normal, 5=comprehensive & detailed): Controls how much information is included in the summary')
     
     summary_complexity = IntegerField('Summary Complexity', validators=[
         NumberRange(min=1, max=5, message='Please select a value between 1 and 5.')
-    ], description='Complexity level of generated summaries (1-5 scale, where 5 is most complex)')
+    ], description='Complexity level of generated summaries (1=simple short sentences, 3=balanced, 5=advanced vocabulary & longer sentences): Controls the sentence structure and language difficulty')
     
     submit = SubmitField('Save Settings')

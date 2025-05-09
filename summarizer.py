@@ -123,11 +123,30 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
         
         # Adjust max_sentences based on depth setting (1-5)
         base_sentences = max_sentences
-        depth_factor = (depth - 1) / 4  # Normalize to 0-1 range
-        depth_adjusted_max = max(2, min(15, int(base_sentences + (base_sentences * depth_factor * 2))))
+        # Amplify the depth effect by using a squared depth factor
+        depth_factor = ((depth - 1) / 4) ** 0.8  # Normalize to 0-1 range with stronger curve
         
-        # Get top-scoring sentences with depth consideration
-        num_sentences = min(depth_adjusted_max, max(min_sentences, int(len(sentences) * (0.1 + depth_factor * 0.3))))
+        # More dramatic scaling based on depth
+        if depth == 1:  # Very concise
+            depth_multiplier = 0.5
+        elif depth == 2:
+            depth_multiplier = 1.0
+        elif depth == 3:
+            depth_multiplier = 2.0
+        elif depth == 4:
+            depth_multiplier = 3.5
+        else:  # depth == 5, very detailed
+            depth_multiplier = 5.0
+            
+        depth_adjusted_max = max(2, min(20, int(base_sentences * depth_multiplier)))
+        
+        # Get top-scoring sentences with depth consideration - stronger effect
+        num_sentences = min(depth_adjusted_max, max(min_sentences, int(len(sentences) * (0.05 + depth_factor * 0.5))))
+        
+        # For highest depth (5), include even more sentences
+        if depth == 5 and len(sentences) > 10:
+            num_sentences = min(len(sentences) // 2, num_sentences * 2)
+            
         top_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[:num_sentences]
         
         # Sort sentences by their original position
@@ -136,28 +155,60 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
         # Generate the summary
         summary = " ".join(sentences[i] for i, _ in top_sentences)
         
-        # Adjust for complexity (1-5)
-        complexity_factor = (complexity - 1) / 4  # Normalize to 0-1 range
-        
-        if complexity_factor < 0.4:  # Lower complexity (1-2)
-            # Keep shorter, simpler sentences
+        # Adjust for complexity (1-5) - Make the effect much stronger
+        # More dramatic complexity effect
+        if complexity == 1:  # Very simple
+            # Keep only the shortest, simplest sentences
             sentence_weights = [(i, s, len(s.split())) for i, s in enumerate(sentences)]
-            simple_sentences = sorted(sentence_weights, key=lambda x: (x[2] < 30, x[2]))  # Prefer shorter sentences
+            # Sort by sentence length, prioritizing sentences under 15 words
+            simple_sentences = sorted(sentence_weights, key=lambda x: (x[2] > 15, x[2]))
+            selected_indices = [x[0] for x in simple_sentences[:max(2, num_sentences)]]
+            selected_indices.sort()  # Maintain original order
+            summary = " ".join(sentences[i] for i in selected_indices)
+            
+        elif complexity == 2:  # Somewhat simple
+            # Prefer shorter sentences but include some informative ones
+            sentence_weights = [(i, s, len(s.split())) for i, s in enumerate(sentences)]
+            # Balance between importance and simplicity
+            simple_sentences = sorted(sentence_weights, key=lambda x: (x[2] > 25, sentence_scores.get(x[0], 0) * -1))
             selected_indices = [x[0] for x in simple_sentences[:num_sentences]]
             selected_indices.sort()  # Maintain original order
             summary = " ".join(sentences[i] for i in selected_indices)
             
-        elif complexity_factor > 0.6:  # Higher complexity (4-5)
-            # Include more context and longer sentences
-            additional_sentences = int(num_sentences * complexity_factor)
+        elif complexity == 3:  # Medium complexity
+            # Use the standard approach
+            summary = " ".join(sentences[i] for i, _ in top_sentences)
+            
+        elif complexity == 4:  # Somewhat complex
+            # Include more context and prioritize longer, more informative sentences
+            additional_sentences = num_sentences // 2
+            # Prioritize sentences with more information and slightly longer length
             complex_sentences = sorted(sentence_scores.items(), 
-                                    key=lambda x: (x[1], len(sentences[x[0]].split())), 
+                                    key=lambda x: (x[1] * (1 + 0.2 * min(1, len(sentences[x[0]].split()) / 30))), 
                                     reverse=True)[:num_sentences + additional_sentences]
             complex_sentences = sorted(complex_sentences, key=lambda x: x[0])
             summary = " ".join(sentences[i] for i, _ in complex_sentences)
             
-        else:  # Medium complexity (3)
-            summary = " ".join(sentences[i] for i, _ in top_sentences)
+        else:  # complexity == 5, Very complex
+            # Include significantly more context and prioritize complex sentences
+            additional_sentences = num_sentences
+            # Find sentences with technical terms or complex structure
+            sentence_complexity = {}
+            for i, sentence in enumerate(sentences):
+                words = word_tokenize(sentence)
+                # Calculate complexity based on sentence length, word length, and presence of rare words
+                avg_word_length = sum(len(word) for word in words) / max(1, len(words))
+                unusual_words = sum(1 for word in words if len(word) > 7 and word.lower() not in stop_words)
+                sentence_complexity[i] = (len(words) * 0.4) + (avg_word_length * 0.3) + (unusual_words * 3)
+            
+            # Combine complexity score with importance score for final ranking
+            combined_scores = {i: (sentence_scores.get(i, 0) * 0.6) + (sentence_complexity.get(i, 0) * 0.4) 
+                              for i in range(len(sentences))}
+            
+            complex_sentences = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
+            complex_sentences = complex_sentences[:num_sentences + additional_sentences]
+            complex_sentences = sorted(complex_sentences, key=lambda x: x[0])  # Restore original order
+            summary = " ".join(sentences[i] for i, _ in complex_sentences)
         
         # If summary is still too short, add more sentences regardless of complexity
         if len(summary.split()) < 30 and len(sentences) > num_sentences:
