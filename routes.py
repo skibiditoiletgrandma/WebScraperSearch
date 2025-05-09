@@ -88,30 +88,64 @@ def index():
 @app.route("/search", methods=["POST"])
 def search():
     """Handle search queries and return results"""
-    logging.debug("Search function called")
+    # Create a unique ID for this search request for tracking in logs
+    import uuid
+    search_request_id = str(uuid.uuid4())[:8]
+    
+    logging.info(f"[SEARCH_REQ:{search_request_id}] Search function called")
     query = request.form.get("query", "")
-    logging.debug(f"Search query: {query}")
+    logging.info(f"[SEARCH_REQ:{search_request_id}] Search query: '{query}'")
+    
+    # Log authentication status
+    if current_user.is_authenticated:
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User is authenticated: {current_user.username} (ID: {current_user.id})")
+    else:
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User is anonymous")
 
     if not query:
+        logging.warning(f"[SEARCH_REQ:{search_request_id}] Empty search query submitted")
         flash("Please enter a search query", "warning")
         return redirect(url_for("index"))
 
     # Check if API key is available
-    if not os.environ.get("SERPAPI_KEY"):
+    api_key = os.environ.get("SERPAPI_KEY")
+    if not api_key:
+        logging.error(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY environment variable not set")
         flash("Search API key is not configured. Please contact the administrator.", "danger")
         return redirect(url_for("index"))
+    else:
+        logging.info(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY found (first 4 chars: {api_key[:4]}...)")
 
     # Check search limits based on authentication status
     if current_user.is_authenticated:
+        # Log user information
+        logging.info(f"[SEARCH_REQ:{search_request_id}] Processing search for logged-in user: {current_user.username}")
+        
         # For logged-in users: Check daily search limit (15 searches per day)
-        if not current_user.check_search_limit():
+        search_limit_ok = current_user.check_search_limit()
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} search limit check: {search_limit_ok}")
+        
+        if not search_limit_ok:
+            logging.warning(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has reached daily search limit")
             flash("You have reached your daily search limit of 15 searches. Please try again tomorrow.", "warning")
             return redirect(url_for("index"))
+            
         # Increment the user's search count if they are under the limit
-        current_user.increment_search_count()
-
+        new_count = current_user.increment_search_count()
+        logging.info(f"[SEARCH_REQ:{search_request_id}] Incremented search count for {current_user.username} to {new_count}")
+        
+        # Save the updated count to the database
+        try:
+            db.session.commit()
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Saved updated search count to database")
+        except Exception as e:
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Error saving search count: {str(e)}")
+            db.session.rollback()
+        
         # Display remaining searches for the user
         remaining = current_user.remaining_searches()
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has {remaining} searches remaining")
+        
         if remaining == float('inf'):
             flash(f"You have unlimited searches as an admin user.", "info")
         else:
