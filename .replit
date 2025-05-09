@@ -29,6 +29,15 @@ task = "shell.exec"
 args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Create Database"
+author = 42460666
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python create_simple_db.py"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
