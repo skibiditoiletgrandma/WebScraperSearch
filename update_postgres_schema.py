@@ -19,11 +19,26 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Import our database models
 from app import app, db  # Import app as well
 from models import User
+from ensure_db_url import ensure_db_url
 
 def update_database_schema():
     """
     Update the database schema to include new settings and summary columns
     """
+    # Ensure DATABASE_URL is set before proceeding
+    if not os.environ.get("DATABASE_URL"):
+        logging.info("DATABASE_URL not set. Attempting to configure it automatically...")
+        if not ensure_db_url():
+            logging.error("Could not set DATABASE_URL automatically.")
+            return False
+        else:
+            database_url = os.environ.get("DATABASE_URL")
+            if database_url and '@' in database_url:
+                masked_url = f"{database_url.split('@')[0].split(':')[0]}:*****@*****"
+                logging.info(f"Successfully set DATABASE_URL: {masked_url}")
+            else:
+                logging.info("Successfully set DATABASE_URL")
+    
     logging.info("Starting database schema update for PostgreSQL...")
     
     # Start a connection to the database within the app context
