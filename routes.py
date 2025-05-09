@@ -65,7 +65,9 @@ def index():
 @app.route("/search", methods=["POST"])
 def search():
     """Handle search queries and return results"""
+    logging.debug("Search function called")
     query = request.form.get("query", "")
+    logging.debug(f"Search query: {query}")
 
     if not query:
         flash("Please enter a search query", "warning")
@@ -169,7 +171,15 @@ def search():
                 
             # Ensure boolean settings have proper defaults
             hide_wikipedia = bool(current_user.hide_wikipedia) if current_user.hide_wikipedia is not None else False
-            show_feedback = bool(current_user.show_feedback_features) if current_user.show_feedback_features is not None else False
+            
+            # show_feedback is actually "hide_feedback_features" in the database
+            # In the template, we check "{% if not show_feedback %}" to display feedback
+            # So if show_feedback_features is True, we want show_feedback to be True (hide feedback)
+            # If show_feedback_features is False, we want show_feedback to be False (show feedback)
+            show_feedback = bool(current_user.show_feedback_features) if current_user.show_feedback_features is not None else True
+            
+            # Add debug logging for clarity
+            logging.debug(f"User settings - hide_wikipedia: {hide_wikipedia}, show_feedback: {show_feedback} (True=hide, False=show)")
 
             # Summary settings for logged-in users with careful handling of None values
             generate_summaries = bool(current_user.generate_summaries) if current_user.generate_summaries is not None else True
@@ -261,13 +271,17 @@ def search():
 
         # Process each search result to get summaries
         processed_results = []
+        logging.debug(f"Found {len(search_results)} search results to process")
+        
         for index, result in enumerate(search_results):
             try:
-                logging.info(f"Processing result: {result['link']}")
+                logging.info(f"Processing result {index+1}/{len(search_results)}: {result['link']}")
 
                 # Extract text content from the website with timeout
                 try:
+                    logging.debug(f"Scraping website: {result['link']}")
                     content = scrape_website(result["link"], timeout=15)  # 15-second timeout for website scraping
+                    logging.debug(f"Successfully scraped content from {result['link']}, content length: {len(content)}")
                 except Exception as scrape_error:
                     logging.error(f"Error scraping {result['link']}: {str(scrape_error)}")
                     content = f"Error accessing website: {result['description']}"
@@ -330,7 +344,18 @@ def search():
 
         # Log the total number of processed results
         logging.info(f"Processed {len(processed_results)} results out of {len(search_results)} search results")
-
+        
+        # Debug log the results before rendering
+        logging.debug(f"About to render results template with {len(processed_results)} results")
+        for i, result in enumerate(processed_results):
+            logging.debug(f"Result {i+1}: {result['title'][:50]}... [{result['link']}]")
+        
+        # Check if user is logged in before rendering
+        logging.debug(f"User authenticated: {current_user.is_authenticated}")
+        if current_user.is_authenticated:
+            logging.debug(f"Logged in user: {current_user.username}")
+        
+        # Render the template with all the data
         return render_template("results.html", 
                               query=query, 
                               results=processed_results,
@@ -391,14 +416,20 @@ def view_search(search_id):
         results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
 
         # Determine user preferences based on authentication status
-        show_feedback = True
+        show_feedback = True  # Default: feedback is hidden (True=hidden, False=shown)
         generate_summaries = True
         enable_suggestions = True
 
         if current_user.is_authenticated:
-            show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
-            generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
-            enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
+            # For backwards compatibility: if show_feedback_features is None, default to True (feedback is hidden)
+            # True means "hide feedback features" so show_feedback should be True
+            # If show_feedback_features is False, then feedback should be shown, so show_feedback should be False
+            show_feedback = True if current_user.show_feedback_features is None else bool(current_user.show_feedback_features)
+            generate_summaries = True if current_user.generate_summaries is None else bool(current_user.generate_summaries)
+            enable_suggestions = True if current_user.enable_suggestions is None else bool(current_user.enable_suggestions)
+            
+            # Debug log the user preferences
+            logging.debug(f"User preferences in view_search - show_feedback: {show_feedback} (True=hide, False=show), generate_summaries: {generate_summaries}, enable_suggestions: {enable_suggestions}")
 
         return render_template("results.html", 
                               query=search.query_text, 
