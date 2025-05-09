@@ -76,7 +76,25 @@ def update_database_schema():
                     ).scalar()
                     
                     if not col_check:
-                        db.session.execute(f"ALTER TABLE search_result ADD COLUMN {column_def}")
+                        # For new columns, preserve existing data
+                        if column_name in ['search_count_today', 'search_count_reset_date']:
+                            # First get existing values
+                            current_values = db.session.execute(
+                                "SELECT id, search_count_today, search_count_reset_date FROM users"
+                            ).fetchall()
+                            
+                            # Add column with defaults
+                            db.session.execute(f"ALTER TABLE search_result ADD COLUMN {column_def}")
+                            
+                            # Restore values if they existed
+                            for user_id, count, reset_date in current_values:
+                                if count is not None and reset_date is not None:
+                                    db.session.execute(
+                                        f"UPDATE users SET search_count_today = {count}, "
+                                        f"search_count_reset_date = '{reset_date}' WHERE id = {user_id}"
+                                    )
+                        else:
+                            db.session.execute(f"ALTER TABLE search_result ADD COLUMN {column_def}")
                         print(f"Added column '{column_name}' to search_result table.")
                     else:
                         print(f"Column '{column_name}' already exists.")
