@@ -1,42 +1,101 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 
-{% block title %}Google Search Scraper - Home{% endblock %}
+{% block title %}Google Search Scraper - Search and Summarize{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h1 class="card-title text-center mb-4">Google Search Scraper</h1>
-                <p class="text-center mb-4">Enter your search query below to get results from Google.</p>
-                
-                <form action="{{ url_for('search') }}" method="post">
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="text-center mb-4">Search and Summarize Websites</h2>
+                <p class="text-center text-muted mb-4">
+                    Enter a search query below to scrape Google results and get summaries of the top websites.
+                </p>
+
+                <form action="{{ url_for('search') }}" method="POST" id="search-form">
                     <div class="input-group mb-3">
-                        <input type="text" class="form-control" name="query" id="query" 
-                               placeholder="Enter your search query..." required autofocus>
-                        <button class="btn btn-primary" type="submit">
-                            <i class="fas fa-search"></i> Search
+                        <input 
+                            type="text" 
+                            name="query" 
+                            id="search-query" 
+                            class="form-control form-control-lg" 
+                            placeholder="Enter your search query..."
+                            required
+                            autofocus
+                        >
+                        <button class="btn btn-primary" type="submit" id="search-button">
+                            <i class="fas fa-search me-2"></i> Search
                         </button>
                     </div>
+                    
+                    <!-- Research Mode Toggle -->
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="research-mode" name="research_mode" value="1">
+                        <label class="form-check-label" for="research-mode">
+                            <i class="fas fa-graduation-cap me-1"></i> Research Mode (limit to .edu, .org, .gov sites)
+                        </label>
+                    </div>
                 </form>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-info">
+                        <i class="fas fa-history me-2"></i> View Search History
+                    </a>
+                </div>
+                
+                <!-- Search limit information -->
+                <div class="text-center mt-3">
+                    {% if current_user.is_authenticated %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> You have <strong>{{ remaining_searches }}</strong> searches remaining today.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-circle me-2"></i> Anonymous users are limited to <strong>3</strong> total searches. 
+                            You have <strong>{{ remaining_searches }}</strong> searches remaining.
+                            <br>
+                            <a href="{{ url_for('register') }}" class="alert-link">Register for a free account</a> to get 15 searches per day!
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if error %}
+                <div class="alert alert-danger mt-3">
+                    {{ error }}
+                </div>
+                {% endif %}
             </div>
         </div>
-        
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h2 class="card-title h5">About This Tool</h2>
-                <p class="card-text">
-                    This is a Python-based Google search tool that uses web scraping techniques to provide you with search results.
-                    Simply enter your query in the search box above to get started.
-                </p>
-                <h3 class="card-title h6 mt-3">Features:</h3>
-                <ul class="list-group list-group-flush mb-3">
-                    <li class="list-group-item bg-transparent">Search Google without ads</li>
-                    <li class="list-group-item bg-transparent">Extract content from webpages</li>
-                    <li class="list-group-item bg-transparent">Simple and clean interface</li>
-                </ul>
-                <div class="alert alert-warning" role="alert">
-                    <i class="fas fa-exclamation-triangle"></i> Please use responsibly. Excessive scraping may lead to your IP being blocked by Google.
+
+        <div class="card mt-4 shadow">
+            <div class="card-body p-4">
+                <h3 class="h5 mb-3">How it works</h3>
+                <div class="d-flex mb-3">
+                    <div class="text-primary me-3">
+                        <i class="fas fa-search fa-2x"></i>
+                    </div>
+                    <div>
+                        <h4 class="h6 mb-1">Search Google</h4>
+                        <p class="text-muted small mb-0">Enter your query to search Google</p>
+                    </div>
+                </div>
+                <div class="d-flex mb-3">
+                    <div class="text-primary me-3">
+                        <i class="fas fa-globe fa-2x"></i>
+                    </div>
+                    <div>
+                        <h4 class="h6 mb-1">Scrape Websites</h4>
+                        <p class="text-muted small mb-0">The app scrapes results from the first page</p>
+                    </div>
+                </div>
+                <div class="d-flex">
+                    <div class="text-primary me-3">
+                        <i class="fas fa-file-alt fa-2x"></i>
+                    </div>
+                    <div>
+                        <h4 class="h6 mb-1">Generate Summaries</h4>
+                        <p class="text-muted small mb-0">Get concise summaries for each website</p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,57 +1,348 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 
-{% block title %}Search Results for "{{ query }}"{% endblock %}
+{% block title %}Search Results for "{{ query }}" - Google Search Scraper{% endblock %}
 
 {% block content %}
 <div class="mb-4">
-    <h1 class="h3">Search Results for "{{ query }}"</h1>
+    <h2>Search Results for "{{ query }}"</h2>
+    <p class="text-muted">Found {{ results|length }} results
+    {% if research_mode %}
+        <span class="badge bg-info ms-2"><i class="fas fa-graduation-cap me-1"></i> Research Mode</span>
+    {% endif %}
+    </p>
     
-    <!-- Search form for new queries -->
-    <form action="{{ url_for('search') }}" method="post" class="mb-4">
+    <form action="{{ url_for('search') }}" method="POST" class="mb-4">
         <div class="input-group">
-            <input type="text" class="form-control" name="query" id="query" 
-                   value="{{ query }}" required>
+            <input 
+                type="text" 
+                name="query" 
+                class="form-control" 
+                value="{{ query }}"
+                placeholder="Enter a new search query..."
+                required
+            >
             <button class="btn btn-primary" type="submit">
-                <i class="fas fa-search"></i> Search
+                <i class="fas fa-search me-1"></i> Search
             </button>
+        </div>
+        
+        <!-- Research Mode Toggle -->
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="research-mode" name="research_mode" value="1" {% if research_mode %}checked{% endif %}>
+            <label class="form-check-label" for="research-mode">
+                <i class="fas fa-graduation-cap me-1"></i> Research Mode (limit to .edu, .org, .gov sites)
+            </label>
         </div>
     </form>
     
-    <!-- Results count -->
-    <p class="text-muted">Found {{ results|length }} results</p>
-    
-    <!-- Display results -->
-    {% if results %}
-        <div class="list-group">
-            {% for result in results %}
-                <div class="list-group-item list-group-item-action flex-column align-items-start">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">{{ result.title }}</h5>
-                    </div>
-                    <p class="mb-1 text-success small">{{ result.url }}</p>
-                    <p class="mb-1">{{ result.snippet }}</p>
-                    <div class="mt-2">
-                        <a href="{{ result.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
-                            <i class="fas fa-external-link-alt"></i> Visit Site
-                        </a>
-                        <a href="{{ url_for('content', url=result.url, title=result.title) }}" class="btn btn-sm btn-outline-info">
-                            <i class="fas fa-file-alt"></i> View Content
-                        </a>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="alert alert-info">
-            No results found for your query. Please try a different search term.
-        </div>
-    {% endif %}
-    
-    <!-- Back to search -->
-    <div class="mt-4">
-        <a href="{{ url_for('index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Search
+    <div class="mb-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i> Back to Home
         </a>
+        
+        <a href="{{ url_for('history') }}" class="btn btn-info">
+            <i class="fas fa-history me-1"></i> View Search History
+        </a>
+        
+        {% if from_history %}
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle me-2"></i>
+            You are viewing results from search history.
+        </div>
+        {% endif %}
     </div>
 </div>
+
+{% if results %}
+    <div class="results-container">
+        {% for result in results %}
+        <div class="card mb-4 shadow-sm result-card">
+            <div class="card-body">
+                <h3 class="card-title h5">
+                    <a href="{{ result.link }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                        {{ result.title }}
+                        <i class="fas fa-external-link-alt ms-1 small"></i>
+                    </a>
+                </h3>
+                <p class="text-muted small mb-2">{{ result.link }}</p>
+                
+                <div class="mb-3">
+                    <p class="card-text text-muted">{{ result.description }}</p>
+                </div>
+                
+                {% if generate_summaries %}
+                <div class="card bg-dark bg-opacity-25 p-3 mb-3">
+                    <h4 class="h6 mb-2">
+                        <i class="fas fa-file-alt me-2"></i>
+                        Website Summary
+                    </h4>
+                    <div class="summary-content">
+                        {% if result.summary %}
+                            <p>{{ result.summary }}</p>
+                            
+                            <!-- Feedback section - only shown if feedback features are enabled -->
+                            {% if show_feedback %}
+                            <div class="mt-3 pt-3 border-top border-secondary">
+                                <h5 class="h6 mb-2">
+                                    <i class="fas fa-star me-2"></i>
+                                    Rate this summary
+                                </h5>
+                                <form action="{{ url_for('submit_feedback', result_id=result.id) }}" method="POST" class="summary-feedback-form">
+                                    <div class="mb-3">
+                                        <div class="star-rating">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <span class="me-2 small">Rating:</span>
+                                                {% for i in range(1, 6) %}
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="rating" id="rating-{{ result.id }}-{{ i }}" value="{{ i }}" required>
+                                                    <label class="form-check-label" for="rating-{{ result.id }}-{{ i }}">
+                                                        {{ i }}
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="feedback-details-{{ result.id }}" class="feedback-details mt-3">
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="helpful" id="helpful-{{ result.id }}">
+                                                    <label class="form-check-label small" for="helpful-{{ result.id }}">
+                                                        Helpful
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="accurate" id="accurate-{{ result.id }}">
+                                                    <label class="form-check-label small" for="accurate-{{ result.id }}">
+                                                        Accurate
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="complete" id="complete-{{ result.id }}">
+                                                    <label class="form-check-label small" for="complete-{{ result.id }}">
+                                                        Complete
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="comment-{{ result.id }}" class="form-label small">Comments (optional):</label>
+                                            <textarea class="form-control form-control-sm" id="comment-{{ result.id }}" name="comment" rows="2" placeholder="Any additional feedback about this summary?"></textarea>
+                                        </div>
+                                        
+                                        <div class="text-end">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-paper-plane me-1"></i> Submit Feedback
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted fst-italic">No summary available for this website.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="share-buttons">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="shareDropdown-{{ result.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-share-alt me-1"></i> Share Summary
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="shareDropdown-{{ result.id }}">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('share_summary', result_id=result.id) }}" target="_blank">
+                                        <i class="fas fa-external-link-alt me-2"></i> Open Share Page
+                                    </a>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item copy-link" data-url="{{ url_for('share_summary', result_id=result.id, _external=True) }}">
+                                        <i class="fas fa-link me-2"></i> Copy Link
+                                    </button>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="https://twitter.com/intent/tweet?url={{ url_for('share_summary', result_id=result.id, _external=True)|urlencode }}&text={{ result.title|urlencode }}" target="_blank">
+                                        <i class="fab fa-twitter me-2"></i> Share on Twitter
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('share_summary', result_id=result.id, _external=True)|urlencode }}" target="_blank">
+                                        <i class="fab fa-facebook me-2"></i> Share on Facebook
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="mailto:?subject={{ result.title|urlencode }}&body={{ url_for('share_summary', result_id=result.id, _external=True)|urlencode }}">
+                                        <i class="fas fa-envelope me-2"></i> Email
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        {% if result.share_count and result.share_count > 0 %}
+                        <span class="badge bg-secondary ms-2" title="Shared {{ result.share_count }} times">
+                            <i class="fas fa-share-alt me-1"></i> {{ result.share_count }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <a href="{{ result.link }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-eye me-1"></i> Visit Website
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        No search results were found for your query. Please try a different search term.
+    </div>
+{% endif %}
+
+<!-- Wikipedia Suggestion Modal -->
+<div class="modal fade" id="wikipediaModal" tabindex="-1" aria-labelledby="wikipediaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="wikipediaModalLabel">
+                    <i class="fas fa-lightbulb text-warning me-2"></i>
+                    Wikipedia Results Hidden
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You have enabled the <strong>Hide Wikipedia Results</strong> setting in your preferences.</p>
+                <p>Wikipedia results have been filtered from your search results. If you're looking for general knowledge or background information, Wikipedia can be a valuable resource.</p>
+                <p>Would you like to:</p>
+                <div class="d-grid gap-2">
+                    <a href="https://wikipedia.org/wiki/Special:Search?search={{ query|urlencode }}" class="btn btn-outline-primary" target="_blank">
+                        <i class="fab fa-wikipedia-w me-2"></i> Search Wikipedia for "{{ query }}"
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{{ url_for('settings') }}" class="btn btn-primary">
+                    <i class="fas fa-cog me-1"></i> Change Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Add any specific JavaScript for the results page here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Highlight the search terms in the summaries
+        const query = "{{ query }}";
+        const terms = query.split(' ').filter(term => term.length > 3);
+        
+        const summaries = document.querySelectorAll('.summary-content p');
+        
+        summaries.forEach(summary => {
+            let html = summary.innerHTML;
+            terms.forEach(term => {
+                const regex = new RegExp('(' + term + ')', 'gi');
+                html = html.replace(regex, '<span class="highlight">$1</span>');
+            });
+            summary.innerHTML = html;
+        });
+        
+        // Initialize - hide all feedback details sections
+        document.querySelectorAll('.feedback-details').forEach(el => {
+            el.style.display = 'none';
+        });
+        
+        // Show feedback details when a rating is selected
+        const ratingInputs = document.querySelectorAll('input[name="rating"]');
+        ratingInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                // Get the result ID from the input ID (format: rating-RESULT_ID-RATING_VALUE)
+                const resultId = this.id.split('-')[1];
+                // Show the feedback details container
+                const detailsContainer = document.getElementById(`feedback-details-${resultId}`);
+                if (detailsContainer) {
+                    detailsContainer.style.display = 'block';
+                    
+                    // Simple color coding based on rating
+                    const rating = parseInt(this.value);
+                    const colors = ['#dc3545', '#fd7e14', '#6c757d', '#0d6efd', '#198754'];
+                    if (rating >= 1 && rating <= 5) {
+                        detailsContainer.style.borderTopColor = colors[rating-1];
+                    }
+                }
+            });
+        });
+        
+        // Copy link functionality
+        document.querySelectorAll('.copy-link').forEach(button => {
+            button.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                navigator.clipboard.writeText(url).then(() => {
+                    // Show a temporary notification
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-check me-2"></i> Copied!';
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                    }, 2000);
+                    
+                    // Add a toast notification
+                    const toastContainer = document.getElementById('toast-container');
+                    if (!toastContainer) {
+                        // Create a toast container if it doesn't exist
+                        const container = document.createElement('div');
+                        container.id = 'toast-container';
+                        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                        document.body.appendChild(container);
+                    }
+                    
+                    // Create and show the toast
+                    const toastId = 'copy-toast-' + new Date().getTime();
+                    const toast = `
+                        <div id="${toastId}" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="d-flex">
+                                <div class="toast-body">
+                                    <i class="fas fa-check-circle me-2"></i> Link copied to clipboard!
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('toast-container').insertAdjacentHTML('beforeend', toast);
+                    const toastElement = document.getElementById(toastId);
+                    const bsToast = new bootstrap.Toast(toastElement, { delay: 3000 });
+                    bsToast.show();
+                    
+                    // Remove toast element after it's hidden
+                    toastElement.addEventListener('hidden.bs.toast', function () {
+                        toastElement.remove();
+                    });
+                }).catch(err => {
+                    console.error('Could not copy text: ', err);
+                    alert('Could not copy to clipboard. Please try again.');
+                });
+            });
+        });
+        
+        // Show Wikipedia modal if Wikipedia results are hidden and there were potential Wikipedia results
+        {% if wikipedia_popup %}
+        const wikipediaModal = new bootstrap.Modal(document.getElementById('wikipediaModal'));
+        wikipediaModal.show();
+        {% endif %}
+    });
+</script>
 {% endblock %}
