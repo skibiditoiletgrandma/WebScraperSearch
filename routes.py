@@ -27,8 +27,15 @@ import secrets
 def check_user_token():
     """Check if the user has a valid remember token in the cookie and log them in
     This allows for persistent sessions with the remember me functionality"""
+    # Generate a unique ID for this auth check
+    import uuid
+    auth_check_id = str(uuid.uuid4())[:8]
+    
+    logging.info(f"[AUTH:{auth_check_id}] Checking for remember token")
+    
     if current_user.is_authenticated:
         # User is already logged in, no need to check token
+        logging.info(f"[AUTH:{auth_check_id}] User already authenticated as {current_user.username} (ID: {current_user.id})")
         return
     
     # Get the remember token from the REMEMBER_COOKIE_NAME
@@ -36,14 +43,23 @@ def check_user_token():
     token = request.cookies.get(remember_cookie_name)
     
     if token:
+        logging.info(f"[AUTH:{auth_check_id}] Found remember token in cookie: {token[:10]}...")
+        
         # Look for a user with this token
         user = User.query.filter_by(remember_token=token).first()
+        
         if user:
+            logging.info(f"[AUTH:{auth_check_id}] Found matching user: {user.username} (ID: {user.id})")
+            
             # Log the user in
             login_user(user, remember=True, duration=timedelta(days=365))
             
             # Log for debugging
-            logging.debug(f"Auto-logged in user {user.username} using remember token")
+            logging.info(f"[AUTH:{auth_check_id}] Successfully auto-logged in user {user.username} using remember token")
+        else:
+            logging.warning(f"[AUTH:{auth_check_id}] No user found with the token {token[:10]}...")
+    else:
+        logging.debug(f"[AUTH:{auth_check_id}] No remember token found in cookies")
 
 # Admin required decorator
 def admin_required(f):
@@ -264,6 +280,18 @@ def search():
 
         # Get search results from Google using SerpAPI
         try:
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Calling search_google with query: '{query}'")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Parameters: results={10*num_pages}, research_mode={research_mode}, hide_wikipedia={hide_wikipedia}")
+            
+            # Log SERPAPI_KEY presence again right before the call
+            api_key = os.environ.get("SERPAPI_KEY")
+            if not api_key:
+                logging.error(f"[SEARCH_REQ:{search_request_id}] CRITICAL: SERPAPI_KEY is missing right before API call!")
+                flash("Search API key is not configured. Please contact the administrator.", "danger")
+                return redirect(url_for("index"))
+                
+            logging.info(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY is present (length: {len(api_key)})")
+            
             search_results = search_google(
                 query, 
                 num_results=10*num_pages, 
@@ -271,21 +299,30 @@ def search():
                 hide_wikipedia=hide_wikipedia,
                 timeout=30  # 30-second timeout for API requests
             )
-        except TimeoutError:
+            
+            logging.info(f"[SEARCH_REQ:{search_request_id}] search_google call completed successfully")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Retrieved {len(search_results)} search results")
+            
+        except TimeoutError as te:
             # Handle timeout specifically with user-friendly message
+            logging.error(f"[SEARCH_REQ:{search_request_id}] TimeoutError: {str(te)}")
             flash("The search took too long to complete. Please try a more specific search query or try again later.", "warning")
             return redirect(url_for("index"))
         except ValueError as ve:
             # Handle API key or parameter errors with specific message
+            logging.error(f"[SEARCH_REQ:{search_request_id}] ValueError: {str(ve)}")
             flash(f"Search API error: {str(ve)}", "danger")
             return redirect(url_for("index"))
-        except ConnectionError:
+        except ConnectionError as ce:
             # Handle network connection issues
+            logging.error(f"[SEARCH_REQ:{search_request_id}] ConnectionError: {str(ce)}")
             flash("Network connection error. Please check your internet connection and try again.", "warning")
             return redirect(url_for("index"))
         except Exception as e:
             # Generic handler for other exceptions
-            logging.error(f"Error in search_google: {str(e)}")
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Unexpected error in search_google: {str(e)}")
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Exception type: {type(e).__name__}")
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Exception traceback: {traceback.format_exc()}")
             flash("An error occurred while processing your search. Please try again later.", "danger")
             return redirect(url_for("index"))
 
@@ -663,25 +700,45 @@ def view_feedback():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """User login route"""
+    # Generate a unique ID for this login attempt
+    import uuid
+    login_id = str(uuid.uuid4())[:8]
+    logging.info(f"[LOGIN:{login_id}] User login page accessed")
+    
     if current_user.is_authenticated:
+        logging.info(f"[LOGIN:{login_id}] User already authenticated as {current_user.username}, redirecting to home")
         return redirect(url_for('index'))
 
     form = LoginForm()
     if form.validate_on_submit():
+        logging.info(f"[LOGIN:{login_id}] Login form submitted with username: {form.username.data}")
+        
         user = User.query.filter_by(username=form.username.data).first()
-        if user is None or not user.check_password(form.password.data):
+        
+        if user is None:
+            logging.warning(f"[LOGIN:{login_id}] No user found with username: {form.username.data}")
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
+            
+        if not user.check_password(form.password.data):
+            logging.warning(f"[LOGIN:{login_id}] Invalid password for user: {user.username}")
+            flash('Invalid username or password', 'danger')
+            return redirect(url_for('login'))
+            
+        logging.info(f"[LOGIN:{login_id}] Valid credentials for user: {user.username} (ID: {user.id})")
 
         try:
             # Generate a new auth token for the user
             auth_token = user.get_auth_token()
+            logging.info(f"[LOGIN:{login_id}] Generated auth token for {user.username}: {auth_token[:15]}...")
             
             # Update last login time and remember token in the database
             db.session.query(User).filter_by(id=user.id).update({
                 User.last_login: datetime.utcnow(),
                 User.remember_token: auth_token
             })
+            
+            logging.info(f"[LOGIN:{login_id}] Updated last login time and remember token for {user.username}")
             db.session.commit()
             
             # Log in the user with remember=True and force cookie refresh
