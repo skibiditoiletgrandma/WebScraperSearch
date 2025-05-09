@@ -227,12 +227,20 @@ def scrape_website(url, timeout=20):
 
         # Use trafilatura to get the website content with timeout
         try:
-            # Set a timeout for the download - note: trafilatura doesn't directly support timeout parameter
-            # for fetch_url, but it will be passed to the underlying request when the fix is implemented
-            downloaded = trafilatura.fetch_url(url)
-            if not downloaded:
-                logging.warning(f"Failed to download content from {url}")
-                return "Could not retrieve content from this website."
+            # Set a timeout for the download - implement our own timeout mechanism
+            # since trafilatura doesn't directly support timeout parameter
+            import socket
+            original_timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(timeout)
+            
+            try:
+                downloaded = trafilatura.fetch_url(url)
+                if not downloaded:
+                    logging.warning(f"Failed to download content from {url}")
+                    return "Could not retrieve content from this website."
+            finally:
+                # Restore original timeout
+                socket.setdefaulttimeout(original_timeout)
 
             # Extract the main text content
             text = trafilatura.extract(downloaded)
