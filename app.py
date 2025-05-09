@@ -11,11 +11,8 @@ from flask_login import LoginManager
 class Base(DeclarativeBase):
     pass
 
-# Initialize SQLAlchemy with the base class
-db = SQLAlchemy(model_class=Base)
-
-# Initialize Flask-Login
-login_manager = LoginManager()
+# Import extensions from models
+from models import db, login_manager
 
 # Create the Flask application
 app = Flask(__name__)

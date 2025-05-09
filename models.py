@@ -3,9 +3,12 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.orm import relationship
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
 
-# Get db and login_manager after they're created
-from app import db, login_manager
+# Initialize extensions
+db = SQLAlchemy()
+login_manager = LoginManager()
 
 @login_manager.user_loader
 def load_user(user_id):
