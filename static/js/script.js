@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const darkTextElement = document.querySelector('.theme-text-dark');
     const lightTextElement = document.querySelector('.theme-text-light');
     const bootstrapCssLink = document.getElementById('bootstrap-css');
-    
+
     // Initialize Research Mode toggle style based on current theme
     const currentTheme = htmlElement.getAttribute('data-bs-theme') || 'light';
     if (currentTheme === 'dark') {
@@ -19,13 +19,13 @@ document.addEventListener('DOMContentLoaded', function() {
             toggle.classList.add('dark-mode-toggle');
         });
     }
-    
+
     // Check for user's theme preference in local storage
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
         applyTheme(savedTheme);
     }
-    
+
     // Handle theme toggle button click
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', function() {
@@ -35,11 +35,11 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('theme', newTheme); // Save preference
         });
     }
-    
+
     // Function to apply the theme
     function applyTheme(theme) {
         htmlElement.setAttribute('data-bs-theme', theme);
-        
+
         // Update button appearance
         if (theme === 'dark') {
             // Show dark mode icons/text, hide light mode ones
@@ -47,18 +47,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (lightIconElement) lightIconElement.classList.add('d-none');
             if (darkTextElement) darkTextElement.classList.remove('d-none');
             if (lightTextElement) lightTextElement.classList.add('d-none');
-            
+
             // Change theme toggle button style for dark mode
             if (themeToggleBtn) {
                 themeToggleBtn.classList.remove('btn-outline-dark');
                 themeToggleBtn.classList.add('btn-outline-light');
             }
-            
+
             // Update Research Mode toggle appearance for dark mode
             document.querySelectorAll('.form-check-input[type="checkbox"]#research-mode').forEach(toggle => {
                 toggle.classList.add('dark-mode-toggle');
             });
-            
+
             // Update all outline-light buttons
             document.querySelectorAll('.btn-outline-light').forEach(btn => {
                 if (btn.classList.contains('btn-outline-dark')) {
@@ -68,12 +68,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     btn.classList.add('btn-outline-light');
                 }
             });
-            
+
             // Change Bootstrap CSS to dark theme
             if (bootstrapCssLink) {
                 bootstrapCssLink.href = "https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css";
             }
-            
+
             // Change header and footer colors
             const header = document.querySelector('header');
             const footer = document.querySelector('footer');
@@ -91,26 +91,26 @@ document.addEventListener('DOMContentLoaded', function() {
             if (lightIconElement) lightIconElement.classList.remove('d-none');
             if (darkTextElement) darkTextElement.classList.add('d-none');
             if (lightTextElement) lightTextElement.classList.remove('d-none');
-            
+
             // Change theme toggle button style for light mode
             if (themeToggleBtn) {
                 themeToggleBtn.classList.remove('btn-outline-light');
                 themeToggleBtn.classList.add('btn-outline-dark');
             }
-            
+
             // Update Research Mode toggle appearance for light mode
             document.querySelectorAll('.form-check-input[type="checkbox"]#research-mode').forEach(toggle => {
                 toggle.classList.remove('dark-mode-toggle');
             });
-            
+
             // Update all button colors for light mode
             // Note: We don't change the classes as our CSS handles this with the data-bs-theme attribute
-            
+
             // Change Bootstrap CSS to light theme
             if (bootstrapCssLink) {
                 bootstrapCssLink.href = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css";
             }
-            
+
             // Change header and footer colors
             const header = document.querySelector('header');
             const footer = document.querySelector('footer');
@@ -124,12 +124,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     // Search form validation
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-query');
     const searchButton = document.getElementById('search-button');
-    
+
     if (searchForm) {
         searchForm.addEventListener('submit', function(e) {
             if (searchInput.value.trim() === '') {
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Automatically dismiss alerts after 5 seconds
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(alert => {
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
             bsAlert.close();
         }, 5000);
     });
-    
+
     // Add smooth scrolling for internal links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Initialize tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function(tooltipTriggerEl) {
@@ -185,7 +185,7 @@ function showAlert(message, type = 'info') {
     alertsContainer.style.top = '20px';
     alertsContainer.style.right = '20px';
     alertsContainer.style.zIndex = '9999';
-    
+
     const alertElement = document.createElement('div');
     alertElement.className = `alert alert-${type} alert-dismissible fade show`;
     alertElement.role = 'alert';
@@ -193,10 +193,10 @@ function showAlert(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
-    
+
     alertsContainer.appendChild(alertElement);
     document.body.appendChild(alertsContainer);
-    
+
     // Auto remove after 5 seconds
     setTimeout(() => {
         alertElement.classList.remove('show');
@@ -204,4 +204,43 @@ function showAlert(message, type = 'info') {
             alertsContainer.remove();
         }, 200);
     }, 5000);
+}
+
+// Function to display suggestions in the UI
+        function displaySuggestions(suggestions) {
+            // Clear previous suggestions
+            const suggestionsList = document.getElementById('suggestions-list'); // Assuming you have a suggestions list element
+            suggestionsList.innerHTML = '';
+
+            // Take only first 3 suggestions
+            suggestions.slice(0, 3).forEach(suggestion => {
+                const button = document.createElement('button');
+                button.className = 'btn btn-outline-primary me-2'; // Added me-2 for spacing
+                button.type = 'button';
+
+                // Add suggestion type icon
+                let typeIcon = 'fa-lightbulb';
+                if (suggestion.type === 'operator') {
+                    typeIcon = 'fa-code';
+                } else if (suggestion.type === 'expanded') {
+                    typeIcon = 'fa-plus-circle';
+                }
+
+                button.innerHTML = `
+                    <i class="fas ${typeIcon} me-2"></i>
+                    ${suggestion.query}
+                `;
+
+                // Add click event to use this suggestion
+                const searchInput = document.getElementById('search-query');
+                const suggestionsContainer = document.getElementById('suggestions-container');
+
+                button.addEventListener('click', function() {
+                    searchInput.value = suggestion.query;
+                    suggestionsContainer.classList.add('d-none');
+                    searchInput.focus(); // Keep focus on search input for immediate enter
+                });
+
+                suggestionsList.appendChild(button);
+            });
 }
