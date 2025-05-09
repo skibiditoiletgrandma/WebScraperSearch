@@ -53,6 +53,10 @@ class User(UserMixin, db.Model):
         
     def check_search_limit(self):
         """Check if user has reached their daily search limit"""
+        # Admin users bypass search limits
+        if self.is_admin:
+            return True
+            
         # Ensure we have valid values for the search count fields
         if self.search_count_today is None:
             self.search_count_today = 0
