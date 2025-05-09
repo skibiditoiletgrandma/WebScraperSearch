@@ -208,14 +208,19 @@ function showAlert(message, type = 'info') {
 
 // Function to display suggestions in the UI
         function displaySuggestions(suggestions) {
+            const suggestionsList = document.getElementById('suggestions-list');
+            const suggestionsContainer = document.getElementById('suggestions-container');
+            const searchInput = document.getElementById('search-query');
+            
+            if (!suggestionsList || !suggestionsContainer || !searchInput) return;
+            
             // Clear previous suggestions
-            const suggestionsList = document.getElementById('suggestions-list'); // Assuming you have a suggestions list element
             suggestionsList.innerHTML = '';
 
             // Take only first 3 suggestions
             suggestions.slice(0, 3).forEach(suggestion => {
                 const button = document.createElement('button');
-                button.className = 'btn btn-outline-primary me-2'; // Added me-2 for spacing
+                button.className = 'btn btn-outline-primary me-2 mb-2'; // Added margin bottom
                 button.type = 'button';
 
                 // Add suggestion type icon
@@ -231,16 +236,18 @@ function showAlert(message, type = 'info') {
                     ${suggestion.query}
                 `;
 
-                // Add click event to use this suggestion
-                const searchInput = document.getElementById('search-query');
-                const suggestionsContainer = document.getElementById('suggestions-container');
-
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
                     searchInput.value = suggestion.query;
-                    suggestionsContainer.classList.add('d-none');
-                    searchInput.focus(); // Keep focus on search input for immediate enter
+                    searchInput.focus();
                 });
 
                 suggestionsList.appendChild(button);
             });
+            
+            // Show suggestions container if we have suggestions
+            if (suggestionsList.children.length > 0) {
+                suggestionsContainer.classList.remove('d-none');
+            }
+}
 }

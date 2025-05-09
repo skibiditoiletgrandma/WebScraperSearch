@@ -399,7 +399,14 @@
         }
         
         // Load suggestions immediately when the page loads
-        setTimeout(fetchSuggestions, 300);
+        if (searchInput && searchInput.value.length >= 3) {
+            setTimeout(fetchSuggestions, 300);
+        }
+        
+        // Show suggestions container if we have suggestions
+        if (suggestionsList && suggestionsList.children.length > 0) {
+            suggestionsContainer.classList.remove('d-none');
+        }
         {% endif %}
         
         // Copy link functionality
