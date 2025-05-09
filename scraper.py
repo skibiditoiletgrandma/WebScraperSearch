@@ -43,12 +43,21 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
         ConnectionError: If there are network connectivity issues
         Exception: For other unexpected errors
     """
-    logging.debug(f"Starting search_google with query: {query}, num_results: {num_results}")
-    logging.debug(f"Research mode: {research_mode}, Additional params: {kwargs}")
+    logging.debug(f"[SEARCH_DEBUG] Starting search_google with query: {query}, num_results: {num_results}")
+    logging.debug(f"[SEARCH_DEBUG] Research mode: {research_mode}, Additional params: {kwargs}")
+    
+    # Create a unique identifier for this search request
+    import uuid
+    search_id = str(uuid.uuid4())[:8]
+    logging.info(f"[SEARCH:{search_id}] New search request initiated for query: '{query}'")
+    
     try:
+        # Log environment variable access
         api_key = os.environ.get("SERPAPI_KEY")
+        logging.debug(f"[SEARCH:{search_id}] SERPAPI_KEY present: {bool(api_key)}")
+        
         if not api_key:
-            logging.error("SERPAPI_KEY environment variable not set")
+            logging.error(f"[SEARCH:{search_id}] SERPAPI_KEY environment variable not set")
             raise ValueError("API key for search service not configured. Please add a valid SerpAPI key.")
 
         logging.info(f"Searching for: {query}")
@@ -215,6 +224,12 @@ def scrape_website(url, timeout=20):
     Returns:
         str: The extracted text content from the website
     """
+    # Create a unique ID for this scraping operation
+    import uuid
+    scrape_id = str(uuid.uuid4())[:8]
+    
+    logging.info(f"[SCRAPE:{scrape_id}] Starting to scrape website: {url} (timeout: {timeout}s)")
+    
     headers = {
         "User-Agent": get_random_user_agent(),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -223,26 +238,35 @@ def scrape_website(url, timeout=20):
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
     }
+    
+    logging.debug(f"[SCRAPE:{scrape_id}] Using User-Agent: {headers['User-Agent']}")
 
     try:
-        logging.info(f"Scraping website: {url}")
-
         # Use trafilatura to get the website content with timeout
         try:
+            logging.info(f"[SCRAPE:{scrape_id}] Using trafilatura to fetch URL: {url}")
+            
             # Set a timeout for the download - implement our own timeout mechanism
             # since trafilatura doesn't directly support timeout parameter
             import socket
+            logging.debug(f"[SCRAPE:{scrape_id}] Current socket timeout: {socket.getdefaulttimeout()}")
             original_timeout = socket.getdefaulttimeout()
             socket.setdefaulttimeout(timeout)
+            logging.debug(f"[SCRAPE:{scrape_id}] Socket timeout temporarily set to: {timeout}s")
             
             try:
+                logging.debug(f"[SCRAPE:{scrape_id}] Calling trafilatura.fetch_url()")
                 downloaded = trafilatura.fetch_url(url)
-                if not downloaded:
-                    logging.warning(f"Failed to download content from {url}")
+                
+                if downloaded:
+                    logging.info(f"[SCRAPE:{scrape_id}] Successfully downloaded content from {url} (size: {len(downloaded)} bytes)")
+                else:
+                    logging.warning(f"[SCRAPE:{scrape_id}] Failed to download content from {url}, returned None or empty content")
                     return "Could not retrieve content from this website."
             finally:
                 # Restore original timeout
                 socket.setdefaulttimeout(original_timeout)
+                logging.debug(f"[SCRAPE:{scrape_id}] Socket timeout restored to: {original_timeout}")
 
             # Extract the main text content
             text = trafilatura.extract(downloaded)

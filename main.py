@@ -4,8 +4,24 @@ from datetime import timedelta
 from configure_database_url import configure_database_url
 from app import app, db, configure_database
 
-# Set up logging for debugging
-logging.basicConfig(level=logging.DEBUG)
+# Set up detailed logging for debugging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d] - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logging.getLogger('werkzeug').setLevel(logging.INFO)
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+logging.getLogger('urllib3').setLevel(logging.INFO)
+
+# Add startup message
+logging.info("======= Starting application =======")
+logging.info(f"SERPAPI_KEY configured: {bool(os.environ.get('SERPAPI_KEY'))}")
+logging.info(f"DATABASE_URL configured: {bool(os.environ.get('DATABASE_URL'))}")
+
+# Log Python version
+import sys
+logging.info(f"Python version: {sys.version}")
 
 # Configure session lifetime for anonymous users
 app.permanent_session_lifetime = timedelta(days=365)  # Session lasts for 1 year
