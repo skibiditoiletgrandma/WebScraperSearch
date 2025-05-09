@@ -157,15 +157,40 @@ def search():
         enable_suggestions = True
 
         if current_user.is_authenticated:
-            # For logged-in users, use their preferences
-            num_pages = current_user.search_pages_limit or 1
-            hide_wikipedia = current_user.hide_wikipedia or False
-            show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
+            # For logged-in users, use their preferences with careful handling of None values
+            # Ensure search_pages_limit is a valid integer between 1 and 10
+            try:
+                if current_user.search_pages_limit is not None:
+                    num_pages = max(1, min(10, int(current_user.search_pages_limit)))
+                else:
+                    num_pages = 1
+            except (ValueError, TypeError):
+                num_pages = 1  # Default if conversion fails
+                
+            # Ensure boolean settings have proper defaults
+            hide_wikipedia = bool(current_user.hide_wikipedia) if current_user.hide_wikipedia is not None else False
+            show_feedback = bool(current_user.show_feedback_features) if current_user.show_feedback_features is not None else False
 
-            # Summary settings for logged-in users
-            generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
-            summary_depth = current_user.summary_depth if current_user.summary_depth is not None else 3
-            summary_complexity = current_user.summary_complexity if current_user.summary_complexity is not None else 3
+            # Summary settings for logged-in users with careful handling of None values
+            generate_summaries = bool(current_user.generate_summaries) if current_user.generate_summaries is not None else True
+            
+            # Ensure summary_depth is a valid integer between 1 and 5
+            try:
+                if current_user.summary_depth is not None:
+                    summary_depth = max(1, min(5, int(current_user.summary_depth)))
+                else:
+                    summary_depth = 3
+            except (ValueError, TypeError):
+                summary_depth = 3  # Default if conversion fails
+                
+            # Ensure summary_complexity is a valid integer between 1 and 5
+            try:
+                if current_user.summary_complexity is not None:
+                    summary_complexity = max(1, min(5, int(current_user.summary_complexity)))
+                else:
+                    summary_complexity = 3
+            except (ValueError, TypeError):
+                summary_complexity = 3  # Default if conversion fails
 
             # Suggestions setting for logged-in users
             enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
@@ -241,16 +266,24 @@ def search():
                 logging.info(f"Processing result: {result['link']}")
 
                 # Extract text content from the website with timeout
-                content = scrape_website(result["link"], timeout=15)  # 15-second timeout for website scraping
+                try:
+                    content = scrape_website(result["link"], timeout=15)  # 15-second timeout for website scraping
+                except Exception as scrape_error:
+                    logging.error(f"Error scraping {result['link']}: {str(scrape_error)}")
+                    content = f"Error accessing website: {result['description']}"
 
                 # Generate a summary of the content if enabled, otherwise use the description
                 if generate_summaries:
-                    summary = summarize_text(
-                        content, 
-                        result["title"],
-                        depth=summary_depth,
-                        complexity=summary_complexity
-                    )
+                    try:
+                        summary = summarize_text(
+                            content, 
+                            result["title"],
+                            depth=summary_depth,
+                            complexity=summary_complexity
+                        )
+                    except Exception as summary_error:
+                        logging.error(f"Error generating summary for {result['link']}: {str(summary_error)}")
+                        summary = f"Could not generate summary. {result['description']}"
                 else:
                     # If summaries are disabled, use the description as the summary
                     summary = f"[Summary generation disabled] {result['description']}"
@@ -556,10 +589,10 @@ def login():
             # Log in the user with remember=True and force cookie refresh
             login_user(user, remember=True, force=True)
 
-            # Update last login time and remember token using query
+            # Update last login time and remember token using proper SQLAlchemy column references
             db.session.query(User).filter_by(id=user.id).update({
-                "last_login": datetime.utcnow(),
-                "remember_token": user.get_id()
+                User.last_login: datetime.utcnow(),
+                User.remember_token: user.get_id()
             })
             db.session.commit()
 
@@ -593,16 +626,16 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        # Generate remember token and store it
-        user.remember_token = secrets.token_hex(32)
-
-        # Log in user with remember token
+        # Generate remember token
+        remember_token = secrets.token_hex(32)
+        
+        # Log in user with remember=True
         login_user(user, remember=True, duration=timedelta(days=365))
-
-        # Update last login time and remember token
+        
+        # Update last login time and remember token using proper SQLAlchemy column references
         db.session.query(User).filter_by(id=user.id).update({
-            "last_login": datetime.utcnow(),
-            "remember_token": user.remember_token
+            User.last_login: datetime.utcnow(),
+            User.remember_token: remember_token
         })
         db.session.commit()
 
