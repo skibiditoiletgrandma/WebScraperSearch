@@ -109,7 +109,7 @@ def search():
     search_request_id = str(uuid.uuid4())[:8]
     
     logging.info(f"[SEARCH_REQ:{search_request_id}] Search function called")
-    query = request.form.get("query", "")
+    query = request.form.get("query", "").strip()
     logging.info(f"[SEARCH_REQ:{search_request_id}] Search query: '{query}'")
     
     # Log authentication status
@@ -369,57 +369,80 @@ def search():
         
         for index, result in enumerate(search_results):
             try:
-                logging.info(f"Processing result {index+1}/{len(search_results)}: {result['link']}")
+                # Create a unique ID for each result processing
+                result_id = f"{search_request_id}-{index+1}"
+                link = result.get('link', '')
+                title = result.get('title', 'Untitled')
+                
+                logging.info(f"[RESULT:{result_id}] Processing: {title[:30]}... ({link})")
 
-                # Extract text content from the website with timeout
+                # Extract text content from the website with timeout - robust approach
                 try:
-                    logging.debug(f"Scraping website: {result['link']}")
-                    content = scrape_website(result["link"], timeout=15)  # 15-second timeout for website scraping
-                    logging.debug(f"Successfully scraped content from {result['link']}, content length: {len(content)}")
+                    logging.debug(f"[RESULT:{result_id}] Scraping website")
+                    # Use our improved scraper that uses BeautifulSoup as primary and trafilatura as fallback
+                    content = scrape_website(link, timeout=15)  # 15-second timeout for website scraping
+                    content_length = len(content)
+                    logging.debug(f"[RESULT:{result_id}] Successfully scraped content, length: {content_length}")
                 except Exception as scrape_error:
-                    logging.error(f"Error scraping {result['link']}: {str(scrape_error)}")
+                    logging.error(f"[RESULT:{result_id}] Error scraping: {str(scrape_error)}")
                     content = f"Error accessing website: {result['description']}"
 
                 # Generate a summary of the content if enabled, otherwise use the description
                 if generate_summaries:
                     try:
+                        logging.debug(f"[RESULT:{result_id}] Generating summary")
                         summary = summarize_text(
                             content, 
-                            result["title"],
+                            title,
                             depth=summary_depth,
                             complexity=summary_complexity
                         )
+                        logging.debug(f"[RESULT:{result_id}] Summary generated successfully")
                     except Exception as summary_error:
-                        logging.error(f"Error generating summary for {result['link']}: {str(summary_error)}")
-                        summary = f"Could not generate summary. {result['description']}"
+                        logging.error(f"[RESULT:{result_id}] Summary error: {str(summary_error)}")
+                        # Provide a fallback using the description
+                        description = result.get('description', 'No description available')
+                        summary = f"Could not generate summary. {description}"
                 else:
                     # If summaries are disabled, use the description as the summary
-                    summary = f"[Summary generation disabled] {result['description']}"
+                    description = result.get('description', 'No description available')
+                    summary = f"[Summary generation disabled] {description}"
 
                 # Save search result to database (if available)
                 search_result = None
                 try:
                     # Only save to database if the search query was successfully saved
                     if search_saved and new_search.id is not None:
+                        # Get values safely with fallbacks
+                        result_title = result.get('title', 'Untitled')
+                        result_link = result.get('link', '')
+                        result_description = result.get('description', '')
+                        
+                        logging.debug(f"[RESULT:{result_id}] Saving to database - title: {result_title[:30]}...")
+                        
                         search_result = SearchResult(
                             search_query_id=new_search.id,
-                            title=result["title"],
-                            link=result["link"],
-                            description=result["description"],
+                            title=result_title,
+                            link=result_link,
+                            description=result_description,
                             summary=summary,
                             rank=index + 1
                         )
                         db.session.add(search_result)
                         db.session.flush()  # Flush to get the ID without committing
-
+                        logging.debug(f"[RESULT:{result_id}] Saved with ID: {search_result.id}")
                 except Exception as db_error:
-                    logging.error(f"Error saving search result to database: {str(db_error)}")
+                    logging.error(f"[RESULT:{result_id}] Database error: {str(db_error)}")
+                    if 'search_result' in locals() and search_result is not None:
+                        db.session.expunge(search_result)  # Remove from session if there was an error
+                    search_result = None
 
+                # Create a dictionary with the result data, safely accessing attributes
                 processed_result = {
-                    "id": search_result.id if search_result else None,
-                    "title": result["title"],
-                    "link": result["link"],
-                    "description": result["description"],
+                    "id": getattr(search_result, 'id', None),
+                    "title": result.get('title', 'Untitled'),
+                    "link": result.get('link', ''),
+                    "description": result.get('description', ''),
                     "summary": summary
                 }
 
@@ -461,8 +484,37 @@ def search():
 
     except Exception as e:
         error_details = traceback.format_exc()
-        logging.error(f"Search error: {str(e)}\n{error_details}")
-        flash(f"Error processing your search request: {str(e)}", "danger")
+        
+        # Use a unique error ID for tracking
+        error_id = str(uuid.uuid4())[:8]
+        logging.error(f"[ERROR:{error_id}] Search error: {str(e)}")
+        logging.error(f"[ERROR:{error_id}] Details: {error_details}")
+        
+        # Create a more user-friendly error message
+        user_error = "Sorry, we encountered a problem with your search request."
+        
+        # Add more specific details for common errors
+        if isinstance(e, ConnectionError) or "connection" in str(e).lower():
+            user_error = "Network connection error. Please check your internet connection and try again."
+        elif isinstance(e, TimeoutError) or "timeout" in str(e).lower():
+            user_error = "The search took too long to complete. Please try a more specific search term."
+        elif "api key" in str(e).lower() or "authorization" in str(e).lower():
+            user_error = "Search API configuration error. Please contact the administrator."
+        elif "database" in str(e).lower() or "sql" in str(e).lower():
+            user_error = "Database error. We're working on fixing this issue."
+            
+            # Try to fix database errors automatically
+            try:
+                from update_all_fixes import main as run_all_fixes
+                run_all_fixes()
+            except:
+                pass
+        
+        # Log that we're showing the error to the user
+        logging.info(f"[ERROR:{error_id}] Displaying user-friendly error: {user_error}")
+        
+        # Flash the user-friendly error message
+        flash(f"{user_error} (Error ID: {error_id})", "danger")
         return redirect(url_for("index"))
 
 @app.route("/history")
