@@ -87,7 +87,10 @@ def search():
 
         # Display remaining searches for the user
         remaining = current_user.remaining_searches()
-        flash(f"You have {remaining} searches remaining today.", "info")
+        if remaining == float('inf'):
+            flash(f"You have unlimited searches as an admin user.", "info")
+        else:
+            flash(f"You have {remaining} searches remaining today.", "info")
 
     else:
         # For anonymous users: Check lifetime search limit (3 searches)

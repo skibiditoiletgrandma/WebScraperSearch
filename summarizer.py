@@ -14,6 +14,16 @@ except LookupError:
     nltk.download('punkt')
 
 try:
+    # Add download of punkt_tab to fix error
+    nltk.data.find('tokenizers/punkt_tab/english')
+except LookupError:
+    try:
+        nltk.download('punkt_tab')
+    except:
+        # If this fails, we have a fallback approach
+        pass
+
+try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
     nltk.download('stopwords')
@@ -70,6 +80,7 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
     try:
         nltk.download('punkt')
         nltk.download('stopwords')
+        nltk.download('punkt_tab')
     except Exception as e:
         logging.error(f"Error downloading NLTK data: {str(e)}")
     if not text or text.strip() == "":
@@ -83,8 +94,13 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
         if len(cleaned_text.split()) < 50:
             return cleaned_text[:500] + "..."
         
-        # Tokenize the text into sentences
-        sentences = sent_tokenize(cleaned_text)
+        # Tokenize the text into sentences - with fallback mechanism
+        try:
+            sentences = sent_tokenize(cleaned_text)
+        except Exception as nltk_error:
+            logging.error(f"Error with NLTK tokenization: {str(nltk_error)}")
+            # Fallback tokenization - split by periods, exclamation points, question marks
+            sentences = re.split(r'(?<=[.!?])\s+', cleaned_text)
         
         # If very few sentences, just return them
         if len(sentences) <= min_sentences:

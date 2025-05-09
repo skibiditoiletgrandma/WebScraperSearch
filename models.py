@@ -59,9 +59,9 @@ class User(UserMixin, db.Model):
 
     def check_search_limit(self):
         """Check if user has reached their daily search limit"""
-        # Admin users are limited to 0 searches
+        # Admin users have unlimited searches
         if self.is_admin:
-            return False
+            return True
 
         # Ensure we have valid values for the search count fields
         if self.search_count_today is None:
@@ -106,6 +106,10 @@ class User(UserMixin, db.Model):
 
     def remaining_searches(self):
         """Return the number of searches remaining for the user today"""
+        # Admin users have unlimited searches
+        if self.is_admin:
+            return float('inf')  # Represents unlimited searches
+            
         # This will ensure all fields are properly set and the counter is current
         self.check_search_limit()
 
