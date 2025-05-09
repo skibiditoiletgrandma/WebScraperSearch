@@ -22,6 +22,29 @@ from forms import LoginForm, RegistrationForm, CitationForm, SettingsForm
 from db_migrations import handle_db_error
 import secrets
 
+# Before request hook to maintain persistent sessions
+@app.before_request
+def check_user_token():
+    """Check if the user has a valid remember token in the cookie and log them in
+    This allows for persistent sessions with the remember me functionality"""
+    if current_user.is_authenticated:
+        # User is already logged in, no need to check token
+        return
+    
+    # Get the remember token from the REMEMBER_COOKIE_NAME
+    remember_cookie_name = app.config.get('REMEMBER_COOKIE_NAME', 'remember_token')
+    token = request.cookies.get(remember_cookie_name)
+    
+    if token:
+        # Look for a user with this token
+        user = User.query.filter_by(remember_token=token).first()
+        if user:
+            # Log the user in
+            login_user(user, remember=True, duration=timedelta(days=365))
+            
+            # Log for debugging
+            logging.debug(f"Auto-logged in user {user.username} using remember token")
+
 # Admin required decorator
 def admin_required(f):
     @wraps(f)
@@ -617,18 +640,27 @@ def login():
             return redirect(url_for('login'))
 
         try:
-            # Log in the user with remember=True and force cookie refresh
-            login_user(user, remember=True, force=True)
-
-            # Update last login time and remember token using proper SQLAlchemy column references
+            # Generate a new auth token for the user
+            auth_token = user.get_auth_token()
+            
+            # Update last login time and remember token in the database
             db.session.query(User).filter_by(id=user.id).update({
                 User.last_login: datetime.utcnow(),
-                User.remember_token: user.get_id()
+                User.remember_token: auth_token
             })
             db.session.commit()
-
-            # Make session permanent
+            
+            # Log in the user with remember=True and force cookie refresh
+            login_user(user, remember=True, force=True, duration=timedelta(days=365))
+            
+            # Make session permanent (365 days)
             session.permanent = True
+            app.permanent_session_lifetime = timedelta(days=365)
+            
+            # Log the session and cookie details for debugging
+            logging.debug(f"User {user.username} logged in with remember_token: {auth_token[:10]}...")
+            logging.debug(f"Session cookie set to permanent: {session.permanent}")
+            logging.debug(f"Remember cookie duration: {app.config.get('REMEMBER_COOKIE_DURATION')}")
         except Exception as e:
             logging.error(f"Error during login persistence: {str(e)}")
             db.session.rollback()
@@ -657,21 +689,27 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        # Generate remember token
-        remember_token = secrets.token_hex(32)
+        # Generate auth token for the user
+        auth_token = user.get_auth_token()
         
-        # Log in user with remember=True
-        login_user(user, remember=True, duration=timedelta(days=365))
-        
-        # Update last login time and remember token using proper SQLAlchemy column references
+        # Update last login time and remember token in the database 
         db.session.query(User).filter_by(id=user.id).update({
             User.last_login: datetime.utcnow(),
-            User.remember_token: remember_token
+            User.remember_token: auth_token
         })
         db.session.commit()
-
-        # Store permanent session
+        
+        # Log in user with remember=True and duration=365 days
+        login_user(user, remember=True, duration=timedelta(days=365))
+        
+        # Make session permanent (365 days)
         session.permanent = True
+        app.permanent_session_lifetime = timedelta(days=365)
+        
+        # Log the session and cookie details for debugging
+        logging.debug(f"New user {user.username} registered and logged in with remember_token: {auth_token[:10]}...")
+        logging.debug(f"Session cookie set to permanent: {session.permanent}")
+        logging.debug(f"Remember cookie duration: {app.config.get('REMEMBER_COOKIE_DURATION')}")
 
         flash('Registration successful! You are now logged in.', 'success')
         return redirect(url_for('index'))

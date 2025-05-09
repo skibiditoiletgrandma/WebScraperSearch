@@ -32,14 +32,19 @@ login_manager.login_message = 'Please log in to access this page'
 login_manager.login_message_category = 'info'
 # Enhanced remember cookie settings
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=365)
-app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['REMEMBER_COOKIE_SECURE'] = False  # Set to False for development environments
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
 app.config['REMEMBER_COOKIE_NAME'] = 'remember_token'
-app.config['SESSION_PROTECTION'] = 'strong'
+app.config['SESSION_PROTECTION'] = 'basic'  # Changed from 'strong' to make sessions more persistent
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to False for development environments
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Add SameSite policy
+
+# Create a secret key if one isn't set already
+if not app.secret_key or len(app.secret_key) < 32:
+    app.secret_key = secrets.token_hex(32)
 
 # Configure database connection and setup function for dynamic configuration
 def configure_database(app_instance, force_refresh=False):
