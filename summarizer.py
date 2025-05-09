@@ -66,6 +66,12 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
     Returns:
         str: The generated summary
     """
+    # Download required NLTK data if not already present
+    try:
+        nltk.download('punkt')
+        nltk.download('stopwords')
+    except Exception as e:
+        logging.error(f"Error downloading NLTK data: {str(e)}")
     if not text or text.strip() == "":
         return "No content to summarize."
     
@@ -116,10 +122,12 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
             sentence_scores[i] = score
         
         # Adjust max_sentences based on depth setting (1-5)
-        depth_adjusted_max = max(2, min(10, max_sentences + (depth - 3) * 2))
+        base_sentences = max_sentences
+        depth_factor = (depth - 1) / 4  # Normalize to 0-1 range
+        depth_adjusted_max = max(2, min(15, int(base_sentences + (base_sentences * depth_factor * 2))))
         
-        # Get top-scoring sentences
-        num_sentences = min(depth_adjusted_max, max(min_sentences, len(sentences) // (6 - depth)))
+        # Get top-scoring sentences with depth consideration
+        num_sentences = min(depth_adjusted_max, max(min_sentences, int(len(sentences) * (0.1 + depth_factor * 0.3))))
         top_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[:num_sentences]
         
         # Sort sentences by their original position
@@ -129,22 +137,27 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
         summary = " ".join(sentences[i] for i, _ in top_sentences)
         
         # Adjust for complexity (1-5)
-        # For lower complexity (1-2), simplify by keeping only the most important sentences
-        if complexity <= 2 and len(top_sentences) > 3:
-            # Keep only the highest-scoring sentences for simpler summaries
-            simple_count = max(3, num_sentences // 2)
-            simple_sentences = sorted(top_sentences, key=lambda x: x[1], reverse=True)[:simple_count]
-            simple_sentences = sorted(simple_sentences, key=lambda x: x[0])
-            summary = " ".join(sentences[i] for i, _ in simple_sentences)
+        complexity_factor = (complexity - 1) / 4  # Normalize to 0-1 range
         
-        # For higher complexity (4-5), add more context
-        elif complexity >= 4 and len(sentences) > num_sentences:
-            # Add more sentences for complex summaries
-            additional = min(len(sentences) - num_sentences, complexity - 2)
-            more_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[num_sentences:num_sentences+additional]
-            more_sentences = sorted(more_sentences, key=lambda x: x[0])
-            for i, _ in more_sentences:
-                summary += " " + sentences[i]
+        if complexity_factor < 0.4:  # Lower complexity (1-2)
+            # Keep shorter, simpler sentences
+            sentence_weights = [(i, s, len(s.split())) for i, s in enumerate(sentences)]
+            simple_sentences = sorted(sentence_weights, key=lambda x: (x[2] < 30, x[2]))  # Prefer shorter sentences
+            selected_indices = [x[0] for x in simple_sentences[:num_sentences]]
+            selected_indices.sort()  # Maintain original order
+            summary = " ".join(sentences[i] for i in selected_indices)
+            
+        elif complexity_factor > 0.6:  # Higher complexity (4-5)
+            # Include more context and longer sentences
+            additional_sentences = int(num_sentences * complexity_factor)
+            complex_sentences = sorted(sentence_scores.items(), 
+                                    key=lambda x: (x[1], len(sentences[x[0]].split())), 
+                                    reverse=True)[:num_sentences + additional_sentences]
+            complex_sentences = sorted(complex_sentences, key=lambda x: x[0])
+            summary = " ".join(sentences[i] for i, _ in complex_sentences)
+            
+        else:  # Medium complexity (3)
+            summary = " ".join(sentences[i] for i, _ in top_sentences)
         
         # If summary is still too short, add more sentences regardless of complexity
         if len(summary.split()) < 30 and len(sentences) > num_sentences:
