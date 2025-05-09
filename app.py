@@ -40,7 +40,7 @@ app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
 
 # Configure database connection
-database_url = os.environ.get("DATABASE_URL_2")  # Use second database as primary
+database_url = os.environ.get("DATABASE_URL")  # Check for database URL
 app.logger.info(f"Database URL detected: {'Yes' if database_url else 'No'}")
 
 # Set up SQLAlchemy configuration
