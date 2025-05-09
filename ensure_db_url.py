@@ -20,16 +20,91 @@ database_url = os.environ.get("DATABASE_URL")
 import os
 import sys
 import logging
+import subprocess
+import time
 from configure_database_url import configure_database_url
+
+def create_postgresql_database():
+    """
+    Create a new PostgreSQL database using Replit's create_postgresql_database_tool.
+    This requires the script to be run in the Replit environment.
+    
+    Returns:
+        bool: True if database creation was initiated, False otherwise
+    """
+    logger = logging.getLogger(__name__)
+    logger.info("No DATABASE_URL found. Creating a new PostgreSQL database...")
+    
+    try:
+        # Execute create_postgresql_database_tool directly using bash
+        result = subprocess.run(
+            [
+                "bash", "-c", 
+                """
+                python3 -c "
+                from antml.function_calls import create_postgresql_database_tool
+                create_postgresql_database_tool()
+                "
+                """
+            ], 
+            capture_output=True, 
+            text=True
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"Failed to execute database creation tool: {result.stderr}")
+            return False
+            
+        logger.info("Initiated database creation, waiting for environment variables...")
+        
+        # Wait for the environment variables to be set
+        # Sometimes there's a delay before they're available
+        max_wait = 10  # seconds
+        for i in range(max_wait):
+            if all([
+                os.environ.get("PGHOST"),
+                os.environ.get("PGPORT"),
+                os.environ.get("PGUSER"),
+                os.environ.get("PGPASSWORD"),
+                os.environ.get("PGDATABASE")
+            ]):
+                logger.info(f"PostgreSQL environment variables detected after {i+1} seconds")
+                break
+                
+            if i < max_wait - 1:  # Don't sleep on the last iteration
+                time.sleep(1)
+        
+        # Check final state of environment variables
+        if all([
+            os.environ.get("PGHOST"),
+            os.environ.get("PGPORT"),
+            os.environ.get("PGUSER"),
+            os.environ.get("PGPASSWORD"),
+            os.environ.get("PGDATABASE")
+        ]):
+            logger.info("PostgreSQL database created successfully")
+            return True
+        else:
+            logger.warning("Database creation completed, but some environment variables are missing")
+            # Return True anyway and let configure_database_url handle any issues
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error creating PostgreSQL database: {str(e)}")
+        return False
 
 def ensure_db_url():
     """
     Ensure DATABASE_URL is set in environment variables.
-    If it's not set, construct it from individual PostgreSQL variables.
+    If it's not set, try the following steps:
+    1. Try to construct it from individual PostgreSQL variables
+    2. If that fails, create a new PostgreSQL database
     
     Returns:
         bool: True if DATABASE_URL is set (or was successfully set), False otherwise
     """
+    logger = logging.getLogger(__name__)
+    
     # Check if DATABASE_URL is already set
     if os.environ.get("DATABASE_URL"):
         return True
@@ -37,13 +112,25 @@ def ensure_db_url():
     # Configure it from individual PostgreSQL environment variables
     success = configure_database_url()
     
-    if not success:
-        logging.error(
-            "DATABASE_URL is not set and could not be constructed from PostgreSQL variables. "
-            "Make sure PGHOST, PGPORT, PGUSER, PGPASSWORD, and PGDATABASE are properly set."
-        )
+    if success:
+        return True
     
-    return success
+    # If we get here, we need to create a new PostgreSQL database
+    logger.warning(
+        "DATABASE_URL is not set and could not be constructed from PostgreSQL variables. "
+        "Attempting to create a new PostgreSQL database."
+    )
+    
+    # Try to create a new database
+    if create_postgresql_database():
+        # Now try again to set DATABASE_URL from the newly created PostgreSQL database
+        return configure_database_url()
+    
+    logger.error(
+        "Could not create a PostgreSQL database. Database functionality will be limited. "
+        "Please set up a database manually."
+    )
+    return False
 
 if __name__ == "__main__":
     # Set up logging when run as script
