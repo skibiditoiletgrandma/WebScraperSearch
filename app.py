@@ -48,6 +48,12 @@ def configure_database(app_instance, force_refresh=False):
         force_refresh: Whether to refresh the connection even if already configured
     """
     database_url = os.environ.get("DATABASE_URL")  # Check for database URL
+    
+    # Skip if already configured with a database URL and not forcing refresh
+    if not force_refresh and app_instance.config.get("SQLALCHEMY_DATABASE_URI") == database_url and database_url:
+        app_instance.logger.info("Database already configured with the same URL. Skipping.")
+        return True
+        
     app_instance.logger.info(f"Database URL detected: {'Yes' if database_url else 'No'}")
     
     # Set up SQLAlchemy configuration
