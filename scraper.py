@@ -43,6 +43,8 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
         ConnectionError: If there are network connectivity issues
         Exception: For other unexpected errors
     """
+    logging.debug(f"Starting search_google with query: {query}, num_results: {num_results}")
+    logging.debug(f"Research mode: {research_mode}, Additional params: {kwargs}")
     try:
         api_key = os.environ.get("SERPAPI_KEY")
         if not api_key:
