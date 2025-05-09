@@ -39,6 +39,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to apply the theme
     function applyTheme(theme) {
         htmlElement.setAttribute('data-bs-theme', theme);
+        localStorage.setItem('theme', theme);
+        
+        // Update Bootstrap CSS link
+        if (bootstrapCssLink) {
+            bootstrapCssLink.href = theme === 'dark' 
+                ? "https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css"
+                : "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css";
+        }
 
         // Update button appearance
         if (theme === 'dark') {
