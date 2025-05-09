@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+
+{% block title %}Search Results for "{{ query }}"{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1 class="h3">Search Results for "{{ query }}"</h1>
+    
+    <!-- Search form for new queries -->
+    <form action="{{ url_for('search') }}" method="post" class="mb-4">
+        <div class="input-group">
+            <input type="text" class="form-control" name="query" id="query" 
+                   value="{{ query }}" required>
+            <button class="btn btn-primary" type="submit">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+    </form>
+    
+    <!-- Results count -->
+    <p class="text-muted">Found {{ results|length }} results</p>
+    
+    <!-- Display results -->
+    {% if results %}
+        <div class="list-group">
+            {% for result in results %}
+                <div class="list-group-item list-group-item-action flex-column align-items-start">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ result.title }}</h5>
+                    </div>
+                    <p class="mb-1 text-success small">{{ result.url }}</p>
+                    <p class="mb-1">{{ result.snippet }}</p>
+                    <div class="mt-2">
+                        <a href="{{ result.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> Visit Site
+                        </a>
+                        <a href="{{ url_for('content', url=result.url, title=result.title) }}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-file-alt"></i> View Content
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No results found for your query. Please try a different search term.
+        </div>
+    {% endif %}
+    
+    <!-- Back to search -->
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Search
+        </a>
+    </div>
+</div>
+{% endblock %}

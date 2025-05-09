@@ -1,0 +1,45 @@
+{% extends 'layout.html' %}
+
+{% block title %}Google Search Scraper - Home{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h1 class="card-title text-center mb-4">Google Search Scraper</h1>
+                <p class="text-center mb-4">Enter your search query below to get results from Google.</p>
+                
+                <form action="{{ url_for('search') }}" method="post">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" name="query" id="query" 
+                               placeholder="Enter your search query..." required autofocus>
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="card-title h5">About This Tool</h2>
+                <p class="card-text">
+                    This is a Python-based Google search tool that uses web scraping techniques to provide you with search results.
+                    Simply enter your query in the search box above to get started.
+                </p>
+                <h3 class="card-title h6 mt-3">Features:</h3>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item bg-transparent">Search Google without ads</li>
+                    <li class="list-group-item bg-transparent">Extract content from webpages</li>
+                    <li class="list-group-item bg-transparent">Simple and clean interface</li>
+                </ul>
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i> Please use responsibly. Excessive scraping may lead to your IP being blocked by Google.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

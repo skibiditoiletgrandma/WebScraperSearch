@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block title %}Search History - Google Search Scraper{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>{% if current_user.is_authenticated %}Your {% endif %}Search History</h2>
+    
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary mb-2">
+                <i class="fas fa-arrow-left me-1"></i> Back to Home
+            </a>
+            
+            {% if current_user.is_authenticated %}
+            <div class="alert alert-info mt-2">
+                <i class="fas fa-info-circle me-2"></i>
+                You're seeing searches associated with your account.
+            </div>
+            {% else %}
+            <div class="alert alert-info mt-2">
+                <i class="fas fa-info-circle me-2"></i>
+                <a href="{{ url_for('login') }}">Log in</a> to save searches to your account and access them anytime.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if searches %}
+    <div class="list-group">
+        {% for search in searches %}
+        <a href="{{ url_for('view_search', search_id=search.id) }}" class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">
+                    {{ search.query_text }}
+                    {% if current_user.is_authenticated and search.user_id == current_user.id %}
+                        <span class="badge bg-primary">Your Search</span>
+                    {% endif %}
+                    {% if not search.is_public %}
+                        <span class="badge bg-secondary">Private</span>
+                    {% endif %}
+                </h5>
+                <small>{{ search.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+            </div>
+            <p class="mb-1">
+                <small>Results: {{ search.results|length }}</small>
+                {% if search.user and current_user.is_admin and search.user_id != current_user.id %}
+                    <small class="text-muted"> • By: {{ search.user.username }}</small>
+                {% endif %}
+            </p>
+        </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-warning">
+        <i class="fas fa-info-circle me-2"></i>
+        No search history found. Try searching for something first.
+    </div>
+{% endif %}
+{% endblock %}
