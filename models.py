@@ -1,9 +1,11 @@
 from datetime import datetime
-from app import db, login_manager
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean
-from sqlalchemy.orm import relationship
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean
+from sqlalchemy.orm import relationship
+
+# Get db and login_manager after they're created
+from app import db, login_manager
 
 @login_manager.user_loader
 def load_user(user_id):
