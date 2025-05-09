@@ -223,10 +223,10 @@ def search():
         hide_wikipedia = False  # Default for anonymous users
         show_feedback = True  # Default for anonymous users
 
-        # Summary settings defaults for anonymous users
+        # Summary settings defaults for anonymous users - minimal settings
         generate_summaries = True
-        summary_depth = 3
-        summary_complexity = 3
+        summary_depth = 1  # Most concise summaries
+        summary_complexity = 1  # Simplest language
 
         # Suggestions feature default for anonymous users
         enable_suggestions = True
