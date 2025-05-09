@@ -215,8 +215,14 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
 
 def scrape_website(url, timeout=20):
     """
-    Scrape and extract text content from a website
-
+    Scrape and extract text content from a website with multiple fallback mechanisms.
+    
+    This function uses a multi-layered approach:
+    1. First tries BeautifulSoup for HTML parsing (most reliable for logged-in users)
+    2. Falls back to trafilatura if BeautifulSoup fails
+    3. Implements multiple request strategies with different SSL settings
+    4. Has robust error handling for timeouts and connection issues
+    
     Args:
         url (str): The URL to scrape
         timeout (int): Timeout in seconds for HTTP requests
@@ -228,11 +234,20 @@ def scrape_website(url, timeout=20):
     import uuid
     import requests
     from bs4 import BeautifulSoup
+    import trafilatura
+    from urllib3.exceptions import InsecureRequestWarning
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning as RequestsInsecureRequestWarning
+    
+    # Suppress only the specific warnings about insecure requests
+    import warnings
+    warnings.filterwarnings('ignore', category=InsecureRequestWarning)
+    warnings.filterwarnings('ignore', category=RequestsInsecureRequestWarning)
     
     scrape_id = str(uuid.uuid4())[:8]
     
     logging.info(f"[SCRAPE:{scrape_id}] Starting to scrape website: {url} (timeout: {timeout}s)")
     
+    # Prepare headers with a random user agent
     headers = {
         "User-Agent": get_random_user_agent(),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -240,70 +255,166 @@ def scrape_website(url, timeout=20):
         "DNT": "1",
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache"
     }
     
     logging.debug(f"[SCRAPE:{scrape_id}] Using User-Agent: {headers['User-Agent']}")
-
-    # Use a more resilient approach that avoids SSL/socket errors
+    
+    # Store our final text content here
+    html_content = None
+    text_content = None
+    
+    # Track which methods we've tried
+    methods_tried = []
+    
+    # STAGE 1: Try to get the raw HTML content with multiple fallbacks
+    # ----------------------------------------------------------------
+    
+    # Method 1: First try - Standard requests with SSL verification
     try:
-        logging.info(f"[SCRAPE:{scrape_id}] Using direct requests approach for {url}")
+        methods_tried.append("requests_verified")
+        logging.debug(f"[SCRAPE:{scrape_id}] Trying method 1: Standard requests with verification")
         
-        # Add error and SSL verification handling
-        try:
-            response = requests.get(
-                url, 
-                headers=headers, 
-                timeout=timeout,
-                verify=False  # Bypass SSL verification to avoid SSL errors
-            )
-            response.raise_for_status()
-        except Exception as req_error:
-            logging.warning(f"[SCRAPE:{scrape_id}] First request attempt failed: {str(req_error)}")
-            # Try again with a different approach
-            response = requests.get(
-                url, 
-                headers=headers, 
-                timeout=timeout,
-                verify=True,  # Try with verification
-                allow_redirects=True
-            )
-        
-        # Use BeautifulSoup to parse HTML
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Remove script, style and other non-content elements
-        for tag in soup(['script', 'style', 'header', 'footer', 'nav']):
-            tag.extract()
-            
-        # Get the text content
-        text = soup.get_text(separator='\n')
-        
-        # Clean up text
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = '\n'.join(chunk for chunk in chunks if chunk)
-        
-        if text and len(text.strip()) > 0:
-            text_length = len(text)
-            logging.info(f"[SCRAPE:{scrape_id}] Successfully extracted {text_length} characters from {url}")
-            return text
-            
-        logging.warning(f"[SCRAPE:{scrape_id}] Failed to extract meaningful content")
-        return "No meaningful content could be extracted from this website."
-            
-    except requests.exceptions.Timeout:
-        logging.error(f"[SCRAPE:{scrape_id}] Timeout while scraping {url}")
-        return "Website took too long to respond. Could not retrieve content."
-        
-    except requests.exceptions.RequestException as e:
-        logging.error(f"[SCRAPE:{scrape_id}] Error making request to {url}: {str(e)}")
-        if "timeout" in str(e).lower():
-            return "Website took too long to respond. Could not retrieve content."
-        elif "connection" in str(e).lower():
-            return "Could not connect to this website. Please check the URL or try again later."
-        else:
-            return "Could not retrieve content from this website due to a network error."
+        response = requests.get(
+            url, 
+            headers=headers, 
+            timeout=timeout,
+            verify=True,  # Standard SSL verification
+            allow_redirects=True
+        )
+        response.raise_for_status()
+        html_content = response.text
+        logging.debug(f"[SCRAPE:{scrape_id}] Method 1 successful, got {len(html_content)} bytes")
         
     except Exception as e:
-        logging.error(f"[SCRAPE:{scrape_id}] Error scraping website {url}: {str(e)}")
-        return "Error processing website content. The content may be in an unsupported format."
+        logging.warning(f"[SCRAPE:{scrape_id}] Method 1 failed: {str(e)}")
+        
+        # Method 2: If first method fails, try without SSL verification
+        try:
+            methods_tried.append("requests_unverified")
+            logging.debug(f"[SCRAPE:{scrape_id}] Trying method 2: Requests without SSL verification")
+            
+            response = requests.get(
+                url, 
+                headers=headers, 
+                timeout=timeout,
+                verify=False,  # Skip SSL verification to handle some SSL errors
+                allow_redirects=True
+            )
+            response.raise_for_status()
+            html_content = response.text
+            logging.debug(f"[SCRAPE:{scrape_id}] Method 2 successful, got {len(html_content)} bytes")
+            
+        except Exception as e:
+            logging.warning(f"[SCRAPE:{scrape_id}] Method 2 failed: {str(e)}")
+            
+            # Method 3: If standard methods fail, try trafilatura's built-in fetcher
+            try:
+                methods_tried.append("trafilatura_fetch")
+                logging.debug(f"[SCRAPE:{scrape_id}] Trying method 3: Trafilatura's fetch_url")
+                
+                downloaded = trafilatura.fetch_url(url)
+                if downloaded:
+                    html_content = downloaded
+                    logging.debug(f"[SCRAPE:{scrape_id}] Method 3 successful")
+                else:
+                    logging.warning(f"[SCRAPE:{scrape_id}] Method 3 failed: trafilatura returned None")
+            except Exception as e:
+                logging.warning(f"[SCRAPE:{scrape_id}] Method 3 failed: {str(e)}")
+    
+    # STAGE 2: If we have HTML content, try to extract the text using different methods
+    # ------------------------------------------------------------------------------
+    
+    if html_content:
+        logging.info(f"[SCRAPE:{scrape_id}] Successfully fetched HTML content ({len(html_content)} bytes), extracting text...")
+        
+        # Method A: Try BeautifulSoup first (works better for logged-in users and complex sites)
+        try:
+            methods_tried.append("beautifulsoup")
+            logging.debug(f"[SCRAPE:{scrape_id}] Trying extraction method A: BeautifulSoup")
+            
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Remove script, style and other non-content elements
+            for tag in soup(['script', 'style', 'header', 'footer', 'nav', 'meta']):
+                tag.extract()
+                
+            # Get the text content
+            text = soup.get_text(separator='\n')
+            
+            # Clean up text
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            text_content = '\n'.join(chunk for chunk in chunks if chunk)
+            
+            # Check if we got meaningful content
+            if text_content and len(text_content.strip()) > 200:  # Require at least 200 chars for "good" content
+                logging.debug(f"[SCRAPE:{scrape_id}] Method A successful, extracted {len(text_content)} characters")
+            else:
+                logging.warning(f"[SCRAPE:{scrape_id}] Method A extracted too little content ({len(text_content) if text_content else 0} chars), will try next method")
+                text_content = None  # Reset to try next method
+                
+        except Exception as e:
+            logging.warning(f"[SCRAPE:{scrape_id}] Method A failed: {str(e)}")
+            text_content = None
+        
+        # Method B: If BeautifulSoup didn't get good content, try trafilatura (good for articles)
+        if not text_content:
+            try:
+                methods_tried.append("trafilatura")
+                logging.debug(f"[SCRAPE:{scrape_id}] Trying extraction method B: Trafilatura")
+                
+                extracted = trafilatura.extract(html_content)
+                if extracted and len(extracted.strip()) > 0:
+                    text_content = extracted
+                    logging.debug(f"[SCRAPE:{scrape_id}] Method B successful, extracted {len(text_content)} characters")
+                else:
+                    logging.warning(f"[SCRAPE:{scrape_id}] Method B failed to extract meaningful content")
+            except Exception as e:
+                logging.warning(f"[SCRAPE:{scrape_id}] Method B failed: {str(e)}")
+    
+    # STAGE 3: Final result determination and fallbacks
+    # ------------------------------------------------
+    
+    # If we got content via any method, return it
+    if text_content and len(text_content.strip()) > 0:
+        content_length = len(text_content)
+        logging.info(f"[SCRAPE:{scrape_id}] Successfully extracted {content_length} characters using methods: {', '.join(methods_tried)}")
+        return text_content
+    
+    # If we got HTML but couldn't extract good text, return a fragment of the HTML
+    if html_content and len(html_content) > 0:
+        # Convert HTML to text as a last resort
+        logging.warning(f"[SCRAPE:{scrape_id}] Falling back to raw HTML conversion")
+        
+        try:
+            # Try to extract title at minimum
+            soup = BeautifulSoup(html_content, 'html.parser')
+            title = soup.title.string if soup.title else "No title"
+            
+            # Simple HTML to text conversion
+            content = re.sub(r'<[^>]+>', ' ', html_content)
+            content = re.sub(r'\s+', ' ', content).strip()
+            
+            # Limit content length to avoid excessively large returns
+            if len(content) > 5000:
+                content = content[:5000] + "... [content truncated]"
+            
+            fallback_text = f"Title: {title}\n\nContent extract:\n{content}"
+            logging.info(f"[SCRAPE:{scrape_id}] Returning fallback HTML-derived content, {len(fallback_text)} characters")
+            return fallback_text
+            
+        except Exception as e:
+            logging.error(f"[SCRAPE:{scrape_id}] Error creating fallback content: {str(e)}")
+            return f"Could only retrieve HTML content from this website. Methods tried: {', '.join(methods_tried)}"
+    
+    # If all extraction methods failed but we have some information, return user-friendly error
+    logging.error(f"[SCRAPE:{scrape_id}] All content extraction methods failed for URL: {url}")
+    
+    if "timeout" in str(methods_tried):
+        return "Website took too long to respond. Could not retrieve content."
+    elif "connection" in str(methods_tried):
+        return "Could not connect to this website. Please check the URL or try again later."
+    else:
+        return f"Unable to extract content from this website. Methods tried: {', '.join(methods_tried)}"
