@@ -809,8 +809,7 @@ def export_search(search_id, format):
         if format == "pdf":
             try:
                 # Generate PDF content
-                pdf_bytes =```python
- export_to_pdf(search.query_text, export_results)
+                pdf_bytes = export_to_pdf(search.query_text, export_results)
 
                 # Return as downloadable file
                 buffer = io.BytesIO(pdf_bytes)
