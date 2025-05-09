@@ -17,18 +17,7 @@
                         <!-- General Settings Category -->
                         <h3 class="mb-3 border-bottom pb-2">General</h3>
                         
-                        <div class="form-group mb-3">
-                            {{ form.search_pages_limit.label(class="form-label") }}
-                            {{ form.search_pages_limit(class="form-control") }}
-                            <small class="form-text text-muted">This controls how many pages of Google search results are fetched for each search. More pages will provide more comprehensive results but may take longer to process.</small>
-                            {% if form.search_pages_limit.errors %}
-                            <div class="alert alert-danger mt-2">
-                                {% for error in form.search_pages_limit.errors %}
-                                <span>{{ error }}</span>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
+                        
                         
                         <h4 class="mb-3">Content Filtering</h4>
                         
