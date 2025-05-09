@@ -6,7 +6,7 @@ import uuid
 import io
 import requests
 from datetime import datetime, timedelta
-from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session, send_file
+from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session, send_file, make_response
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError  # For error handling
 import concurrent.futures  # For TimeoutError
 from concurrent.futures import TimeoutError
@@ -36,10 +36,10 @@ def index():
     """Route for the home page"""
     # Check if API key is available
     has_api_key = bool(os.environ.get("SERPAPI_KEY"))
-    
+
     # Get remaining searches based on authentication status
     remaining_searches = 0
-    
+
     if current_user.is_authenticated:
         # For logged-in users: Daily limit of 15 searches
         remaining_searches = current_user.remaining_searches()
@@ -58,23 +58,23 @@ def index():
         else:
             # New anonymous session
             remaining_searches = 3
-    
+
     return render_template("index.html", has_api_key=has_api_key, remaining_searches=remaining_searches)
 
 @app.route("/search", methods=["POST"])
 def search():
     """Handle search queries and return results"""
     query = request.form.get("query", "")
-    
+
     if not query:
         flash("Please enter a search query", "warning")
         return redirect(url_for("index"))
-    
+
     # Check if API key is available
     if not os.environ.get("SERPAPI_KEY"):
         flash("Search API key is not configured. Please contact the administrator.", "danger")
         return redirect(url_for("index"))
-        
+
     # Check search limits based on authentication status
     if current_user.is_authenticated:
         # For logged-in users: Check daily search limit (15 searches per day)
@@ -83,11 +83,11 @@ def search():
             return redirect(url_for("index"))
         # Increment the user's search count if they are under the limit
         current_user.increment_search_count()
-        
+
         # Display remaining searches for the user
         remaining = current_user.remaining_searches()
         flash(f"You have {remaining} searches remaining today.", "info")
-        
+
     else:
         # For anonymous users: Check lifetime search limit (3 searches)
         # Make sure we have a unique identifier in the session
@@ -96,13 +96,13 @@ def search():
             session.permanent = True  # Make the session persistent
             app.permanent_session_lifetime = timedelta(days=365)  # Session lasts for 1 year
             session['anon_id'] = str(uuid.uuid4())
-            
+
         # Use our unique session ID as the identifier
         session_id = session['anon_id']
-            
+
         # Get or create an anonymous search limit record
         anon_limit = AnonymousSearchLimit.query.filter_by(session_id=session_id).first()
-        
+
         if not anon_limit:
             # Create new record if none exists
             anon_limit = AnonymousSearchLimit(
@@ -116,56 +116,56 @@ def search():
             except Exception as e:
                 logging.error(f"Error creating anonymous search limit record: {str(e)}")
                 db.session.rollback()
-        
+
         # Check if anonymous user has reached their search limit
         if not anon_limit.check_search_limit():
             flash("You have used all 3 of your anonymous searches. Please register for a free account to get 15 searches per day.", "warning")
             return redirect(url_for("index"))
-            
+
         # Increment the anonymous user's search count
         anon_limit.increment_search_count()
-        
+
         # Display remaining searches for the anonymous user
         remaining = anon_limit.remaining_searches()
         flash(f"You have {remaining} anonymous searches remaining. Register for a free account to get 15 searches per day.", "info")
-        
+
         try:
             db.session.commit()
         except Exception as e:
             logging.error(f"Error updating anonymous search limit: {str(e)}")
             db.session.rollback()
-    
+
     try:
         # Check if research mode is enabled
         research_mode = bool(request.form.get('research_mode'))
-        
+
         # Determine number of results pages to fetch
         num_pages = 1  # Default is 1 page for anonymous users
         hide_wikipedia = False  # Default for anonymous users
         show_feedback = True  # Default for anonymous users
-        
+
         # Summary settings defaults for anonymous users
         generate_summaries = True
         summary_depth = 3
         summary_complexity = 3
-        
+
         # Suggestions feature default for anonymous users
         enable_suggestions = True
-        
+
         if current_user.is_authenticated:
             # For logged-in users, use their preferences
             num_pages = current_user.search_pages_limit or 1
             hide_wikipedia = current_user.hide_wikipedia or False
             show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
-            
+
             # Summary settings for logged-in users
             generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
             summary_depth = current_user.summary_depth if current_user.summary_depth is not None else 3
             summary_complexity = current_user.summary_complexity if current_user.summary_complexity is not None else 3
-            
+
             # Suggestions setting for logged-in users
             enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
-        
+
         # Get search results from Google using SerpAPI
         try:
             search_results = search_google(
@@ -192,20 +192,20 @@ def search():
             logging.error(f"Error in search_google: {str(e)}")
             flash("An error occurred while processing your search. Please try again later.", "danger")
             return redirect(url_for("index"))
-        
+
         # Check if any of the search results were from Wikipedia before filtering
         has_wikipedia_results = any(
             result.get('metadata', {}).get('is_wikipedia', False) 
             for result in search_results
         ) if hide_wikipedia else False
-        
+
         if not search_results:
             flash("No search results found", "info")
             return render_template("results.html", query=query, results=[], 
                                   show_feedback=not show_feedback, 
                                   research_mode=research_mode,
                                   wikipedia_popup=False)
-        
+
         # Create a new search query record in the database
         new_search = SearchQuery(
             query_text=query,
@@ -213,10 +213,10 @@ def search():
             user_id=current_user.id if current_user.is_authenticated else None,
             is_public=True  # Default to public searches
         )
-        
+
         # Create a flag to track if search was saved to database
         search_saved = False
-        
+
         # Save to database (if available)
         try:
             db.session.add(new_search)
@@ -229,16 +229,16 @@ def search():
                 db.session.rollback()
             except:
                 pass
-        
+
         # Process each search result to get summaries
         processed_results = []
         for index, result in enumerate(search_results):
             try:
                 logging.info(f"Processing result: {result['link']}")
-                
+
                 # Extract text content from the website with timeout
                 content = scrape_website(result["link"], timeout=15)  # 15-second timeout for website scraping
-                
+
                 # Generate a summary of the content if enabled, otherwise use the description
                 if generate_summaries:
                     summary = summarize_text(
@@ -250,7 +250,7 @@ def search():
                 else:
                     # If summaries are disabled, use the description as the summary
                     summary = f"[Summary generation disabled] {result['description']}"
-                
+
                 # Save search result to database (if available)
                 search_result = None
                 try:
@@ -266,10 +266,10 @@ def search():
                         )
                         db.session.add(search_result)
                         db.session.flush()  # Flush to get the ID without committing
-                        
+
                 except Exception as db_error:
                     logging.error(f"Error saving search result to database: {str(db_error)}")
-                
+
                 processed_result = {
                     "id": search_result.id if search_result else None,
                     "title": result["title"],
@@ -277,16 +277,12 @@ def search():
                     "description": result["description"],
                     "summary": summary
                 }
-                
+
                 processed_results.append(processed_result)
-                
-                # Add a short delay to avoid overwhelming target servers
-                time.sleep(0.5)
-                
             except Exception as e:
                 logging.error(f"Error processing {result['link']}: {str(e)}")
                 continue
-        
+
         # Commit all search results to database
         try:
             db.session.commit()
@@ -294,10 +290,10 @@ def search():
         except Exception as db_error:
             logging.error(f"Error committing search results to database: {str(db_error)}")
             db.session.rollback()
-        
+
         # Log the total number of processed results
         logging.info(f"Processed {len(processed_results)} results out of {len(search_results)} search results")
-        
+
         return render_template("results.html", 
                               query=query, 
                               results=processed_results,
@@ -306,7 +302,7 @@ def search():
                               wikipedia_popup=has_wikipedia_results,
                               generate_summaries=generate_summaries,
                               enable_suggestions=enable_suggestions)
-    
+
     except Exception as e:
         error_details = traceback.format_exc()
         logging.error(f"Search error: {str(e)}\n{error_details}")
@@ -328,7 +324,7 @@ def history():
             recent_searches = SearchQuery.query.filter_by(
                 is_public=True
             ).order_by(SearchQuery.timestamp.desc()).limit(20).all()
-            
+
         return render_template("history.html", searches=recent_searches)
     except Exception as e:
         logging.error(f"Error retrieving search history: {str(e)}")
@@ -341,7 +337,7 @@ def view_search(search_id):
     try:
         # Get the search query
         search = SearchQuery.query.get_or_404(search_id)
-        
+
         # Check access permissions:
         # 1. If user is logged in and is the owner of the search
         # 2. If search is public
@@ -349,24 +345,24 @@ def view_search(search_id):
         is_owner = current_user.is_authenticated and search.user_id == current_user.id
         is_public = search.is_public
         is_admin = current_user.is_authenticated and current_user.is_admin
-        
+
         if not (is_owner or is_public or is_admin):
             flash("You don't have permission to view this search", "warning")
             return redirect(url_for("history"))
-        
+
         # Get the results for this search
         results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
-        
+
         # Determine user preferences based on authentication status
         show_feedback = True
         generate_summaries = True
         enable_suggestions = True
-        
+
         if current_user.is_authenticated:
             show_feedback = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
             generate_summaries = current_user.generate_summaries if current_user.generate_summaries is not None else True
             enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
-            
+
         return render_template("results.html", 
                               query=search.query_text, 
                               results=[{
@@ -408,19 +404,19 @@ def timeout_error(e):
 def handle_exception(e):
     """Handle all other exceptions"""
     logging.error(f"Unhandled exception: {str(e)}")
-    
+
     # Pass through HTTP errors
     if isinstance(e, HTTPException):
         return e
-    
+
     # Handle timeout errors with a specific template and status code
     if isinstance(e, TimeoutError) or "timeout" in str(e).lower() or "time out" in str(e).lower():
         return timeout_error(e)
-    
+
     # Handle API key errors with a specific template
     if "api key" in str(e).lower() or "authentication" in str(e).lower():
         return render_template("error.html", error=f"API Configuration Error: {str(e)}", status_code=503), 503
-        
+
     # Try to handle database schema errors
     from sqlalchemy.exc import OperationalError, ProgrammingError
     if isinstance(e, (OperationalError, ProgrammingError)):
@@ -432,11 +428,11 @@ def handle_exception(e):
             # Try to get the referrer URL
             referrer = request.referrer or url_for('index')
             return redirect(referrer)
-    
+
     # Handle connection errors with a user-friendly message
     if isinstance(e, ConnectionError) or "connection" in str(e).lower():
         return render_template("error.html", error="Network connection error. Please check your internet connection.", status_code=503), 503
-    
+
     # Handle non-HTTP exceptions with 500 error
     return render_template("error.html", error=f"Server error: {str(e)}", status_code=500), 500
 
@@ -446,7 +442,7 @@ def submit_feedback(result_id):
     try:
         # Get the search result
         search_result = SearchResult.query.get_or_404(result_id)
-        
+
         # Create a new feedback record
         feedback = SummaryFeedback(
             search_result_id=result_id,
@@ -457,17 +453,17 @@ def submit_feedback(result_id):
             complete="complete" in request.form,
             ip_address=request.remote_addr
         )
-        
+
         # Save to database
         db.session.add(feedback)
         db.session.commit()
-        
+
         # Flash success message
         flash("Thank you for your feedback! It helps us improve our summaries.", "success")
-        
+
         # Redirect back to the search results
         return redirect(url_for("view_search", search_id=search_result.search_query_id))
-    
+
     except Exception as e:
         logging.error(f"Error submitting feedback: {str(e)}")
         flash("Unable to submit feedback", "danger")
@@ -480,25 +476,25 @@ def view_feedback():
     try:
         # Get all feedback with related search results
         feedback_list = SummaryFeedback.query.order_by(SummaryFeedback.timestamp.desc()).limit(50).all()
-        
+
         # Calculate statistics
         feedback_count = SummaryFeedback.query.count()
-        
+
         # Average rating (default to 0 if no feedback)
         average_rating = 0
         if feedback_count > 0:
             average_rating = db.session.query(db.func.avg(SummaryFeedback.rating)).scalar() or 0
-            
+
         # Count attributes
         helpful_count = SummaryFeedback.query.filter_by(helpful=True).count()
         accurate_count = SummaryFeedback.query.filter_by(accurate=True).count()
         complete_count = SummaryFeedback.query.filter_by(complete=True).count()
-        
+
         # Rating distribution
         rating_distribution = {}
         for i in range(1, 6):
             rating_distribution[i] = SummaryFeedback.query.filter_by(rating=i).count()
-        
+
         return render_template(
             "feedback.html",
             feedback_list=feedback_list,
@@ -509,7 +505,7 @@ def view_feedback():
             complete_count=complete_count,
             rating_distribution=rating_distribution
         )
-    
+
     except Exception as e:
         logging.error(f"Error retrieving feedback: {str(e)}")
         flash("Unable to retrieve feedback", "warning")
@@ -520,29 +516,29 @@ def login():
     """User login route"""
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
+
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
-        
+
         # Log in the user with remember=True to ensure persistence across updates
         login_user(user, remember=True)
-        
+
         # Update last login time using query to avoid type errors
         db.session.query(User).filter_by(id=user.id).update({"last_login": datetime.utcnow()})
         db.session.commit()
-        
+
         # Redirect to requested page or index
         next_page = request.args.get('next')
         if not next_page or not next_page.startswith('/'):
             next_page = url_for('index')
-        
+
         flash(f'Welcome back, {user.username}!', 'success')
         return redirect(next_page)
-    
+
     return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -550,25 +546,25 @@ def register():
     """User registration route"""
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
+
     form = RegistrationForm()
     if form.validate_on_submit():
         user = User(username=form.username.data, email=form.email.data)
         user.set_password(form.password.data)
-        
+
         db.session.add(user)
         db.session.commit()
-        
+
         # Automatically log in the user after registration with remember=True
         login_user(user, remember=True)
-        
+
         # Update last login time using query to avoid type errors
         db.session.query(User).filter_by(id=user.id).update({"last_login": datetime.utcnow()})
         db.session.commit()
-        
+
         flash('Registration successful! You are now logged in.', 'success')
         return redirect(url_for('index'))
-    
+
     return render_template('register.html', form=form)
 
 @app.route('/logout')
@@ -585,26 +581,26 @@ def share_summary(result_id):
     try:
         # Get the search result
         result = SearchResult.query.get_or_404(result_id)
-        
+
         # Increment share count if accessed directly (not from search results page)
         referrer = request.referrer or ""
         if not referrer.endswith(f"/history/{result.search_query_id}") and not referrer.endswith("/results"):
             username = current_user.username if current_user.is_authenticated else None
             result.increment_share_count(username)
             db.session.commit()
-        
+
         # Get related results from the same search
         related_results = SearchResult.query.filter(
             SearchResult.search_query_id == result.search_query_id,
             SearchResult.id != result.id
         ).order_by(SearchResult.rank).limit(5).all()
-        
+
         return render_template(
             "share_summary.html", 
             result=result, 
             related_results=related_results
         )
-    
+
     except Exception as e:
         logging.error(f"Error retrieving shared summary: {str(e)}")
         flash("Unable to retrieve the requested summary", "warning")
@@ -617,20 +613,20 @@ def api_share_summary(result_id):
     try:
         # Get the search result
         result = SearchResult.query.get_or_404(result_id)
-        
+
         # Increment share count
         result.increment_share_count(current_user.username)
         db.session.commit()
-        
+
         # Generate share URL
         share_url = url_for('share_summary', result_id=result.id, _external=True)
-        
+
         return jsonify({
             "success": True,
             "share_url": share_url,
             "share_count": result.share_count
         })
-    
+
     except Exception as e:
         logging.error(f"Error sharing summary: {str(e)}")
         return jsonify({
@@ -642,22 +638,22 @@ def api_share_summary(result_id):
 def get_search_suggestions():
     """API endpoint to get search query suggestions"""
     query = request.args.get("query", "").strip()
-    
+
     if not query or len(query) < 3:
         return jsonify({
             "success": False,
             "suggestions": []
         })
-    
+
     try:
         # Get suggestions using our suggestions module
         suggestions = get_suggestions_for_ui(query, db)
-        
+
         return jsonify({
             "success": True,
             "suggestions": suggestions
         })
-    
+
     except Exception as e:
         logging.error(f"Error generating suggestions: {str(e)}")
         return jsonify({
@@ -671,10 +667,10 @@ def get_search_suggestions():
 def citations():
     """Citation generator page"""
     form = CitationForm()
-    
+
     # Check if we have a previously stored citation in the session
     citation_result = session.get('citation_result', None)
-    
+
     if form.validate_on_submit():
         try:
             # Create a Citation object from form data
@@ -685,7 +681,7 @@ def citations():
             formatted_authors = authors.replace("\r\n", ";").replace("\n", ";")
             source_type = form.source_type.data or ""
             citation_style = form.citation_style.data or ""
-            
+
             citation = Citation(
                 title=title,
                 authors=formatted_authors,
@@ -702,13 +698,13 @@ def citations():
                 doi=form.doi.data or "",
                 user_id=current_user.id if current_user.is_authenticated else None
             )
-            
+
             # Generate the formatted citation based on selected style
             citation_result = citation.get_formatted_citation()
-            
+
             # Store the citation in the session to persist it between page reloads
             session['citation_result'] = citation_result
-            
+
             # Save to database if user is authenticated
             if current_user.is_authenticated:
                 db.session.add(citation)
@@ -716,11 +712,11 @@ def citations():
                 flash("Citation generated and saved to your account.", "success")
             else:
                 flash("Citation generated. Create an account to save citations for future reference.", "info")
-                
+
         except Exception as e:
             flash(f"Error generating citation: {str(e)}", "danger")
             logging.error(f"Citation generation error: {str(e)}")
-    
+
     return render_template("citations.html", form=form, citation_result=citation_result)
 
 
@@ -738,7 +734,7 @@ def clear_citation():
 def settings():
     """User settings page"""
     form = SettingsForm()
-    
+
     # When form is submitted
     if form.validate_on_submit():
         try:
@@ -747,19 +743,19 @@ def settings():
             current_user.hide_wikipedia = form.hide_wikipedia.data
             current_user.show_feedback_features = form.show_feedback_features.data
             current_user.enable_suggestions = form.enable_suggestions.data
-            
+
             # Update summary settings
             current_user.generate_summaries = form.generate_summaries.data
             current_user.summary_depth = form.summary_depth.data
             current_user.summary_complexity = form.summary_complexity.data
-            
+
             db.session.commit()
             flash("Settings updated successfully", "success")
             return redirect(url_for('index'))
         except Exception as e:
             db.session.rollback()
             flash(f"Error updating settings: {str(e)}", "danger")
-    
+
     # Pre-populate form with current settings
     if request.method == 'GET':
         # Ensure there are default values if fields are None
@@ -768,12 +764,12 @@ def settings():
         form.hide_wikipedia.data = current_user.hide_wikipedia if current_user.hide_wikipedia is not None else False
         form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
         form.enable_suggestions.data = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
-        
+
         # Summary settings
         form.generate_summaries.data = current_user.generate_summaries if current_user.generate_summaries is not None else True
         form.summary_depth.data = current_user.summary_depth if current_user.summary_depth is not None else 3
         form.summary_complexity.data = current_user.summary_complexity if current_user.summary_complexity is not None else 3
-    
+
     return render_template('settings.html', form=form)
 
 
@@ -783,19 +779,19 @@ def export_search(search_id, format):
     try:
         # Get the search query
         search = SearchQuery.query.get_or_404(search_id)
-        
+
         # Check access permissions
         is_owner = current_user.is_authenticated and search.user_id == current_user.id
         is_public = search.is_public
         is_admin = current_user.is_authenticated and current_user.is_admin
-        
+
         if not (is_owner or is_public or is_admin):
             flash("You don't have permission to export this search", "warning")
             return redirect(url_for("history"))
-        
+
         # Get the results for this search
         results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
-        
+
         # Prepare results for export
         export_results = [{
             "title": r.title,
@@ -803,25 +799,25 @@ def export_search(search_id, format):
             "description": r.description,
             "summary": r.summary
         } for r in results]
-        
+
         # Check if we have any results to export
         if not export_results:
             flash("No results to export", "warning")
             return redirect(url_for("view_search", search_id=search_id))
-        
+
         # Handle export based on requested format
         if format == "pdf":
             try:
                 # Generate PDF content
                 pdf_bytes = export_to_pdf(search.query_text, export_results)
-                
+
                 # Return as downloadable file
                 buffer = io.BytesIO(pdf_bytes)
                 buffer.seek(0)
-                
+
                 # Generate filename based on search query
                 filename = f"search-{search.query_text[:30].replace(' ', '_')}.pdf"
-                
+
                 return send_file(
                     buffer,
                     download_name=filename,
@@ -832,19 +828,19 @@ def export_search(search_id, format):
                 logging.error(f"Error exporting to PDF: {str(e)}")
                 flash("Error generating PDF export. Please try again later.", "danger")
                 return redirect(url_for("view_search", search_id=search_id))
-                
+
         elif format == "markdown":
             try:
                 # Generate Markdown content
                 md_content = export_to_markdown(search.query_text, export_results)
-                
+
                 # Return as downloadable file
                 buffer = io.BytesIO(md_content.encode('utf-8'))
                 buffer.seek(0)
-                
+
                 # Generate filename based on search query
                 filename = f"search-{search.query_text[:30].replace(' ', '_')}.md"
-                
+
                 return send_file(
                     buffer,
                     download_name=filename,
@@ -855,15 +851,15 @@ def export_search(search_id, format):
                 logging.error(f"Error exporting to Markdown: {str(e)}")
                 flash("Error generating Markdown export. Please try again later.", "danger")
                 return redirect(url_for("view_search", search_id=search_id))
-                
+
         elif format == "notion":
             # For Notion, we need to redirect to a form to get the Notion API token and database ID
             return redirect(url_for("export_to_notion_form", search_id=search_id))
-            
+
         else:
             flash(f"Unsupported export format: {format}", "warning")
             return redirect(url_for("view_search", search_id=search_id))
-            
+
     except Exception as e:
         logging.error(f"Error exporting search: {str(e)}")
         flash("Error exporting search. Please try again later.", "danger")
@@ -876,29 +872,29 @@ def export_to_notion_form(search_id):
     try:
         # Make sure we have a valid search ID
         search = SearchQuery.query.get_or_404(search_id)
-        
+
         # Check access permissions 
         is_owner = current_user.is_authenticated and search.user_id == current_user.id
         is_public = search.is_public
         is_admin = current_user.is_authenticated and current_user.is_admin
-        
+
         if not (is_owner or is_public or is_admin):
             flash("You don't have permission to export this search", "warning")
             return redirect(url_for("history"))
-            
+
         # Check if user submitted the form
         if request.method == "POST":
             notion_token = request.form.get("notion_token", "").strip()
             database_id = request.form.get("database_id", "").strip()
-            
+
             # Basic validation
             if not notion_token or not database_id:
                 flash("Both Notion API token and database ID are required.", "warning")
                 return render_template("notion_export.html", search_id=search_id)
-                
+
             # Get the results for this search
             results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
-            
+
             # Prepare results for export
             export_results = [{
                 "title": r.title,
@@ -906,39 +902,39 @@ def export_to_notion_form(search_id):
                 "description": r.description,
                 "summary": r.summary
             } for r in results]
-            
+
             # Try to export to Notion
             try:
                 # Check for environment variables first
                 if os.environ.get("NOTION_INTEGRATION_SECRET") and notion_token == "[ENV]":
                     notion_token = os.environ.get("NOTION_INTEGRATION_SECRET")
-                
+
                 if os.environ.get("NOTION_DATABASE_ID") and database_id == "[ENV]":
                     database_id = os.environ.get("NOTION_DATABASE_ID")
-                    
+
                 # Check we have valid values
                 if not notion_token or not database_id:
                     flash("Missing Notion API token or database ID.", "danger")
                     return render_template("notion_export.html", search_id=search_id)
-                
+
                 # Perform the export
                 result = export_to_notion(search.query_text, export_results, notion_token, database_id)
-                
+
                 if result and result.get("success"):
                     flash(f"Successfully exported to Notion: {result.get('message')}", "success")
                     return redirect(url_for("view_search", search_id=search_id))
                 else:
                     flash("Error exporting to Notion. Please check your API token and database ID.", "danger")
                     return render_template("notion_export.html", search_id=search_id)
-                    
+
             except Exception as e:
                 logging.error(f"Error exporting to Notion: {str(e)}")
                 flash(f"Error exporting to Notion: {str(e)}", "danger")
                 return render_template("notion_export.html", search_id=search_id)
-        
+
         # Show form for GET requests
         return render_template("notion_export.html", search_id=search_id)
-        
+
     except Exception as e:
         logging.error(f"Error with Notion export: {str(e)}")
         flash("An error occurred. Please try again later.", "danger")

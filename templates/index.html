@@ -46,9 +46,15 @@
                 <!-- Search limit information -->
                 <div class="text-center mt-3">
                     {% if current_user.is_authenticated %}
+                        {% if current_user.is_admin %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i> <strong>Warning:</strong> The admin account is limited to 0 searches and cannot perform search operations. Please use a regular account for searching.
+                        </div>
+                        {% else %}
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i> You have <strong>{{ remaining_searches }}</strong> searches remaining today.
                         </div>
+                        {% endif %}
                     {% else %}
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-circle me-2"></i> Anonymous users are limited to <strong>3</strong> total searches. 

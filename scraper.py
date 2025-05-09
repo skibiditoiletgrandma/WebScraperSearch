@@ -25,7 +25,7 @@ def get_random_user_agent():
 def search_google(query, num_results=10, research_mode=False, timeout=30, **kwargs):
     """
     Use SerpAPI to retrieve Google search results for the given query
-    
+
     Args:
         query (str): The search query
         num_results (int): Number of results to return
@@ -33,10 +33,10 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
         timeout (int): Time in seconds to wait for API response before timing out
         **kwargs: Additional parameters, such as:
             hide_wikipedia (bool): If True, filter out Wikipedia results
-        
+
     Returns:
         list: List of dictionaries containing search result data
-        
+
     Raises:
         TimeoutError: If the API request exceeds the specified timeout
         ValueError: If there are issues with the API key or search parameters
@@ -48,7 +48,7 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
         if not api_key:
             logging.error("SERPAPI_KEY environment variable not set")
             raise ValueError("API key for search service not configured. Please add a valid SerpAPI key.")
-        
+
         logging.info(f"Searching for: {query}")
         # Set up the search parameters
         params = {
@@ -57,41 +57,54 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
             "api_key": api_key,
             "num": num_results
         }
-        
+
         # Execute the search with timeout
         import signal
-        
+
         class TimeoutHandler:
             def __init__(self, seconds=30):
                 self.seconds = seconds
                 self.triggered = False
-                
+
             def handle_timeout(self, signum, frame):
                 self.triggered = True
                 raise TimeoutError(f"Search API request timed out after {self.seconds} seconds")
-        
+
         # Set timeout handler
         timeout_handler = TimeoutHandler(timeout)
-        
+
         # Initialize original_handler to None
         original_handler = None
-        
+
         # Only use signal on Unix-like systems
         if hasattr(signal, 'SIGALRM'):
             original_handler = signal.signal(signal.SIGALRM, timeout_handler.handle_timeout)
             signal.alarm(timeout)
-        
+
         try:
             # Execute the search
             search = GoogleSearch(params)
             results = search.get_dict()
-            
+
             # Reset the alarm and restore original handler
             if hasattr(signal, 'SIGALRM'):
                 signal.alarm(0)
                 if original_handler is not None:
                     signal.signal(signal.SIGALRM, original_handler)
-            
+
+            # Check for error response
+            if not isinstance(results, dict):
+                raise ValueError("Invalid response format from search API")
+
+            if "error" in results:
+                error_msg = results.get("error", "Unknown error")
+                if "Authentication failed" in error_msg:
+                    raise ValueError("Invalid API key. Please check your SERPAPI_KEY configuration.")
+                elif "quota" in error_msg.lower():
+                    raise ValueError("Search quota exceeded. Please try again later.")
+                else:
+                    raise ValueError(f"Search API error: {error_msg}")
+
         except TimeoutError as te:
             logging.error(f"SerpAPI timeout: {str(te)}")
             raise TimeoutError(f"Search service took too long to respond. Please try again later.")
@@ -102,11 +115,7 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                 if original_handler is not None:
                     signal.signal(signal.SIGALRM, original_handler)
             raise
-        
-        if "error" in results:
-            error_msg = results.get("error", "Unknown error from search API")
-            logging.error(f"SerpAPI error: {error_msg}")
-            
+
             # Provide more user-friendly error messages based on common API errors
             if "authorization" in error_msg.lower() or "api key" in error_msg.lower():
                 raise ValueError("Invalid API key. Please check your SerpAPI key.")
@@ -114,58 +123,72 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                 raise ValueError("API usage limit reached. Please try again later.")
             else:
                 raise ValueError(f"Search API error: {error_msg}")
-        
-        # Check if results are empty
-        if "organic_results" not in results or not results["organic_results"]:
+
+        # Validate response format
+        if not isinstance(results, dict):
+            logging.error("Invalid response format from SerpAPI")
+            raise ValueError("Invalid response format from search API")
+
+        # Check for API errors
+        if "error" in results:
+            error_msg = results.get("error", "Unknown error")
+            if "Invalid API key" in error_msg:
+                raise ValueError("Invalid API key. Please check your SERPAPI_KEY configuration.")
+            logging.error(f"SerpAPI error response: {error_msg}")
+            raise ValueError(f"Search API error: {error_msg}")
+
+        # Process organic results
+        organic_results = results.get("organic_results", [])
+        if not organic_results:
             logging.warning(f"No organic results found for query: {query}")
-            return []  # Return empty list instead of raising an exception
-        
+            return []
+
         # Process the organic search results
         search_results = []
-        for result in results["organic_results"]:
+        for result in organic_results:
             # Extract relevant data
             title = result.get("title", "No title")
             link = result.get("link", "")
             description = result.get("snippet", "No description available")
-            
+
             # Skip if not a valid link or from Google itself
             if not link.startswith('http') or 'google.com' in link:
                 continue
-            
+
             # Parse the URL to get the domain
             domain = urlparse(link).netloc.lower()
-            
+
             # Store domain in the result metadata
             result_metadata = {
                 "is_wikipedia": 'wikipedia.org' in domain
             }
-            
+
             # Check if Research Mode is enabled, and if so, filter by domain
             if research_mode:
                 # Check if the domain ends with educational extensions
                 if not (domain.endswith('.edu') or domain.endswith('.org') or domain.endswith('.gov')):
                     logging.info(f"Research mode: Skipping non-educational site: {domain}")
                     continue
-            
+
             # Check if filtering out Wikipedia results was requested
             if kwargs.get('hide_wikipedia', False) and 'wikipedia.org' in domain:
                 logging.info(f"Wikipedia filter: Skipping Wikipedia result: {domain}")
                 continue
-                
+
             search_results.append({
                 "title": title,
                 "link": link,
                 "description": description,
                 "metadata": result_metadata
             })
-            
+
             # Limit the number of results
             if len(search_results) >= num_results:
                 break
-        
+
         logging.info(f"Found {len(search_results)} search results")
         return search_results
-    
+
     except TimeoutError as te:
         logging.error(f"Search timeout: {str(te)}")
         raise
@@ -182,11 +205,11 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
 def scrape_website(url, timeout=20):
     """
     Scrape and extract text content from a website
-    
+
     Args:
         url (str): The URL to scrape
         timeout (int): Timeout in seconds for HTTP requests
-        
+
     Returns:
         str: The extracted text content from the website
     """
@@ -198,10 +221,10 @@ def scrape_website(url, timeout=20):
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
     }
-    
+
     try:
         logging.info(f"Scraping website: {url}")
-        
+
         # Use trafilatura to get the website content with timeout
         try:
             # Set a timeout for the download - note: trafilatura doesn't directly support timeout parameter
@@ -210,49 +233,49 @@ def scrape_website(url, timeout=20):
             if not downloaded:
                 logging.warning(f"Failed to download content from {url}")
                 return "Could not retrieve content from this website."
-            
+
             # Extract the main text content
             text = trafilatura.extract(downloaded)
-            
+
             if text and text.strip() != "":
                 # Log the length of the extracted text
                 text_length = len(text)
                 logging.info(f"Extracted {text_length} characters from {url}")
                 return text
-                
+
             # If we get here, trafilatura failed to extract meaningful content
             logging.info(f"Trafilatura failed for {url}, using fallback method")
         except Exception as trafilatura_error:
             logging.warning(f"Trafilatura error for {url}: {str(trafilatura_error)}")
             logging.info("Falling back to requests/BeautifulSoup method")
-        
+
         # Fallback to manual extraction if trafilatura fails
         try:
             response = requests.get(url, headers=headers, timeout=timeout)
             response.raise_for_status()
-            
+
             soup = BeautifulSoup(response.text, 'html.parser')
-            
+
             # Remove script and style elements
             for script in soup(["script", "style", "header", "footer", "nav"]):
                 script.extract()
-            
+
             # Get text and clean it
             text = soup.get_text(separator='\n')
-            
+
             # Clean extra whitespace
             lines = (line.strip() for line in text.splitlines())
             chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
             text = '\n'.join(chunk for chunk in chunks if chunk)
-            
+
             # Check if we got any meaningful content
             if not text or text.strip() == "":
                 return "No meaningful content could be extracted from this website."
-            
+
             # Log the length of the extracted text
             text_length = len(text)
             logging.info(f"Extracted {text_length} characters from {url} using fallback method")
-            
+
             return text
         except requests.exceptions.Timeout:
             logging.error(f"Timeout while scraping {url}")
@@ -261,11 +284,11 @@ def scrape_website(url, timeout=20):
             logging.error(f"Request error for {url}: {str(request_error)}")
             # Return a more user-friendly message instead of the raw error
             return "Could not access this website. The site may be unavailable or blocking automated access."
-    
+
     except requests.exceptions.Timeout:
         logging.error(f"Timeout while scraping {url}")
         return "Website took too long to respond. Could not retrieve content."
-    
+
     except requests.exceptions.RequestException as e:
         logging.error(f"Error making request to {url}: {str(e)}")
         if "timeout" in str(e).lower():
@@ -274,7 +297,7 @@ def scrape_website(url, timeout=20):
             return "Could not connect to this website. Please check the URL or try again later."
         else:
             return "Could not retrieve content from this website due to a network error."
-    
+
     except Exception as e:
         logging.error(f"Error scraping website {url}: {str(e)}")
         return "Error processing website content. The content may be in an unsupported format."

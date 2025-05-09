@@ -416,3 +416,21 @@ img {
         margin-top: 0.25rem;
     }
 }
+
+
+/* Suggestion Buttons Styling */
+#suggestions-container {
+    margin-top: 1rem;
+}
+
+#suggestions-list .btn {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+
+#suggestions-list .btn:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
