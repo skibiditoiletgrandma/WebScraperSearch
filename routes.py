@@ -389,8 +389,32 @@ def page_not_found(e):
 
 @app.errorhandler(500)
 def server_error(e):
-    """Handle 500 errors"""
+    """Handle 500 errors and attempt automatic fixes"""
     logging.error(f"500 error: {str(e)}")
+    
+    try:
+        # Import and run the fix scripts
+        from update_all_fixes import main as run_all_fixes
+        from fix_attribute_errors import main as fix_attributes
+        from update_schema import update_database_schema
+        
+        # Run fixes in sequence
+        fix_results = []
+        fix_results.append(run_all_fixes())
+        fix_results.append(fix_attributes())
+        fix_results.append(update_database_schema())
+        
+        if any(fix_results):
+            # If any fix was successful, inform the user
+            flash("The system has attempted to fix the error automatically. Please try your request again.", "info")
+            # Try to get the referrer URL, fallback to index
+            referrer = request.referrer or url_for('index')
+            return redirect(referrer)
+            
+    except Exception as fix_error:
+        logging.error(f"Error running automatic fixes: {str(fix_error)}")
+    
+    # If fixes failed or didn't resolve the issue, show error page
     return render_template("error.html", error="Internal server error", status_code=500), 500
 
 @app.errorhandler(TimeoutError)
