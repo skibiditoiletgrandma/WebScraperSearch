@@ -20,6 +20,7 @@ class User(UserMixin, db.Model):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
+    remember_token = Column(String(128), unique=True, index=True)
     search_count_today = Column(Integer, default=0)  # Number of searches used today
     search_count_reset_date = Column(DateTime, default=datetime.utcnow)  # When the daily search count was last reset
     # General settings

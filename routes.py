@@ -20,6 +20,7 @@ from suggestions import get_suggestions_for_ui
 from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit, Citation
 from forms import LoginForm, RegistrationForm, CitationForm, SettingsForm
 from db_migrations import handle_db_error
+import secrets
 
 # Admin required decorator
 def admin_required(f):
@@ -391,29 +392,29 @@ def page_not_found(e):
 def server_error(e):
     """Handle 500 errors and attempt automatic fixes"""
     logging.error(f"500 error: {str(e)}")
-    
+
     try:
         # Import and run the fix scripts
         from update_all_fixes import main as run_all_fixes
         from fix_attribute_errors import main as fix_attributes
         from update_schema import update_database_schema
-        
+
         # Run fixes in sequence
         fix_results = []
         fix_results.append(run_all_fixes())
         fix_results.append(fix_attributes())
         fix_results.append(update_database_schema())
-        
+
         if any(fix_results):
             # If any fix was successful, inform the user
             flash("The system has attempted to fix the error automatically. Please try your request again.", "info")
             # Try to get the referrer URL, fallback to index
             referrer = request.referrer or url_for('index')
             return redirect(referrer)
-            
+
     except Exception as fix_error:
         logging.error(f"Error running automatic fixes: {str(fix_error)}")
-    
+
     # If fixes failed or didn't resolve the issue, show error page
     return render_template("error.html", error="Internal server error", status_code=500), 500
 
@@ -551,14 +552,14 @@ def login():
         try:
             # Log in the user with remember=True and force cookie refresh
             login_user(user, remember=True, force=True)
-            
+
             # Update last login time and remember token using query
             db.session.query(User).filter_by(id=user.id).update({
                 "last_login": datetime.utcnow(),
                 "remember_token": user.get_id()
             })
             db.session.commit()
-            
+
             # Make session permanent
             session.permanent = True
         except Exception as e:
@@ -589,12 +590,21 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        # Automatically log in the user after registration with remember=True
-        login_user(user, remember=True)
+        # Generate remember token and store it
+        user.remember_token = secrets.token_hex(32)
 
-        # Update last login time using query to avoid type errors
-        db.session.query(User).filter_by(id=user.id).update({"last_login": datetime.utcnow()})
+        # Log in user with remember token
+        login_user(user, remember=True, duration=timedelta(days=365))
+
+        # Update last login time and remember token
+        db.session.query(User).filter_by(id=user.id).update({
+            "last_login": datetime.utcnow(),
+            "remember_token": user.remember_token
+        })
         db.session.commit()
+
+        # Store permanent session
+        session.permanent = True
 
         flash('Registration successful! You are now logged in.', 'success')
         return redirect(url_for('index'))
