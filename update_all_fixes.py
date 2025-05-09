@@ -77,7 +77,7 @@ def run_scripts(script_names):
 if __name__ == "__main__":
     # Example usage:
     # List the names of the scripts you want to run *in order*.
-    scripts_to_run = ["script1.py", "script2.py", "script3.py", "update_postgres_schema.py", "update_all_user_columns.py"]
+    scripts_to_run = ["script1.py", "script2.py", "script3.py", "update_postgres_schema.py", "update_all_user_columns.py", "update_sqlite_schema.py"]
     # Create dummy scripts if they don't exist
     for script_name in scripts_to_run:
         if not os.path.exists(script_name):
