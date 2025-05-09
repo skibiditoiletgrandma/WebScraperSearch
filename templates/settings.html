@@ -173,6 +173,14 @@
     </div>
 </div>
 
+<style>
+.inactive-input {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Set initial values for range sliders
@@ -187,9 +195,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleSummaryControls() {
         summaryControls.forEach(control => {
             control.style.opacity = generateSummariesCheckbox.checked ? '1' : '0.5';
+            // Instead of disabling the inputs (which prevents form submission),
+            // we'll just visually indicate they're inactive but keep them enabled
+            // This ensures they still get submitted with the form
             const inputs = control.querySelectorAll('input');
             inputs.forEach(input => {
-                input.disabled = !generateSummariesCheckbox.checked;
+                // Don't disable the actual form inputs
+                // input.disabled = !generateSummariesCheckbox.checked;
+                
+                // Instead, add a visual indication they're inactive
+                if (generateSummariesCheckbox.checked) {
+                    input.classList.remove('inactive-input');
+                } else {
+                    input.classList.add('inactive-input');
+                }
             });
         });
     }
