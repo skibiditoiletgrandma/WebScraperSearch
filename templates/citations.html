@@ -1,0 +1,384 @@
+{% extends "layout.html" %}
+
+{% block title %}Citation Generator - Google Search Scraper{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">
+                        <i class="fas fa-quote-left me-2"></i>Academic Citation Generator
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="lead mb-4">
+                        Generate properly formatted citations for academic papers, articles, books, and websites.
+                        Select the source type and fill in the relevant information.
+                    </p>
+
+                    {% if citation_result %}
+                    <div class="alert alert-success mb-4">
+                        <h4 class="alert-heading mb-3">Your citation is ready!</h4>
+                        <div class="citation-result p-3 bg-light border rounded">
+                            <p id="citation-text">{{ citation_result|safe }}</p>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-primary" id="copy-citation">
+                                    <i class="fas fa-copy me-1"></i> Copy to Clipboard
+                                </button>
+                                <a href="{{ url_for('clear_citation') }}" class="btn btn-sm btn-outline-secondary ms-2">
+                                    <i class="fas fa-times me-1"></i> Clear Citation
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="POST" id="citation-form">
+                        {{ form.hidden_tag() }}
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    {{ form.source_type.label(class="form-label") }}
+                                    {{ form.source_type(class="form-select source-type-select") }}
+                                    {% if form.source_type.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.source_type.errors %}
+                                        <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    {{ form.citation_style.label(class="form-label") }}
+                                    {{ form.citation_style(class="form-select") }}
+                                    {% if form.citation_style.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.citation_style.errors %}
+                                        <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Common fields for all source types -->
+                        <div class="form-group mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% if form.title.errors %}
+                            <div class="text-danger">
+                                {% for error in form.title.errors %}
+                                <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group mb-3">
+                            {{ form.authors.label(class="form-label") }}
+                            <small class="text-muted d-block mb-2">Enter each author on a new line, e.g., "John Smith"</small>
+                            {{ form.authors(class="form-control", rows=3) }}
+                            {% if form.authors.errors %}
+                            <div class="text-danger">
+                                {% for error in form.authors.errors %}
+                                <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Book-specific fields -->
+                        <div class="source-fields book-fields">
+                            <h4 class="h5 mt-4 mb-3 border-bottom pb-2">Book Information</h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        {{ form.publisher.label(class="form-label") }}
+                                        {{ form.publisher(class="form-control") }}
+                                        {% if form.publisher.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.publisher.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        {{ form.publication_date.label(class="form-label") }}
+                                        {{ form.publication_date(class="form-control") }}
+                                        {% if form.publication_date.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.publication_date.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Journal-specific fields -->
+                        <div class="source-fields journal-fields">
+                            <h4 class="h5 mt-4 mb-3 border-bottom pb-2">Journal Article Information</h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        {{ form.journal_name.label(class="form-label") }}
+                                        {{ form.journal_name(class="form-control") }}
+                                        {% if form.journal_name.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.journal_name.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        {{ form.publication_date.label(class="form-label") }}
+                                        {{ form.publication_date(class="form-control") }}
+                                        {% if form.publication_date.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.publication_date.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        {{ form.volume.label(class="form-label") }}
+                                        {{ form.volume(class="form-control") }}
+                                        {% if form.volume.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.volume.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        {{ form.issue.label(class="form-label") }}
+                                        {{ form.issue(class="form-control") }}
+                                        {% if form.issue.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.issue.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        {{ form.pages.label(class="form-label") }}
+                                        {{ form.pages(class="form-control") }}
+                                        {% if form.pages.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.pages.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                {{ form.doi.label(class="form-label") }}
+                                {{ form.doi(class="form-control") }}
+                                {% if form.doi.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.doi.errors %}
+                                    <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Website-specific fields -->
+                        <div class="source-fields website-fields">
+                            <h4 class="h5 mt-4 mb-3 border-bottom pb-2">Website Information</h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        {{ form.url.label(class="form-label") }}
+                                        {{ form.url(class="form-control") }}
+                                        {% if form.url.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.url.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        {{ form.publication_date.label(class="form-label") }}
+                                        {{ form.publication_date(class="form-control") }}
+                                        {% if form.publication_date.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.publication_date.errors %}
+                                            <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                {{ form.access_date.label(class="form-label") }}
+                                {{ form.access_date(class="form-control") }}
+                                {% if form.access_date.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.access_date.errors %}
+                                    <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-4">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <button type="reset" class="btn btn-outline-secondary">Clear Form</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Citation Style Guide -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-info text-white">
+                    <h3 class="h5 mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Citation Style Guide
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="styleGuideTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="apa-tab" data-bs-toggle="tab" data-bs-target="#apa" type="button" role="tab" aria-controls="apa" aria-selected="true">APA</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="mla-tab" data-bs-toggle="tab" data-bs-target="#mla" type="button" role="tab" aria-controls="mla" aria-selected="false">MLA</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="chicago-tab" data-bs-toggle="tab" data-bs-target="#chicago" type="button" role="tab" aria-controls="chicago" aria-selected="false">Chicago</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content p-3 border border-top-0 rounded-bottom" id="styleGuideTabContent">
+                        <div class="tab-pane fade show active" id="apa" role="tabpanel" aria-labelledby="apa-tab">
+                            <h4 class="h6">APA (7th Edition) Format</h4>
+                            <p>The American Psychological Association style is commonly used in social sciences.</p>
+                            <ul class="small">
+                                <li><strong>Book:</strong> Author, A. A. (Year). <em>Title of work</em>. Publisher.</li>
+                                <li><strong>Journal:</strong> Author, A. A., & Author, B. B. (Year). Title of article. <em>Title of Journal</em>, Volume(Issue), page-range. https://doi.org/xxxx</li>
+                                <li><strong>Website:</strong> Author, A. A. (Year, Month Day). Title of page. Site Name. URL</li>
+                            </ul>
+                        </div>
+                        <div class="tab-pane fade" id="mla" role="tabpanel" aria-labelledby="mla-tab">
+                            <h4 class="h6">MLA (9th Edition) Format</h4>
+                            <p>The Modern Language Association style is commonly used in humanities, especially language and literature.</p>
+                            <ul class="small">
+                                <li><strong>Book:</strong> Author Lastname, Firstname. <em>Title of Book</em>. Publisher, Publication Date.</li>
+                                <li><strong>Journal:</strong> Author Lastname, Firstname. "Title of Article." <em>Title of Journal</em>, vol. Number, no. Number, Publication Date, pp. Range.</li>
+                                <li><strong>Website:</strong> Author Lastname, Firstname. "Title of Web Page." Name of Website, Publication Date, URL. Accessed Access Date.</li>
+                            </ul>
+                        </div>
+                        <div class="tab-pane fade" id="chicago" role="tabpanel" aria-labelledby="chicago-tab">
+                            <h4 class="h6">Chicago (17th Edition) Format</h4>
+                            <p>The Chicago Manual of Style is commonly used in history and some humanities fields.</p>
+                            <ul class="small">
+                                <li><strong>Book:</strong> Lastname, Firstname. <em>Title of Book</em>. Place of Publication: Publisher, Year.</li>
+                                <li><strong>Journal:</strong> Lastname, Firstname. "Title of Article." <em>Title of Journal</em> Volume, no. Issue (Year): Page range.</li>
+                                <li><strong>Website:</strong> Lastname, Firstname. "Title of Web Page." Name of Website. Publication Date. URL.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Source type toggle functionality
+        const sourceTypeSelect = document.querySelector('.source-type-select');
+        const sourceFields = document.querySelectorAll('.source-fields');
+        
+        function toggleSourceFields() {
+            // Hide all source-specific fields
+            sourceFields.forEach(field => {
+                field.style.display = 'none';
+            });
+            
+            // Show fields for the selected source type
+            const selectedType = sourceTypeSelect.value;
+            const activeFields = document.querySelector(`.${selectedType}-fields`);
+            if (activeFields) {
+                activeFields.style.display = 'block';
+            }
+        }
+        
+        // Initialize fields visibility
+        toggleSourceFields();
+        
+        // Update fields when source type changes
+        sourceTypeSelect.addEventListener('change', toggleSourceFields);
+        
+        // Copy citation to clipboard functionality
+        const copyButton = document.getElementById('copy-citation');
+        if (copyButton) {
+            copyButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                const citationText = document.getElementById('citation-text').innerText;
+                navigator.clipboard.writeText(citationText).then(() => {
+                    // Success feedback
+                    const originalText = copyButton.innerHTML;
+                    copyButton.innerHTML = '<i class="fas fa-check me-1"></i> Copied!';
+                    copyButton.classList.remove('btn-primary');
+                    copyButton.classList.add('btn-success');
+                    
+                    // Reset button after 2 seconds
+                    setTimeout(() => {
+                        copyButton.innerHTML = originalText;
+                        copyButton.classList.remove('btn-success');
+                        copyButton.classList.add('btn-primary');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            });
+        }
+        
+        // Auto-populate current date for website access date if empty
+        const accessDateField = document.querySelector('input[name="access_date"]');
+        if (accessDateField && accessDateField.value === '') {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            accessDateField.setAttribute('placeholder', `${yyyy}-${mm}-${dd}`);
+        }
+    });
+</script>
+{% endblock %}
