@@ -37,9 +37,9 @@ def search_google(query, num_results=10, research_mode=False, **kwargs):
         list: List of dictionaries containing search result data
     """
     try:
-        api_key = os.environ.get("SERPAPI_API_KEY")
+        api_key = os.environ.get("SERPAPI_KEY")
         if not api_key:
-            logging.error("SERPAPI_API_KEY environment variable not set")
+            logging.error("SERPAPI_KEY environment variable not set")
             raise Exception("API key for search service not configured")
         
         logging.info(f"Searching for: {query}")
