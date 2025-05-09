@@ -1,23 +1,34 @@
 import os
 from datetime import datetime
+from sqlalchemy import text
 from app import app, db
 from models import SearchResult
+from ensure_db_url import ensure_db_url
 
 def update_database_schema():
     """Update the database schema to include new sharing columns"""
     try:
+        # Ensure DATABASE_URL is set before proceeding
+        if not os.environ.get("DATABASE_URL"):
+            print("DATABASE_URL not set. Attempting to configure it automatically...")
+            if not ensure_db_url():
+                print("ERROR: Could not set DATABASE_URL automatically.")
+                return False
+            else:
+                database_url = os.environ.get("DATABASE_URL")
+                if database_url and '@' in database_url:
+                    masked_url = f"{database_url.split('@')[0].split(':')[0]}:*****@*****"
+                    print(f"Successfully set DATABASE_URL: {masked_url}")
+                else:
+                    print("Successfully set DATABASE_URL")
+            
         with app.app_context():
             print("Starting database schema update...")
-            
-            # Check if database is accessible
-            if not os.environ.get("DATABASE_URL"):
-                print("ERROR: DATABASE_URL environment variable not set.")
-                return False
             
             # Check connection
             try:
                 # Try to execute a simple query to test connection
-                db.session.execute("SELECT 1")
+                db.session.execute(text("SELECT 1"))
                 print("Database connection successful.")
             except Exception as e:
                 print(f"Database connection failed: {str(e)}")
@@ -25,7 +36,7 @@ def update_database_schema():
             
             # Check if table exists
             try:
-                result = db.session.execute("SELECT to_regclass('search_result')").scalar()
+                result = db.session.execute(text("SELECT to_regclass('search_result')")).scalar()
                 if not result:
                     print("The search_result table doesn't exist. Creating all tables...")
                     db.create_all()
