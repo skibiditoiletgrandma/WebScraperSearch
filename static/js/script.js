@@ -205,47 +205,46 @@ function showAlert(message, type = 'info') {
 }
 
 // Function to display suggestions in the UI
-        function displaySuggestions(suggestions) {
-            const suggestionsList = document.getElementById('suggestions-list');
-            const suggestionsContainer = document.getElementById('suggestions-container');
-            const searchInput = document.getElementById('search-query');
-            
-            if (!suggestionsList || !suggestionsContainer || !searchInput) return;
-            
-            // Clear previous suggestions
-            suggestionsList.innerHTML = '';
+function displaySuggestions(suggestions) {
+    const suggestionsList = document.getElementById('suggestions-list');
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    const searchInput = document.getElementById('search-query');
+    
+    if (!suggestionsList || !suggestionsContainer || !searchInput) return;
+    
+    // Clear previous suggestions
+    suggestionsList.innerHTML = '';
 
-            // Take only first 3 suggestions
-            suggestions.slice(0, 3).forEach(suggestion => {
-                const button = document.createElement('button');
-                button.className = 'btn btn-outline-primary me-2 mb-2'; // Added margin bottom
-                button.type = 'button';
+    // Take only first 3 suggestions
+    suggestions.slice(0, 3).forEach(suggestion => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-outline-primary me-2 mb-2'; // Added margin bottom
+        button.type = 'button';
 
-                // Add suggestion type icon
-                let typeIcon = 'fa-lightbulb';
-                if (suggestion.type === 'operator') {
-                    typeIcon = 'fa-code';
-                } else if (suggestion.type === 'expanded') {
-                    typeIcon = 'fa-plus-circle';
-                }
+        // Add suggestion type icon
+        let typeIcon = 'fa-lightbulb';
+        if (suggestion.type === 'operator') {
+            typeIcon = 'fa-code';
+        } else if (suggestion.type === 'expanded') {
+            typeIcon = 'fa-plus-circle';
+        }
 
-                button.innerHTML = `
-                    <i class="fas ${typeIcon} me-2"></i>
-                    ${suggestion.query}
-                `;
+        button.innerHTML = `
+            <i class="fas ${typeIcon} me-2"></i>
+            ${suggestion.query}
+        `;
 
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    searchInput.value = suggestion.query;
-                    searchInput.focus();
-                });
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            searchInput.value = suggestion.query;
+            searchInput.focus();
+        });
 
-                suggestionsList.appendChild(button);
-            });
-            
-            // Show suggestions container if we have suggestions
-            if (suggestionsList.children.length > 0) {
-                suggestionsContainer.classList.remove('d-none');
-            }
-}
+        suggestionsList.appendChild(button);
+    });
+    
+    // Show suggestions container if we have suggestions
+    if (suggestionsList.children.length > 0) {
+        suggestionsContainer.classList.remove('d-none');
+    }
 }
