@@ -214,6 +214,22 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(fetchSuggestions, 300);
     }
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    const copyButtons = document.querySelectorAll('.copy-btn');
+    copyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const textToCopy = this.getAttribute('data-text');
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = this.innerHTML;
+                this.innerHTML = 'Copied!';
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+    });
+});
 </script>
 {% endif %}
 {% endblock %}

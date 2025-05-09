@@ -1,9 +1,14 @@
 from datetime import datetime
-from app import db, login_manager
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean
-from sqlalchemy.orm import relationship
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean
+from sqlalchemy.orm import relationship
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+
+# Initialize extensions
+db = SQLAlchemy()
+login_manager = LoginManager()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -20,6 +25,7 @@ class User(UserMixin, db.Model):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
+    remember_token = Column(String(128), unique=True, index=True)
     search_count_today = Column(Integer, default=0)  # Number of searches used today
     search_count_reset_date = Column(DateTime, default=datetime.utcnow)  # When the daily search count was last reset
     # General settings

@@ -18,9 +18,25 @@ def update_user_schema():
             # Columns don't exist, so add them
             print("Adding missing columns to users table...")
             
+            # First check if we have existing data to preserve
+            try:
+                current_values = db.session.execute(text(
+                    "SELECT id, search_count_today, search_count_reset_date FROM users"
+                )).fetchall()
+            except:
+                current_values = []
+
             # Execute SQL to add the missing columns - one statement at a time
             db.session.execute(text("ALTER TABLE users ADD COLUMN search_count_today INTEGER DEFAULT 0"))
             db.session.execute(text("ALTER TABLE users ADD COLUMN search_count_reset_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+            
+            # Restore previous values if they existed
+            for user_id, count, reset_date in current_values:
+                if count is not None and reset_date is not None:
+                    db.session.execute(text(
+                        f"UPDATE users SET search_count_today = :count, "
+                        f"search_count_reset_date = :reset_date WHERE id = :user_id"
+                    ), {"count": count, "reset_date": reset_date, "user_id": user_id})
             
             db.session.commit()
             print("Successfully added search_count_today and search_count_reset_date columns to users table.")

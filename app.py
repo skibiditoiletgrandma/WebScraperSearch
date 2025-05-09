@@ -11,11 +11,8 @@ from flask_login import LoginManager
 class Base(DeclarativeBase):
     pass
 
-# Initialize SQLAlchemy with the base class
-db = SQLAlchemy(model_class=Base)
-
-# Initialize Flask-Login
-login_manager = LoginManager()
+# Import extensions from models
+from models import db, login_manager
 
 # Create the Flask application
 app = Flask(__name__)
@@ -33,11 +30,16 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'  # type: ignore
 login_manager.login_message = 'Please log in to access this page'
 login_manager.login_message_category = 'info'
-# Set remember cookie duration to 1 year (365 days)
+# Enhanced remember cookie settings
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=365)
 app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
+app.config['REMEMBER_COOKIE_NAME'] = 'remember_token'
+app.config['SESSION_PROTECTION'] = 'strong'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # Configure database connection and setup function for dynamic configuration
 def configure_database(app_instance, force_refresh=False):
