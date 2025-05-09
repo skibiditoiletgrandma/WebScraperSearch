@@ -1,8 +1,8 @@
 
+import os
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime
-import os
 
 # Create the base class for declarative models
 Base = declarative_base()
@@ -21,13 +21,13 @@ def create_database():
     instance_path = 'instance'
     os.makedirs(instance_path, exist_ok=True)
     
-    # Database URL
-    database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        # Use SQLite as fallback
-        sqlite_path = os.path.join(instance_path, 'dev.db')
-        database_url = f'sqlite:///{sqlite_path}'
-        print(f"Using SQLite database at: {sqlite_path}")
+    # Set up SQLite database path
+    sqlite_path = os.path.join(instance_path, 'dev.db')
+    database_url = f'sqlite:///{sqlite_path}'
+    
+    # Set the environment variable
+    os.environ['DATABASE_URL'] = database_url
+    print(f"Set DATABASE_URL to: {database_url}")
     
     # Create engine
     engine = create_engine(database_url)
