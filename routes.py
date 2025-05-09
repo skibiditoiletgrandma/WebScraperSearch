@@ -4,9 +4,12 @@ import time
 import os
 import uuid
 import io
+import requests
 from datetime import datetime, timedelta
 from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session, send_file
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError  # For error handling
+import concurrent.futures  # For TimeoutError
+from concurrent.futures import TimeoutError
 from flask_login import login_user, logout_user, current_user, login_required
 from exporters import export_to_pdf, export_to_markdown, export_to_notion
 from functools import wraps
@@ -431,7 +434,7 @@ def handle_exception(e):
             return redirect(referrer)
     
     # Handle connection errors with a user-friendly message
-    if isinstance(e, requests.exceptions.ConnectionError) or "connection" in str(e).lower():
+    if isinstance(e, ConnectionError) or "connection" in str(e).lower():
         return render_template("error.html", error="Network connection error. Please check your internet connection.", status_code=503), 503
     
     # Handle non-HTTP exceptions with 500 error
