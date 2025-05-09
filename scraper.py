@@ -124,18 +124,20 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
             else:
                 raise ValueError(f"Search API error: {error_msg}")
 
-        # Check for error response from SerpAPI
+        # Validate response format
         if not isinstance(results, dict):
             logging.error("Invalid response format from SerpAPI")
             raise ValueError("Invalid response format from search API")
 
-        # Handle potential error messages from SerpAPI
+        # Check for API errors
         if "error" in results:
             error_msg = results.get("error", "Unknown error")
+            if "Invalid API key" in error_msg:
+                raise ValueError("Invalid API key. Please check your SERPAPI_KEY configuration.")
             logging.error(f"SerpAPI error response: {error_msg}")
             raise ValueError(f"Search API error: {error_msg}")
 
-        # Check if results are empty or missing organic_results
+        # Process organic results
         organic_results = results.get("organic_results", [])
         if not organic_results:
             logging.warning(f"No organic results found for query: {query}")
