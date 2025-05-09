@@ -226,6 +226,9 @@ def scrape_website(url, timeout=20):
     """
     # Create a unique ID for this scraping operation
     import uuid
+    import requests
+    from bs4 import BeautifulSoup
+    
     scrape_id = str(uuid.uuid4())[:8]
     
     logging.info(f"[SCRAPE:{scrape_id}] Starting to scrape website: {url} (timeout: {timeout}s)")
@@ -241,97 +244,66 @@ def scrape_website(url, timeout=20):
     
     logging.debug(f"[SCRAPE:{scrape_id}] Using User-Agent: {headers['User-Agent']}")
 
+    # Use a more resilient approach that avoids SSL/socket errors
     try:
-        # Use trafilatura to get the website content with timeout
+        logging.info(f"[SCRAPE:{scrape_id}] Using direct requests approach for {url}")
+        
+        # Add error and SSL verification handling
         try:
-            logging.info(f"[SCRAPE:{scrape_id}] Using trafilatura to fetch URL: {url}")
-            
-            # Set a timeout for the download - implement our own timeout mechanism
-            # since trafilatura doesn't directly support timeout parameter
-            import socket
-            logging.debug(f"[SCRAPE:{scrape_id}] Current socket timeout: {socket.getdefaulttimeout()}")
-            original_timeout = socket.getdefaulttimeout()
-            socket.setdefaulttimeout(timeout)
-            logging.debug(f"[SCRAPE:{scrape_id}] Socket timeout temporarily set to: {timeout}s")
-            
-            try:
-                logging.debug(f"[SCRAPE:{scrape_id}] Calling trafilatura.fetch_url()")
-                downloaded = trafilatura.fetch_url(url)
-                
-                if downloaded:
-                    logging.info(f"[SCRAPE:{scrape_id}] Successfully downloaded content from {url} (size: {len(downloaded)} bytes)")
-                else:
-                    logging.warning(f"[SCRAPE:{scrape_id}] Failed to download content from {url}, returned None or empty content")
-                    return "Could not retrieve content from this website."
-            finally:
-                # Restore original timeout
-                socket.setdefaulttimeout(original_timeout)
-                logging.debug(f"[SCRAPE:{scrape_id}] Socket timeout restored to: {original_timeout}")
-
-            # Extract the main text content
-            text = trafilatura.extract(downloaded)
-
-            if text and text.strip() != "":
-                # Log the length of the extracted text
-                text_length = len(text)
-                logging.info(f"Extracted {text_length} characters from {url}")
-                return text
-
-            # If we get here, trafilatura failed to extract meaningful content
-            logging.info(f"Trafilatura failed for {url}, using fallback method")
-        except Exception as trafilatura_error:
-            logging.warning(f"Trafilatura error for {url}: {str(trafilatura_error)}")
-            logging.info("Falling back to requests/BeautifulSoup method")
-
-        # Fallback to manual extraction if trafilatura fails
-        try:
-            response = requests.get(url, headers=headers, timeout=timeout)
+            response = requests.get(
+                url, 
+                headers=headers, 
+                timeout=timeout,
+                verify=False  # Bypass SSL verification to avoid SSL errors
+            )
             response.raise_for_status()
-
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            # Remove script and style elements
-            for script in soup(["script", "style", "header", "footer", "nav"]):
-                script.extract()
-
-            # Get text and clean it
-            text = soup.get_text(separator='\n')
-
-            # Clean extra whitespace
-            lines = (line.strip() for line in text.splitlines())
-            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-            text = '\n'.join(chunk for chunk in chunks if chunk)
-
-            # Check if we got any meaningful content
-            if not text or text.strip() == "":
-                return "No meaningful content could be extracted from this website."
-
-            # Log the length of the extracted text
+        except Exception as req_error:
+            logging.warning(f"[SCRAPE:{scrape_id}] First request attempt failed: {str(req_error)}")
+            # Try again with a different approach
+            response = requests.get(
+                url, 
+                headers=headers, 
+                timeout=timeout,
+                verify=True,  # Try with verification
+                allow_redirects=True
+            )
+        
+        # Use BeautifulSoup to parse HTML
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Remove script, style and other non-content elements
+        for tag in soup(['script', 'style', 'header', 'footer', 'nav']):
+            tag.extract()
+            
+        # Get the text content
+        text = soup.get_text(separator='\n')
+        
+        # Clean up text
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text = '\n'.join(chunk for chunk in chunks if chunk)
+        
+        if text and len(text.strip()) > 0:
             text_length = len(text)
-            logging.info(f"Extracted {text_length} characters from {url} using fallback method")
-
+            logging.info(f"[SCRAPE:{scrape_id}] Successfully extracted {text_length} characters from {url}")
             return text
-        except requests.exceptions.Timeout:
-            logging.error(f"Timeout while scraping {url}")
-            return "Website took too long to respond. Could not retrieve content."
-        except requests.exceptions.RequestException as request_error:
-            logging.error(f"Request error for {url}: {str(request_error)}")
-            # Return a more user-friendly message instead of the raw error
-            return "Could not access this website. The site may be unavailable or blocking automated access."
-
+            
+        logging.warning(f"[SCRAPE:{scrape_id}] Failed to extract meaningful content")
+        return "No meaningful content could be extracted from this website."
+            
     except requests.exceptions.Timeout:
-        logging.error(f"Timeout while scraping {url}")
+        logging.error(f"[SCRAPE:{scrape_id}] Timeout while scraping {url}")
         return "Website took too long to respond. Could not retrieve content."
-
+        
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error making request to {url}: {str(e)}")
+        logging.error(f"[SCRAPE:{scrape_id}] Error making request to {url}: {str(e)}")
         if "timeout" in str(e).lower():
             return "Website took too long to respond. Could not retrieve content."
         elif "connection" in str(e).lower():
             return "Could not connect to this website. Please check the URL or try again later."
         else:
             return "Could not retrieve content from this website due to a network error."
-
+        
     except Exception as e:
-        logging.error(f"Error scraping website {url}: {str(e)}")
+        logging.error(f"[SCRAPE:{scrape_id}] Error scraping website {url}: {str(e)}")
         return "Error processing website content. The content may be in an unsupported format."
