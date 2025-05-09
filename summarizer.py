@@ -7,21 +7,25 @@ from nltk.tokenize import word_tokenize
 import logging
 
 # Download required NLTK resources
+# Download required NLTK data
 try:
     nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
+
+try:
     nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords')
+
+try:
     nltk.data.find('taggers/averaged_perceptron_tagger')
 except LookupError:
-    nltk.download('punkt')
-    nltk.download('stopwords')
     nltk.download('averaged_perceptron_tagger')
 
-# Initialize NLTK sentence tokenizer
-try:
-    sent_tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-except LookupError:
-    nltk.download('punkt')
-    sent_tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+# Initialize the sentence tokenizer more simply
+from nltk.tokenize import PunktSentenceTokenizer
+sent_tokenizer = PunktSentenceTokenizer()
 
 def clean_text(text):
     """
