@@ -1,5 +1,6 @@
 
 import os
+import secrets
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime
@@ -16,7 +17,8 @@ class User(Base):
     email = Column(String(120), unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-def create_database():
+def configure_secrets():
+    """Configure all necessary secret values and environment variables"""
     # Create instance directory if it doesn't exist
     instance_path = 'instance'
     os.makedirs(instance_path, exist_ok=True)
@@ -25,9 +27,26 @@ def create_database():
     sqlite_path = os.path.join(instance_path, 'dev.db')
     database_url = f'sqlite:///{sqlite_path}'
     
-    # Set the environment variable
-    os.environ['DATABASE_URL'] = database_url
-    print(f"Set DATABASE_URL to: {database_url}")
+    # Generate a secure secret key for session
+    session_secret = secrets.token_hex(32)
+    
+    # Set environment variables
+    secrets_config = {
+        'DATABASE_URL': database_url,
+        'SESSION_SECRET': session_secret,
+        'REMEMBER_COOKIE_DURATION': '365',  # days
+        'REMEMBER_COOKIE_SECURE': 'True',
+        'REMEMBER_COOKIE_HTTPONLY': 'True'
+    }
+    
+    # Set all environment variables
+    for key, value in secrets_config.items():
+        os.environ[key] = value
+        print(f"Set {key}")
+
+def create_database():
+    # Configure all secrets first
+    configure_secrets()
     
     # Create engine
     engine = create_engine(database_url)
