@@ -32,7 +32,7 @@ def admin_required(f):
 def index():
     """Route for the home page"""
     # Check if API key is available
-    has_api_key = bool(os.environ.get("SERPAPI_API_KEY"))
+    has_api_key = bool(os.environ.get("SERPAPI_KEY"))
     
     # Get remaining searches based on authentication status
     remaining_searches = 0
@@ -68,7 +68,7 @@ def search():
         return redirect(url_for("index"))
     
     # Check if API key is available
-    if not os.environ.get("SERPAPI_API_KEY"):
+    if not os.environ.get("SERPAPI_KEY"):
         flash("Search API key is not configured. Please contact the administrator.", "danger")
         return redirect(url_for("index"))
         
