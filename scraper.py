@@ -92,6 +92,19 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                 if original_handler is not None:
                     signal.signal(signal.SIGALRM, original_handler)
 
+            # Check for error response
+            if not isinstance(results, dict):
+                raise ValueError("Invalid response format from search API")
+
+            if "error" in results:
+                error_msg = results.get("error", "Unknown error")
+                if "Authentication failed" in error_msg:
+                    raise ValueError("Invalid API key. Please check your SERPAPI_KEY configuration.")
+                elif "quota" in error_msg.lower():
+                    raise ValueError("Search quota exceeded. Please try again later.")
+                else:
+                    raise ValueError(f"Search API error: {error_msg}")
+
         except TimeoutError as te:
             logging.error(f"SerpAPI timeout: {str(te)}")
             raise TimeoutError(f"Search service took too long to respond. Please try again later.")
@@ -102,10 +115,6 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                 if original_handler is not None:
                     signal.signal(signal.SIGALRM, original_handler)
             raise
-
-        if "error" in results:
-            error_msg = results.get("error", "Unknown error from search API")
-            logging.error(f"SerpAPI error: {error_msg}")
 
             # Provide more user-friendly error messages based on common API errors
             if "authorization" in error_msg.lower() or "api key" in error_msg.lower():

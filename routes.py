@@ -279,10 +279,6 @@ def search():
                 }
                 
                 processed_results.append(processed_result)
-                
-                # Add a short delay to avoid overwhelming target servers
-                time.sleep(0.5)
-                
             except Exception as e:
                 logging.error(f"Error processing {result['link']}: {str(e)}")
                 continue
