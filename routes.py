@@ -36,30 +36,30 @@ def check_user_token():
     # Generate a unique ID for this auth check
     import uuid
     auth_check_id = str(uuid.uuid4())[:8]
-    
+
     logging.info(f"[AUTH:{auth_check_id}] Checking for remember token")
-    
+
     if current_user.is_authenticated:
         # User is already logged in, no need to check token
         logging.info(f"[AUTH:{auth_check_id}] User already authenticated as {current_user.username} (ID: {current_user.id})")
         return
-    
+
     # Get the remember token from the REMEMBER_COOKIE_NAME
     remember_cookie_name = app.config.get('REMEMBER_COOKIE_NAME', 'remember_token')
     token = request.cookies.get(remember_cookie_name)
-    
+
     if token:
         logging.info(f"[AUTH:{auth_check_id}] Found remember token in cookie: {token[:10]}...")
-        
+
         # Look for a user with this token
         user = User.query.filter_by(remember_token=token).first()
-        
+
         if user:
             logging.info(f"[AUTH:{auth_check_id}] Found matching user: {user.username} (ID: {user.id})")
-            
+
             # Log the user in
             login_user(user, remember=True, duration=timedelta(days=365))
-            
+
             # Log for debugging
             logging.info(f"[AUTH:{auth_check_id}] Successfully auto-logged in user {user.username} using remember token")
         else:
@@ -113,11 +113,11 @@ def search():
     # Create a unique ID for this search request for tracking in logs
     import uuid
     search_request_id = str(uuid.uuid4())[:8]
-    
+
     logging.info(f"[SEARCH_REQ:{search_request_id}] Search function called")
     query = request.form.get("query", "").strip()
     logging.info(f"[SEARCH_REQ:{search_request_id}] Search query: '{query}'")
-    
+
     # Log authentication status
     if current_user.is_authenticated:
         logging.info(f"[SEARCH_REQ:{search_request_id}] User is authenticated: {current_user.username} (ID: {current_user.id})")
@@ -142,20 +142,20 @@ def search():
     if current_user.is_authenticated:
         # Log user information
         logging.info(f"[SEARCH_REQ:{search_request_id}] Processing search for logged-in user: {current_user.username}")
-        
+
         # For logged-in users: Check daily search limit (15 searches per day)
         search_limit_ok = current_user.check_search_limit()
         logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} search limit check: {search_limit_ok}")
-        
+
         if not search_limit_ok:
             logging.warning(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has reached daily search limit")
             flash("You have reached your daily search limit of 15 searches. Please try again tomorrow.", "warning")
             return redirect(url_for("index"))
-            
+
         # Increment the user's search count if they are under the limit
         new_count = current_user.increment_search_count()
         logging.info(f"[SEARCH_REQ:{search_request_id}] Incremented search count for {current_user.username} to {new_count}")
-        
+
         # Save the updated count to the database
         try:
             db.session.commit()
@@ -163,11 +163,11 @@ def search():
         except Exception as e:
             logging.error(f"[SEARCH_REQ:{search_request_id}] Error saving search count: {str(e)}")
             db.session.rollback()
-        
+
         # Display remaining searches for the user
         remaining = current_user.remaining_searches()
         logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has {remaining} searches remaining")
-        
+
         if remaining == float('inf'):
             flash(f"You have unlimited searches as an admin user.", "info")
         else:
@@ -247,22 +247,22 @@ def search():
                     num_pages = 1
             except (ValueError, TypeError):
                 num_pages = 1  # Default if conversion fails
-                
+
             # Ensure boolean settings have proper defaults
             hide_wikipedia = bool(current_user.hide_wikipedia) if current_user.hide_wikipedia is not None else False
-            
+
             # show_feedback is actually "hide_feedback_features" in the database
             # In the template, we check "{% if not show_feedback %}" to display feedback
             # So if show_feedback_features is True, we want show_feedback to be True (hide feedback)
             # If show_feedback_features is False, we want show_feedback to be False (show feedback)
             show_feedback = bool(current_user.show_feedback_features) if current_user.show_feedback_features is not None else True
-            
+
             # Add debug logging for clarity
             logging.debug(f"User settings - hide_wikipedia: {hide_wikipedia}, show_feedback: {show_feedback} (True=hide, False=show)")
 
             # Summary settings for logged-in users with careful handling of None values
             generate_summaries = bool(current_user.generate_summaries) if current_user.generate_summaries is not None else True
-            
+
             # Ensure summary_depth is a valid integer between 1 and 5
             try:
                 if current_user.summary_depth is not None:
@@ -271,7 +271,7 @@ def search():
                     summary_depth = 3
             except (ValueError, TypeError):
                 summary_depth = 3  # Default if conversion fails
-                
+
             # Ensure summary_complexity is a valid integer between 1 and 5
             try:
                 if current_user.summary_complexity is not None:
@@ -288,16 +288,16 @@ def search():
         try:
             logging.info(f"[SEARCH_REQ:{search_request_id}] Calling search_google with query: '{query}'")
             logging.info(f"[SEARCH_REQ:{search_request_id}] Parameters: results={10*num_pages}, research_mode={research_mode}, hide_wikipedia={hide_wikipedia}")
-            
+
             # Log SERPAPI_KEY presence again right before the call
             api_key = os.environ.get("SERPAPI_KEY")
             if not api_key:
                 logging.error(f"[SEARCH_REQ:{search_request_id}] CRITICAL: SERPAPI_KEY is missing right before API call!")
                 flash("Search API key is not configured. Please contact the administrator.", "danger")
                 return redirect(url_for("index"))
-                
+
             logging.info(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY is present (length: {len(api_key)})")
-            
+
             search_results = search_google(
                 query, 
                 num_results=10*num_pages, 
@@ -305,10 +305,10 @@ def search():
                 hide_wikipedia=hide_wikipedia,
                 timeout=30  # 30-second timeout for API requests
             )
-            
+
             logging.info(f"[SEARCH_REQ:{search_request_id}] search_google call completed successfully")
             logging.info(f"[SEARCH_REQ:{search_request_id}] Retrieved {len(search_results)} search results")
-            
+
         except TimeoutError as te:
             # Handle timeout specifically with user-friendly message
             logging.error(f"[SEARCH_REQ:{search_request_id}] TimeoutError: {str(te)}")
@@ -372,14 +372,14 @@ def search():
         # Process each search result to get summaries
         processed_results = []
         logging.debug(f"Found {len(search_results)} search results to process")
-        
+
         for index, result in enumerate(search_results):
             try:
                 # Create a unique ID for each result processing
                 result_id = f"{search_request_id}-{index+1}"
                 link = result.get('link', '')
                 title = result.get('title', 'Untitled')
-                
+
                 logging.info(f"[RESULT:{result_id}] Processing: {title[:30]}... ({link})")
 
                 # Extract text content from the website with timeout - robust approach
@@ -400,7 +400,7 @@ def search():
                         # Get user's summary settings or use defaults
                         user_depth = current_user.summary_depth if current_user.is_authenticated else 3
                         user_complexity = current_user.summary_complexity if current_user.is_authenticated else 3
-                        
+
                         summary = summarize_text(
                             content, 
                             title,
@@ -427,9 +427,9 @@ def search():
                         result_title = result.get('title', 'Untitled')
                         result_link = result.get('link', '')
                         result_description = result.get('description', '')
-                        
+
                         logging.debug(f"[RESULT:{result_id}] Saving to database - title: {result_title[:30]}...")
-                        
+
                         search_result = SearchResult(
                             search_query_id=new_search.id,
                             title=result_title,
@@ -471,17 +471,17 @@ def search():
 
         # Log the total number of processed results
         logging.info(f"Processed {len(processed_results)} results out of {len(search_results)} search results")
-        
+
         # Debug log the results before rendering
         logging.debug(f"About to render results template with {len(processed_results)} results")
         for i, result in enumerate(processed_results):
             logging.debug(f"Result {i+1}: {result['title'][:50]}... [{result['link']}]")
-        
+
         # Check if user is logged in before rendering
         logging.debug(f"User authenticated: {current_user.is_authenticated}")
         if current_user.is_authenticated:
             logging.debug(f"Logged in user: {current_user.username}")
-        
+
         # Render the template with all the data
         return render_template("results.html", 
                               query=query, 
@@ -494,16 +494,16 @@ def search():
 
     except Exception as e:
         error_details = traceback.format_exc()
-        
+
         # Use a unique error ID for tracking
         error_id = str(uuid.uuid4())[:8]
         logging.error(f"[ERROR:{error_id}] Search error: {str(e)}")
         logging.error(f"[ERROR:{error_id}] Details: {error_details}")
-        
+
         # Create a more user-friendly error message
         user_error = "Sorry, we encountered a problem with your search request."
         error_code = 500  # Default error code
-        
+
         # Add more specific details for common errors
         if isinstance(e, ConnectionError) or "connection" in str(e).lower():
             user_error = "Network connection error. Please check your internet connection and try again."
@@ -517,21 +517,21 @@ def search():
         elif "database" in str(e).lower() or "sql" in str(e).lower():
             user_error = "Database error. Creating a new account might help resolve this issue."
             error_code = 503
-            
+
             # Try to fix database errors automatically
             try:
                 from update_all_fixes import main as run_all_fixes
                 run_all_fixes()
             except:
                 pass
-        
+
         # Log that we're showing the error to the user
         logging.info(f"[ERROR:{error_id}] Displaying user-friendly error: {user_error}")
-        
+
         # Add registration suggestion for non-authenticated users
         if not current_user.is_authenticated:
             user_error += " If this error persists, please register for a free account to resolve potential authentication issues."
-        
+
         return render_template(
             "error.html",
             error=user_error,
@@ -596,7 +596,7 @@ def view_search(search_id):
             show_feedback = True if current_user.show_feedback_features is None else bool(current_user.show_feedback_features)
             generate_summaries = True if current_user.generate_summaries is None else bool(current_user.generate_summaries)
             enable_suggestions = True if current_user.enable_suggestions is None else bool(current_user.enable_suggestions)
-            
+
             # Debug log the user preferences
             logging.debug(f"User preferences in view_search - show_feedback: {show_feedback} (True=hide, False=show), generate_summaries: {generate_summaries}, enable_suggestions: {enable_suggestions}")
 
@@ -779,7 +779,7 @@ def login():
     import uuid
     login_id = str(uuid.uuid4())[:8]
     logging.info(f"[LOGIN:{login_id}] User login page accessed")
-    
+
     if current_user.is_authenticated:
         logging.info(f"[LOGIN:{login_id}] User already authenticated as {current_user.username}, redirecting to home")
         return redirect(url_for('index'))
@@ -787,42 +787,42 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         logging.info(f"[LOGIN:{login_id}] Login form submitted with username: {form.username.data}")
-        
+
         user = User.query.filter_by(username=form.username.data).first()
-        
+
         if user is None:
             logging.warning(f"[LOGIN:{login_id}] No user found with username: {form.username.data}")
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
-            
+
         if not user.check_password(form.password.data):
             logging.warning(f"[LOGIN:{login_id}] Invalid password for user: {user.username}")
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
-            
+
         logging.info(f"[LOGIN:{login_id}] Valid credentials for user: {user.username} (ID: {user.id})")
 
         try:
             # Generate a new auth token for the user
             auth_token = user.get_auth_token()
             logging.info(f"[LOGIN:{login_id}] Generated auth token for {user.username}: {auth_token[:15]}...")
-            
+
             # Update last login time and remember token in the database
             db.session.query(User).filter_by(id=user.id).update({
                 User.last_login: datetime.utcnow(),
                 User.remember_token: auth_token
             })
-            
+
             logging.info(f"[LOGIN:{login_id}] Updated last login time and remember token for {user.username}")
             db.session.commit()
-            
+
             # Log in the user with remember=True and force cookie refresh
             login_user(user, remember=True, force=True, duration=timedelta(days=365))
-            
+
             # Make session permanent (365 days)
             session.permanent = True
             app.permanent_session_lifetime = timedelta(days=365)
-            
+
             # Log the session and cookie details for debugging
             logging.debug(f"User {user.username} logged in with remember_token: {auth_token[:10]}...")
             logging.debug(f"Session cookie set to permanent: {session.permanent}")
@@ -857,21 +857,21 @@ def register():
 
         # Generate auth token for the user
         auth_token = user.get_auth_token()
-        
+
         # Update last login time and remember token in the database 
         db.session.query(User).filter_by(id=user.id).update({
             User.last_login: datetime.utcnow(),
             User.remember_token: auth_token
         })
         db.session.commit()
-        
+
         # Log in user with remember=True and duration=365 days
         login_user(user, remember=True, duration=timedelta(days=365))
-        
+
         # Make session permanent (365 days)
         session.permanent = True
         app.permanent_session_lifetime = timedelta(days=365)
-        
+
         # Log the session and cookie details for debugging
         logging.debug(f"New user {user.username} registered and logged in with remember_token: {auth_token[:10]}...")
         logging.debug(f"Session cookie set to permanent: {session.permanent}")
@@ -955,7 +955,7 @@ def get_search_suggestions():
     query = request.args.get("query", "").strip()
     request_id = uuid.uuid4().hex[:8] # Simple request ID for logging
     user_id = None
-    
+
     # Get current user ID if authenticated
     if current_user.is_authenticated:
         user_id = current_user.id
@@ -966,7 +966,7 @@ def get_search_suggestions():
     try:
         # Get suggestions using our suggestions module with user context
         suggestions = get_suggestions_for_ui(query, db, user_id)
-        
+
         # Log suggestion count
         logging.debug(f"[{request_id}] Generated {len(suggestions)} suggestions")
 
