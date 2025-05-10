@@ -16,7 +16,26 @@ logging.getLogger('urllib3').setLevel(logging.INFO)
 
 # Add startup message
 logging.info("======= Starting application =======")
-logging.info(f"SERPAPI_KEY configured: {bool(os.environ.get('SERPAPI_KEY'))}")
+
+# Check for SerpAPI key availability (env var or database)
+env_key = bool(os.environ.get('SERPAPI_KEY'))
+db_keys = False
+
+try:
+    if os.environ.get('DATABASE_URL'):
+        # Import here to avoid circular imports
+        with app.app_context():
+            try:
+                from models import ApiKey
+                db_keys = ApiKey.query.filter_by(service='serpapi', is_active=True).count() > 0
+            except Exception as e:
+                logging.error(f"Error checking database for API keys: {str(e)}")
+except Exception as e:
+    logging.error(f"Error accessing database during startup: {str(e)}")
+
+logging.info(f"SERPAPI_KEY in environment: {env_key}")
+if db_keys:
+    logging.info("SERPAPI_KEYS found in database")
 logging.info(f"DATABASE_URL configured: {bool(os.environ.get('DATABASE_URL'))}")
 
 # Log Python version

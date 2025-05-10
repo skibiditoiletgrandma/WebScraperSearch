@@ -615,3 +615,81 @@ class CookieSearchLimit(db.Model):
 
         self.search_count_today += 1
         return True
+
+class ApiKey(db.Model):
+    """Model for storing multiple API keys for services like SerpAPI"""
+    __tablename__ = 'api_keys'
+
+    id = Column(Integer, primary_key=True)
+    service = Column(String(50), nullable=False)  # e.g., 'serpapi', 'openai', etc.
+    key = Column(String(255), nullable=False)
+    name = Column(String(100), nullable=True)  # Optional name/label for the key
+    is_active = Column(Boolean, default=True)  # Whether this key is currently active
+    priority = Column(Integer, default=0)  # Priority level (lower number = higher priority)
+    usage_count = Column(Integer, default=0)  # Count of how many times this key has been used
+    last_used = Column(DateTime)  # When this key was last used
+    last_error = Column(Text)  # Last error message if any
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def mark_used(self):
+        """Mark this API key as used, incrementing the usage count"""
+        # Ensure we have a valid usage count
+        if self.usage_count is None:
+            self.usage_count = 0
+
+        # Increment counter
+        try:
+            self.usage_count = int(self.usage_count) + 1
+        except (ValueError, TypeError):
+            # If there was a conversion error, reset counter to 1
+            self.usage_count = 1
+
+        # Update last used timestamp
+        self.last_used = datetime.utcnow()
+
+    def record_error(self, error_message):
+        """Record an error that occurred when using this API key"""
+        self.last_error = error_message
+        self.last_used = datetime.utcnow()
+
+    @classmethod
+    def get_next_active_key(cls, service, current_key_id=None):
+        """
+        Get the next active API key for the specified service.
+        If current_key_id is provided, get the next key after this one.
+        
+        Args:
+            service (str): The service name (e.g., 'serpapi')
+            current_key_id (int, optional): The ID of the current key being used
+            
+        Returns:
+            ApiKey: The next active API key object, or None if no active keys are available
+        """
+        query = cls.query.filter_by(service=service, is_active=True)
+        
+        if current_key_id is not None:
+            # Get the current key's priority
+            current_key = cls.query.get(current_key_id)
+            if current_key:
+                # Find keys with lower or equal priority (higher or same importance)
+                # but different ID than the current key
+                return query.filter(
+                    db.or_(
+                        # Keys with same priority but higher ID (next in sequence)
+                        db.and_(cls.priority == current_key.priority, cls.id > current_key_id),
+                        # Keys with lower priority (less important, used as fallback)
+                        cls.priority > current_key.priority
+                    )
+                ).order_by(cls.priority, cls.id).first() or \
+                query.order_by(cls.priority, cls.id).first()  # Wrap around to first key if needed
+        
+        # If no current key or it wasn't found, get the highest priority (lowest number) key
+        return query.order_by(cls.priority, cls.id).first()
+
+    def __repr__(self):
+        masked_key = f"{self.key[:4]}...{self.key[-4:]}" if self.key and len(self.key) > 8 else "****"
+        return f"<ApiKey service={self.service} name={self.name} key={masked_key} priority={self.priority}>"
