@@ -40,7 +40,7 @@ def create_default_admin():
                 search_count_today=0,
                 search_pages_limit=1,
                 hide_wikipedia=False,
-                show_feedback_features=False,
+                show_feedback_features=True,
                 enable_suggestions=True,
                 generate_summaries=True,
                 summary_depth=3,
