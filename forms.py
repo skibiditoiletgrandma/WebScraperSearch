@@ -86,12 +86,6 @@ class CitationForm(FlaskForm):
 class SettingsForm(FlaskForm):
     """Form for user settings"""
     # General settings
-    
-    search_pages_limit = IntegerField('Google Search Pages Limit', validators=[
-        DataRequired(),
-        NumberRange(min=1, max=10, message='Please select a value between 1 and 10 pages.')
-    ], description='Number of Google search results pages to fetch per search (1-10)')
-
     hide_wikipedia = BooleanField('Hide Wikipedia Results', 
         description='When enabled, results from Wikipedia will be hidden from search results')
     
