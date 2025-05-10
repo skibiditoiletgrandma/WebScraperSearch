@@ -15,19 +15,7 @@
 
                     <h3 class="h5 mt-3 mb-3 border-bottom pb-2"><i class="fas fa-search me-2"></i>Search Settings</h3>
 
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">{{ form.search_pages_limit.label }}</label>
-                        <div class="d-flex align-items-center">
-                            <span class="me-2 text-muted"><i class="fas fa-file"></i> 1 page</span>
-                            <input type="range" class="form-range mx-2" min="1" max="10" step="1" 
-                                id="search_pages_range" 
-                                value="{{ form.search_pages_limit.data }}"
-                                oninput="document.getElementById('search_pages_limit').value = this.value;">
-                            <span class="ms-2 me-2 text-muted"><i class="fas fa-file-alt"></i> 10 pages</span>
-                            {{ form.search_pages_limit(class="form-control ms-2", style="max-width: 60px;", oninput="document.getElementById('search_pages_range').value = this.value;") }}
-                        </div>
-                        <div class="form-text mt-2">{{ form.search_pages_limit.description }}</div>
-                    </div>
+                    
                     
 
                     <div class="mb-3 form-check">
