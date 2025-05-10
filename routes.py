@@ -269,14 +269,8 @@ def search():
 
         if current_user.is_authenticated:
             # For logged-in users, use their preferences with careful handling of None values
-            # Ensure search_pages_limit is a valid integer between 1 and 10
-            try:
-                if current_user.search_pages_limit is not None:
-                    num_pages = max(1, min(10, int(current_user.search_pages_limit)))
-                else:
-                    num_pages = 1
-            except (ValueError, TypeError):
-                num_pages = 1  # Default if conversion fails
+            # Default to 1 page for all users
+            num_pages = 1
 
             # Ensure boolean settings have proper defaults
             hide_wikipedia = bool(current_user.hide_wikipedia) if current_user.hide_wikipedia is not None else False
@@ -1179,7 +1173,6 @@ def settings():
     if form.validate_on_submit():
         try:
             # Update general settings
-            current_user.search_pages_limit = form.search_pages_limit.data
             current_user.hide_wikipedia = form.hide_wikipedia.data
             current_user.show_feedback_features = form.show_feedback_features.data
             current_user.enable_suggestions = form.enable_suggestions.data
@@ -1200,7 +1193,6 @@ def settings():
     if request.method == 'GET':
         # Ensure there are default values if fields are None
         # General settings
-        form.search_pages_limit.data = current_user.search_pages_limit if current_user.search_pages_limit is not None else 1
         form.hide_wikipedia.data = current_user.hide_wikipedia if current_user.hide_wikipedia is not None else False
         form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
         form.enable_suggestions.data = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
