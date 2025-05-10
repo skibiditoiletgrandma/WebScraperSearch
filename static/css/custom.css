@@ -149,12 +149,11 @@ header {
 /* Dropdown menu fixes */
 header .dropdown {
     position: relative;
-    z-index: 9999;
 }
 
-header .dropdown-menu {
-    position: absolute;
-    z-index: 10000;
+header .dropdown-menu.show {
+    position: fixed;
+    z-index: 99999;
     border: none;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
