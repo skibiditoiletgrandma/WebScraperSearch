@@ -1,4 +1,5 @@
 import re
+import math
 import nltk
 from nltk.tokenize import sent_tokenize
 from nltk.corpus import stopwords
@@ -137,31 +138,34 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
             
             sentence_scores[i] = score
         
-        # Adjust max_sentences based on depth setting (1-5)
-        base_sentences = max_sentences
-        # Amplify the depth effect by using a squared depth factor
-        depth_factor = ((depth - 1) / 4) ** 0.8  # Normalize to 0-1 range with stronger curve
+        # Dynamic depth scaling based on text length and depth setting
+        text_length = len(sentences)
+        base_coverage = {
+            1: 0.1,  # 10% of content
+            2: 0.2,  # 20% of content
+            3: 0.3,  # 30% of content
+            4: 0.45, # 45% of content
+            5: 0.6   # 60% of content
+        }
         
-        # More dramatic scaling based on depth
-        if depth == 1:  # Very concise
-            depth_multiplier = 0.5
-        elif depth == 2:
-            depth_multiplier = 1.0
-        elif depth == 3:
-            depth_multiplier = 2.0
-        elif depth == 4:
-            depth_multiplier = 3.5
-        else:  # depth == 5, very detailed
-            depth_multiplier = 5.0
+        # Calculate target sentence count with smooth scaling
+        base_count = max(2, int(text_length * base_coverage[depth]))
+        length_factor = min(1.0, text_length / 20)  # Normalize for very short texts
+        depth_multiplier = 1 + (depth - 3) * 0.5 * length_factor
+        
+        # Apply progressive scaling for longer texts
+        if text_length > 20:
+            depth_multiplier *= 1 + math.log(text_length / 20, 10) * 0.2
             
-        depth_adjusted_max = max(2, min(20, int(base_sentences * depth_multiplier)))
+        depth_adjusted_max = max(2, min(int(base_count * depth_multiplier), text_length))
+        num_sentences = depth_adjusted_max
         
-        # Get top-scoring sentences with depth consideration - stronger effect
-        num_sentences = min(depth_adjusted_max, max(min_sentences, int(len(sentences) * (0.05 + depth_factor * 0.5))))
-        
-        # For highest depth (5), include even more sentences
-        if depth == 5 and len(sentences) > 10:
-            num_sentences = min(len(sentences) // 2, num_sentences * 2)
+        # Fine-tune for extremes
+        if depth == 1:
+            num_sentences = min(num_sentences, 3)  # Enforce strict limit for very concise
+        elif depth == 5 and text_length > 15:
+            # Progressive increase for detailed summaries
+            num_sentences = min(text_length - 2, int(num_sentences * 1.2))
             
         top_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[:num_sentences]
         
@@ -208,14 +212,29 @@ def summarize_text(text, title="", max_sentences=5, min_sentences=2, depth=3, co
         else:  # complexity == 5, Very complex
             # Include significantly more context and prioritize complex sentences
             additional_sentences = num_sentences
-            # Find sentences with technical terms or complex structure
+            # Enhanced complexity analysis
             sentence_complexity = {}
+            vocab_frequency = FreqDist(words)  # Use previously calculated word frequencies
+            
             for i, sentence in enumerate(sentences):
                 words = word_tokenize(sentence)
-                # Calculate complexity based on sentence length, word length, and presence of rare words
-                avg_word_length = sum(len(word) for word in words) / max(1, len(words))
-                unusual_words = sum(1 for word in words if len(word) > 7 and word.lower() not in stop_words)
-                sentence_complexity[i] = (len(words) * 0.4) + (avg_word_length * 0.3) + (unusual_words * 3)
+                words_filtered = [w.lower() for w in words if w.lower() not in stop_words]
+                
+                # Multiple complexity factors
+                avg_word_length = sum(len(word) for word in words_filtered) / max(1, len(words_filtered))
+                syllable_count = sum(len(re.findall(r'[aeiouy]+', word.lower())) for word in words_filtered)
+                avg_syllables = syllable_count / max(1, len(words_filtered))
+                unusual_words = sum(1 for word in words_filtered if len(word) > 7)
+                rare_words = sum(1 for word in words_filtered if vocab_frequency[word.lower()] <= 2)
+                
+                # Weighted complexity score
+                sentence_complexity[i] = (
+                    (len(words) * 0.2) +           # Length factor
+                    (avg_word_length * 0.3) +      # Word length
+                    (avg_syllables * 0.2) +        # Syllable complexity
+                    (unusual_words * 2.0) +        # Long words
+                    (rare_words * 2.5)             # Rare/technical terms
+                )
             
             # Combine complexity score with importance score for final ranking
             combined_scores = {i: (sentence_scores.get(i, 0) * 0.6) + (sentence_complexity.get(i, 0) * 0.4) 

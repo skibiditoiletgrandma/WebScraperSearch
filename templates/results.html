@@ -188,10 +188,25 @@
                 {% endif %}
 
                 <div class="share-buttons mt-3">
-                    <button class="btn btn-sm btn-outline-info me-2 share-button" data-result-id="{{ result.id }}">
+                    <button class="btn btn-sm btn-outline-info me-2 share-button" 
+                            data-result-id="{{ result.id }}"
+                            data-title="{{ result.title }}"
+                            data-description="{{ result.description }}"
+                            data-summary="{{ result.summary }}">
                         <i class="fas fa-share-alt me-1"></i>Share
                         <span class="badge bg-secondary ms-1">{{ result.share_count or 0 }}</span>
                     </button>
+                </div>
+                <!-- Toast for share notification -->
+                <div class="toast-container position-fixed bottom-0 end-0 p-3">
+                    <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="fas fa-check me-2"></i>Share link copied to clipboard!
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -437,6 +452,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Handle share buttons
+    document.querySelectorAll('.share-button').forEach(button => {
+        button.addEventListener('click', async function() {
+            const resultId = this.getAttribute('data-result-id');
+            const title = this.getAttribute('data-title');
+            const description = this.getAttribute('data-description');
+            const summary = this.getAttribute('data-summary');
+            
+            try {
+                // Call API to increment share count
+                const response = await fetch(`/api/share/${resultId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Copy share URL to clipboard
+                    await navigator.clipboard.writeText(data.share_url);
+                    
+                    // Update share count badge
+                    const badge = this.querySelector('.badge');
+                    if (badge) {
+                        badge.textContent = data.share_count;
+                    }
+                    
+                    // Show success toast
+                    const toastEl = document.querySelector('.toast');
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+                }
+            } catch (error) {
+                console.error('Error sharing:', error);
+                showAlert('Error sharing result. Please try again.', 'danger');
+            }
+        });
+    });
+    
     // Handle copy buttons
     const copyButtons = document.querySelectorAll('.copy-btn');
     copyButtons.forEach(button => {

@@ -7,20 +7,35 @@
     border-radius: 2px;
 }
 
-/* Result card hover effect */
+/* Enhanced card styles */
+.card {
+    border: none;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
 .result-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
 }
 
 .result-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Theme-specific styling for result cards */
-[data-bs-theme="light"] .result-card {
-    background-color: #fff;
-    border-color: rgba(0, 0, 0, 0.125);
+/* Theme-specific styling for cards */
+[data-bs-theme="light"] .result-card,
+[data-bs-theme="light"] .card {
+    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="dark"] .result-card,
+[data-bs-theme="dark"] .card {
+    background: linear-gradient(to bottom right, #2b3035, #212529);
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 [data-bs-theme="light"] .result-card:hover {
@@ -90,9 +105,98 @@
     animation: pulse 1.5s infinite ease-in-out;
 }
 
-/* Add some padding to the body */
+/* Modern layout and spacing */
 body {
     padding-bottom: 2rem;
+    background-color: #f8f9fa;
+}
+
+[data-bs-theme="dark"] body {
+    background-color: #1a1d20;
+}
+
+.container {
+    max-width: 1200px;
+    padding: 0 1.5rem;
+}
+
+/* Enhanced header */
+header {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+[data-bs-theme="light"] header {
+    background: rgba(248, 249, 250, 0.8) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="dark"] header {
+    background: rgba(33, 37, 41, 0.8) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Improved spacing */
+.card {
+    margin-bottom: 1.5rem;
+}
+
+.section-spacing {
+    margin-top: 3rem;
+    margin-bottom: 3rem;
+}
+
+/* Dropdown menu fixes */
+header {
+    position: relative;
+    z-index: 99999;
+}
+
+header .dropdown {
+    position: relative;
+}
+
+header .dropdown-menu.show {
+    position: absolute;
+    z-index: 100000;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    min-width: 240px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+[data-bs-theme="light"] header .dropdown-menu {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="dark"] header .dropdown-menu {
+    background: rgba(33, 37, 41, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+header .dropdown-item {
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+header .dropdown-item:hover {
+    transform: translateX(4px);
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+header .dropdown-divider {
+    margin: 0.5rem 0;
+    opacity: 0.1;
+}
+
+header .dropdown-item-text {
+    padding: 0.5rem 1rem;
 }
 
 /* Theme toggle button styles */
@@ -185,15 +289,51 @@ body {
     color: #212529 !important;
 }
 
+/* Enhanced button styles */
+.btn {
+    border-radius: 8px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, var(--bs-primary), #2980b9);
+    border: none;
+    box-shadow: 0 2px 6px rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(var(--bs-primary-rgb), 0.3);
+}
+
+/* Form controls */
+.form-control {
+    border-radius: 8px;
+    padding: 0.625rem 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.15);
+    border-color: var(--bs-primary);
+}
+
 /* Fix button colors in light mode */
 [data-bs-theme="light"] .btn-outline-light {
     color: #212529;
-    border-color: #212529;
+    border-color: rgba(0, 0, 0, 0.2);
 }
 
 [data-bs-theme="light"] .btn-outline-light:hover {
     color: #fff;
-    background-color: #212529;
+    background: linear-gradient(45deg, #212529, #343a40);
     border-color: #212529;
 }
 
