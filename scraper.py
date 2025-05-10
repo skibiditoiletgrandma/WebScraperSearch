@@ -10,17 +10,20 @@ import os
 from serpapi import GoogleSearch
 from flask import flash
 try:
-    from models import ApiKey, db
+    from app import db
+    from models import ApiKey
+    has_db = True
 except ImportError:
     # Mock ApiKey for when models is not available (e.g., during imports)
     class ApiKey:
         @classmethod
-        def get_next_active_key(cls, *args, **kwargs):
+        def get_next_active_key(cls, service, current_key_id=None):
             return None
         def mark_used(self):
             pass
         def record_error(self, error_message):
             pass
+    has_db = False
     db = None
 
 # List of user agents to rotate for requests to avoid being blocked
@@ -136,7 +139,8 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
             if api_key_obj is not None and hasattr(api_key_obj, 'mark_used'):
                 try:
                     api_key_obj.mark_used()
-                    db.session.commit()
+                    if has_db and db is not None:
+                        db.session.commit()
                     logging.debug(f"[SEARCH:{search_id}] Marked API key {api_key_obj.id} as used")
                 except Exception as db_err:
                     logging.error(f"[SEARCH:{search_id}] Failed to mark API key usage: {str(db_err)}")
