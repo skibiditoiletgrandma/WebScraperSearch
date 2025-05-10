@@ -15,6 +15,19 @@
 
                     <h3 class="h5 mt-3 mb-3 border-bottom pb-2"><i class="fas fa-search me-2"></i>Search Settings</h3>
 
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">{{ form.search_pages_limit.label }}</label>
+                        <div class="d-flex align-items-center">
+                            <span class="me-2 text-muted"><i class="fas fa-file"></i> 1 page</span>
+                            <input type="range" class="form-range mx-2" min="1" max="10" step="1" 
+                                id="search_pages_range" 
+                                value="{{ form.search_pages_limit.data }}"
+                                oninput="document.getElementById('search_pages_limit').value = this.value;">
+                            <span class="ms-2 me-2 text-muted"><i class="fas fa-file-alt"></i> 10 pages</span>
+                            {{ form.search_pages_limit(class="form-control ms-2", style="max-width: 60px;", oninput="document.getElementById('search_pages_range').value = this.value;") }}
+                        </div>
+                        <div class="form-text mt-2">{{ form.search_pages_limit.description }}</div>
+                    </div>
                     
 
                     <div class="mb-3 form-check">
@@ -190,37 +203,55 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Set initial values for range sliders
-    document.getElementById('search_pages_range').value = document.getElementById('search_pages_limit').value;
-    document.getElementById('summary_depth_range').value = document.getElementById('summary_depth').value;
-    document.getElementById('summary_complexity_range').value = document.getElementById('summary_complexity').value;
+    // Safely get elements and set values only if they exist
+    const searchPagesRange = document.getElementById('search_pages_range');
+    const searchPagesLimit = document.getElementById('search_pages_limit');
+    const summaryDepthRange = document.getElementById('summary_depth_range');
+    const summaryDepth = document.getElementById('summary_depth');
+    const summaryComplexityRange = document.getElementById('summary_complexity_range');
+    const summaryComplexity = document.getElementById('summary_complexity');
+    
+    if (searchPagesRange && searchPagesLimit) {
+        searchPagesRange.value = searchPagesLimit.value;
+    }
+    
+    if (summaryDepthRange && summaryDepth) {
+        summaryDepthRange.value = summaryDepth.value;
+    }
+    
+    if (summaryComplexityRange && summaryComplexity) {
+        summaryComplexityRange.value = summaryComplexity.value;
+    }
 
     // Handle the "generate_summaries" toggle to show/hide summary settings
     const generateSummariesCheckbox = document.getElementById('generate_summaries');
     const summaryControls = document.querySelectorAll('.summary-controls');
 
-    function toggleSummaryControls() {
-        summaryControls.forEach(control => {
-            control.style.opacity = generateSummariesCheckbox.checked ? '1' : '0.5';
-            // Instead of disabling the inputs (which prevents form submission),
-            // we'll just visually indicate they're inactive but keep them enabled
-            // This ensures they still get submitted with the form
-            const inputs = control.querySelectorAll('input');
-            inputs.forEach(input => {
-                // Don't disable the actual form inputs
-                // input.disabled = !generateSummariesCheckbox.checked;
+    if (generateSummariesCheckbox && summaryControls.length > 0) {
+        function toggleSummaryControls() {
+            summaryControls.forEach(control => {
+                control.style.opacity = generateSummariesCheckbox.checked ? '1' : '0.5';
+                // Instead of disabling the inputs (which prevents form submission),
+                // we'll just visually indicate they're inactive but keep them enabled
+                // This ensures they still get submitted with the form
+                const inputs = control.querySelectorAll('input');
+                inputs.forEach(input => {
+                    // Don't disable the actual form inputs
+                    // input.disabled = !generateSummariesCheckbox.checked;
 
-                // Instead, add a visual indication they're inactive
-                if (generateSummariesCheckbox.checked) {
-                    input.classList.remove('inactive-input');
-                } else {
-                    input.classList.add('inactive-input');
-                }
+                    // Instead, add a visual indication they're inactive
+                    if (generateSummariesCheckbox.checked) {
+                        input.classList.remove('inactive-input');
+                    } else {
+                        input.classList.add('inactive-input');
+                    }
+                });
             });
-        });
-    }
+        }
 
-    generateSummariesCheckbox.addEventListener('change', toggleSummaryControls);
-    toggleSummaryControls(); // Run on page load
+        generateSummariesCheckbox.addEventListener('change', toggleSummaryControls);
+        toggleSummaryControls(); // Run on page load
+    }
 });
                     function updateDepthGuide(value) {
                             document.querySelectorAll('.depth-badge').forEach(badge => {
@@ -248,8 +279,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         // Initialize guides with current values
                         document.addEventListener('DOMContentLoaded', function() {
-                            updateDepthGuide(document.getElementById('summary_depth').value);
-                            updateComplexityGuide(document.getElementById('summary_complexity').value);
+                            const summaryDepth = document.getElementById('summary_depth');
+                            const summaryComplexity = document.getElementById('summary_complexity');
+                            
+                            if (summaryDepth) {
+                                updateDepthGuide(summaryDepth.value);
+                            }
+                            
+                            if (summaryComplexity) {
+                                updateComplexityGuide(summaryComplexity.value);
+                            }
                         });
                     </script>
 {% endblock %}
