@@ -146,6 +146,11 @@ header {
     margin-bottom: 3rem;
 }
 
+/* Dropdown menu fixes */
+.dropdown-menu {
+    z-index: 1050;
+}
+
 /* Theme toggle button styles */
 #theme-toggle {
     display: flex;
