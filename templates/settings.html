@@ -12,9 +12,9 @@
             <div class="card-body">
                 <form method="POST" action="{{ url_for('settings') }}">
                     {{ form.hidden_tag() }}
-                    
+
                     <h3 class="h5 mt-3 mb-3 border-bottom pb-2"><i class="fas fa-search me-2"></i>Search Settings</h3>
-                    
+
                     <div class="mb-3">
                         {{ form.search_pages_limit.label(class="form-label fw-bold") }}
                         <div class="d-flex align-items-center">
@@ -28,83 +28,79 @@
                             <div class="text-danger">{{ error }}</div>
                         {% endfor %}
                     </div>
-                    
+
                     <div class="mb-3 form-check">
                         {{ form.hide_wikipedia(class="form-check-input") }}
                         {{ form.hide_wikipedia.label(class="form-check-label") }}
                         <div class="form-text">{{ form.hide_wikipedia.description }}</div>
                     </div>
-                    
+
                     <div class="mb-3 form-check">
                         {{ form.show_feedback_features(class="form-check-input") }}
                         {{ form.show_feedback_features.label(class="form-check-label") }}
                         <div class="form-text">{{ form.show_feedback_features.description }}</div>
                     </div>
-                    
+
                     <div class="mb-3 form-check">
                         {{ form.enable_suggestions(class="form-check-input") }}
                         {{ form.enable_suggestions.label(class="form-check-label") }}
                         <div class="form-text">{{ form.enable_suggestions.description }}</div>
                     </div>
-                    
+
                     <h3 class="h5 mt-4 mb-3 border-bottom pb-2"><i class="fas fa-file-alt me-2"></i>Summary Settings</h3>
-                    
+
                     <div class="mb-3 form-check">
                         {{ form.generate_summaries(class="form-check-input") }}
                         {{ form.generate_summaries.label(class="form-check-label") }}
                         <div class="form-text">{{ form.generate_summaries.description }}</div>
                     </div>
-                    
+
                     <div class="mb-4 mt-4 summary-controls">
                         <label class="form-label fw-bold">{{ form.summary_depth.label }}</label>
                         <div class="d-flex align-items-center">
                             <span class="me-2 text-muted"><i class="fas fa-compress"></i> Concise</span>
                             <input type="range" class="form-range mx-2" min="1" max="5" step="1" 
                                 id="summary_depth_range" 
-                                oninput="document.getElementById('{{ form.summary_depth.id }}').value = this.value">
+                                value="{{ form.summary_depth.data }}"
+                                oninput="document.getElementById('{{ form.summary_depth.id }}').value = this.value; updateDepthGuide(this.value);">
                             <span class="ms-2 me-2 text-muted"><i class="fas fa-expand"></i> Detailed</span>
-                            {{ form.summary_depth(class="form-control ms-2", style="max-width: 60px;") }}
+                            {{ form.summary_depth(class="form-control ms-2", style="max-width: 60px;", oninput="document.getElementById('summary_depth_range').value = this.value; updateDepthGuide(this.value);") }}
                         </div>
                         <div class="form-text mt-2">{{ form.summary_depth.description }}</div>
                         <div class="summary-depth-guide mt-2">
                             <div class="row text-center">
-                                <div class="col"><span class="badge bg-light text-dark border">1</span><br><small>Very concise</small></div>
-                                <div class="col"><span class="badge bg-light text-dark border">2</span><br><small>Brief</small></div>
-                                <div class="col"><span class="badge bg-primary">3</span><br><small>Balanced</small></div>
-                                <div class="col"><span class="badge bg-light text-dark border">4</span><br><small>Detailed</small></div>
-                                <div class="col"><span class="badge bg-light text-dark border">5</span><br><small>Comprehensive</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border depth-badge" data-level="1">1</span><br><small>Very concise</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border depth-badge" data-level="2">2</span><br><small>Brief</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border depth-badge" data-level="3">3</span><br><small>Balanced</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border depth-badge" data-level="4">4</span><br><small>Detailed</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border depth-badge" data-level="5">5</span><br><small>Comprehensive</small></div>
                             </div>
                         </div>
-                        {% for error in form.summary_depth.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                        {% endfor %}
                     </div>
-                    
+
                     <div class="mb-4 mt-4 summary-controls">
                         <label class="form-label fw-bold">{{ form.summary_complexity.label }}</label>
                         <div class="d-flex align-items-center">
                             <span class="me-2 text-muted"><i class="fas fa-child"></i> Simple</span>
                             <input type="range" class="form-range mx-2" min="1" max="5" step="1" 
                                 id="summary_complexity_range" 
-                                oninput="document.getElementById('{{ form.summary_complexity.id }}').value = this.value">
+                                value="{{ form.summary_complexity.data }}"
+                                oninput="document.getElementById('{{ form.summary_complexity.id }}').value = this.value; updateComplexityGuide(this.value);">
                             <span class="ms-2 me-2 text-muted"><i class="fas fa-user-graduate"></i> Complex</span>
-                            {{ form.summary_complexity(class="form-control ms-2", style="max-width: 60px;") }}
+                            {{ form.summary_complexity(class="form-control ms-2", style="max-width: 60px;", oninput="document.getElementById('summary_complexity_range').value = this.value; updateComplexityGuide(this.value);") }}
                         </div>
                         <div class="form-text mt-2">{{ form.summary_complexity.description }}</div>
                         <div class="summary-complexity-guide mt-2">
                             <div class="row text-center">
-                                <div class="col"><span class="badge bg-light text-dark border">1</span><br><small>Elementary</small></div>
-                                <div class="col"><span class="badge bg-light text-dark border">2</span><br><small>Simple</small></div>
-                                <div class="col"><span class="badge bg-primary">3</span><br><small>Average</small></div>
-                                <div class="col"><span class="badge bg-light text-dark border">4</span><br><small>Advanced</small></div>
-                                <div class="col"><span class="badge bg-light text-dark border">5</span><br><small>Technical</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border complexity-badge" data-level="1">1</span><br><small>Elementary</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border complexity-badge" data-level="2">2</span><br><small>Simple</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border complexity-badge" data-level="3">3</span><br><small>Average</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border complexity-badge" data-level="4">4</span><br><small>Advanced</small></div>
+                                <div class="col"><span class="badge bg-light text-dark border complexity-badge" data-level="5">5</span><br><small>Technical</small></div>
                             </div>
                         </div>
-                        {% for error in form.summary_complexity.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                        {% endfor %}
                     </div>
-                    
+
                     <div class="text-center mt-4">
                         {{ form.submit(class="btn btn-primary") }}
                         <button type="button" onclick="resetSettings()" class="btn btn-outline-danger ms-2">Reset Settings</button>
@@ -120,20 +116,23 @@
                                 document.getElementById('hide_wikipedia').checked = false;
                                 document.getElementById('show_feedback_features').checked = false;
                                 document.getElementById('enable_suggestions').checked = true;
-                                
+
                                 // Reset summary settings
                                 document.getElementById('generate_summaries').checked = true;
                                 document.getElementById('summary_depth').value = '3';
                                 document.getElementById('summary_depth_range').value = '3';
                                 document.getElementById('summary_complexity').value = '3';
                                 document.getElementById('summary_complexity_range').value = '3';
+
+                                updateDepthGuide('3');
+                                updateComplexityGuide('3');
                             }
                         }
                     </script>
                 </form>
             </div>
         </div>
-        
+
         <!-- Example summary preview -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-secondary text-white">
@@ -143,7 +142,7 @@
                 <div class="alert alert-primary">
                     <strong>Examples of how your settings affect summaries:</strong>
                 </div>
-                
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card mb-3">
@@ -166,7 +165,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card mb-3">
@@ -208,11 +207,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('search_pages_range').value = document.getElementById('search_pages_limit').value;
     document.getElementById('summary_depth_range').value = document.getElementById('summary_depth').value;
     document.getElementById('summary_complexity_range').value = document.getElementById('summary_complexity').value;
-    
+
     // Handle the "generate_summaries" toggle to show/hide summary settings
     const generateSummariesCheckbox = document.getElementById('generate_summaries');
     const summaryControls = document.querySelectorAll('.summary-controls');
-    
+
     function toggleSummaryControls() {
         summaryControls.forEach(control => {
             control.style.opacity = generateSummariesCheckbox.checked ? '1' : '0.5';
@@ -223,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
             inputs.forEach(input => {
                 // Don't disable the actual form inputs
                 // input.disabled = !generateSummariesCheckbox.checked;
-                
+
                 // Instead, add a visual indication they're inactive
                 if (generateSummariesCheckbox.checked) {
                     input.classList.remove('inactive-input');
@@ -233,9 +232,38 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     generateSummariesCheckbox.addEventListener('change', toggleSummaryControls);
     toggleSummaryControls(); // Run on page load
 });
-</script>
+                    function updateDepthGuide(value) {
+                            document.querySelectorAll('.depth-badge').forEach(badge => {
+                                if (badge.dataset.level === value) {
+                                    badge.classList.remove('bg-light', 'text-dark', 'border');
+                                    badge.classList.add('bg-primary');
+                                } else {
+                                    badge.classList.remove('bg-primary');
+                                    badge.classList.add('bg-light', 'text-dark', 'border');
+                                }
+                            });
+                        }
+
+                        function updateComplexityGuide(value) {
+                            document.querySelectorAll('.complexity-badge').forEach(badge => {
+                                if (badge.dataset.level === value) {
+                                    badge.classList.remove('bg-light', 'text-dark', 'border');
+                                    badge.classList.add('bg-primary');
+                                } else {
+                                    badge.classList.remove('bg-primary');
+                                    badge.classList.add('bg-light', 'text-dark', 'border');
+                                }
+                            });
+                        }
+
+                        // Initialize guides with current values
+                        document.addEventListener('DOMContentLoaded', function() {
+                            updateDepthGuide(document.getElementById('summary_depth').value);
+                            updateComplexityGuide(document.getElementById('summary_complexity').value);
+                        });
+                    </script>
 {% endblock %}
