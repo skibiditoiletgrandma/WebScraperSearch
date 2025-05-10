@@ -23,7 +23,7 @@ from app import app, db
 from scraper import search_google, scrape_website
 from summarizer import summarize_text
 from suggestions import get_suggestions_for_ui
-from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit, Citation
+from models import SearchQuery, SearchResult, SummaryFeedback, User, AnonymousSearchLimit, Citation, ApiKey
 from forms import LoginForm, RegistrationForm, CitationForm, SettingsForm
 from db_migrations import handle_db_error
 import secrets
@@ -85,7 +85,6 @@ def index():
     
     # First check for API keys in the database
     try:
-        from models import ApiKey
         api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
         if api_key_count > 0:
             has_api_key = True
@@ -320,14 +319,22 @@ def search():
             logging.info(f"[SEARCH_REQ:{search_request_id}] Calling search_google with query: '{query}'")
             logging.info(f"[SEARCH_REQ:{search_request_id}] Parameters: results={10*num_pages}, research_mode={research_mode}, hide_wikipedia={hide_wikipedia}")
 
-            # Log SERPAPI_KEY presence again right before the call
-            api_key = os.environ.get("SERPAPI_KEY")
-            if not api_key:
-                logging.error(f"[SEARCH_REQ:{search_request_id}] CRITICAL: SERPAPI_KEY is missing right before API call!")
+            # Check for API keys in both database and environment variables
+            api_key_env = os.environ.get("SERPAPI_KEY")
+            api_key_count = 0
+            
+            try:
+                # Check database for active API keys
+                api_key_count = db.session.query(ApiKey).filter_by(service='serpapi', is_active=True).count()
+            except Exception as db_err:
+                logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(db_err)}")
+            
+            if not api_key_env and api_key_count == 0:
+                logging.error(f"[SEARCH_REQ:{search_request_id}] CRITICAL: No SerpAPI keys available! Env: {bool(api_key_env)}, DB: {api_key_count} keys")
                 flash("Search API key is not configured. Please contact the administrator.", "danger")
                 return redirect(url_for("index"))
 
-            logging.info(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY is present (length: {len(api_key)})")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] SerpAPI keys available: {api_key_count} in database, environment key: {bool(api_key_env)}")
 
             search_results = search_google(
                 query, 
