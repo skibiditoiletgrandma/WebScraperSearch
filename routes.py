@@ -13,6 +13,12 @@ from concurrent.futures import TimeoutError
 from flask_login import login_user, logout_user, current_user, login_required
 from exporters import export_to_pdf, export_to_markdown, export_to_notion
 from functools import wraps
+
+def generate_request_id():
+    """Generate a unique request ID for tracking"""
+    return str(uuid.uuid4())[:8]
+
+
 from app import app, db
 from scraper import search_google, scrape_website
 from summarizer import summarize_text
