@@ -80,8 +80,24 @@ def admin_required(f):
 @app.route("/")
 def index():
     """Route for the home page"""
-    # Check if API key is available
-    has_api_key = bool(os.environ.get("SERPAPI_KEY"))
+    # Check if any API keys are available
+    has_api_key = False
+    
+    # First check for API keys in the database
+    try:
+        from models import ApiKey
+        api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
+        if api_key_count > 0:
+            has_api_key = True
+            logging.info(f"Index page: Found {api_key_count} active SerpAPI keys in database")
+    except Exception as e:
+        logging.error(f"Index page: Error checking database for API keys: {str(e)}")
+    
+    # If no keys in database, check environment variable
+    if not has_api_key:
+        has_api_key = bool(os.environ.get("SERPAPI_KEY"))
+        if has_api_key:
+            logging.info("Index page: Using SerpAPI key from environment variable")
 
     # Get remaining searches based on authentication status
     remaining_searches = 0
@@ -129,14 +145,29 @@ def search():
         flash("Please enter a search query", "warning")
         return redirect(url_for("index"))
 
-    # Check if API key is available
-    api_key = os.environ.get("SERPAPI_KEY")
-    if not api_key:
-        logging.error(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY environment variable not set")
-        flash("Search API key is not configured. Please contact the administrator.", "danger")
-        return redirect(url_for("index"))
-    else:
-        logging.info(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY found (first 4 chars: {api_key[:4]}...)")
+    # Check if any API keys are available
+    has_api_key = False
+    
+    # First check for API keys in the database
+    try:
+        from models import ApiKey
+        api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
+        if api_key_count > 0:
+            has_api_key = True
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Found {api_key_count} active SerpAPI keys in database")
+    except Exception as e:
+        logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(e)}")
+    
+    # If no keys in database, check environment variable
+    if not has_api_key:
+        api_key = os.environ.get("SERPAPI_KEY")
+        if api_key:
+            has_api_key = True
+            logging.info(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY found in environment (first 4 chars: {api_key[:4]}...)")
+        else:
+            logging.error(f"[SEARCH_REQ:{search_request_id}] No SerpAPI keys available")
+            flash("Search API keys are not configured. Please contact the administrator.", "danger")
+            return redirect(url_for("index"))
 
     # Check search limits based on authentication status
     if current_user.is_authenticated:

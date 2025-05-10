@@ -8,6 +8,20 @@ import random
 import time
 import os
 from serpapi import GoogleSearch
+from flask import flash
+try:
+    from models import ApiKey, db
+except ImportError:
+    # Mock ApiKey for when models is not available (e.g., during imports)
+    class ApiKey:
+        @classmethod
+        def get_next_active_key(cls, *args, **kwargs):
+            return None
+        def mark_used(self):
+            pass
+        def record_error(self, error_message):
+            pass
+    db = None
 
 # List of user agents to rotate for requests to avoid being blocked
 USER_AGENTS = [
@@ -24,7 +38,7 @@ def get_random_user_agent():
 
 def search_google(query, num_results=10, research_mode=False, timeout=30, **kwargs):
     """
-    Use SerpAPI to retrieve Google search results for the given query
+    Use SerpAPI to retrieve Google search results with multiple API key support and fallback
 
     Args:
         query (str): The search query
@@ -33,6 +47,7 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
         timeout (int): Time in seconds to wait for API response before timing out
         **kwargs: Additional parameters, such as:
             hide_wikipedia (bool): If True, filter out Wikipedia results
+            current_key_id (int): ID of API key currently being used (for fallback)
 
     Returns:
         list: List of dictionaries containing search result data
@@ -51,109 +66,175 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
     search_id = str(uuid.uuid4())[:8]
     logging.info(f"[SEARCH:{search_id}] New search request initiated for query: '{query}'")
     
+    # Check if we're in a fallback scenario
+    fallback_attempt = 'current_key_id' in kwargs
+    current_key_id = kwargs.pop('current_key_id', None)
+    
+    # Get API key to use
+    api_key = None
+    api_key_obj = None
+    
+    # Try to get the next API key from the database
     try:
-        # Log environment variable access
+        api_key_obj = ApiKey.get_next_active_key('serpapi', current_key_id)
+        if api_key_obj:
+            api_key = api_key_obj.key
+            logging.info(f"[SEARCH:{search_id}] Using API key from database: id={api_key_obj.id}, name={api_key_obj.name}")
+    except Exception as e:
+        logging.error(f"[SEARCH:{search_id}] Error getting API key from database: {str(e)}")
+    
+    # If no API key in database, try environment variable
+    if not api_key:
         api_key = os.environ.get("SERPAPI_KEY")
-        logging.debug(f"[SEARCH:{search_id}] SERPAPI_KEY present: {bool(api_key)}")
+        logging.debug(f"[SEARCH:{search_id}] SERPAPI_KEY from environment: present={bool(api_key)}")
         
-        if not api_key:
-            logging.error(f"[SEARCH:{search_id}] SERPAPI_KEY environment variable not set")
-            raise ValueError("API key for search service not configured. Please add a valid SerpAPI key.")
+    # If still no API key, raise error
+    if not api_key:
+        logging.error(f"[SEARCH:{search_id}] No SerpAPI key available")
+        raise ValueError("API key for search service not configured. Please add a valid SerpAPI key.")
 
-        logging.info(f"Searching for: {query}")
-        # Set up the search parameters
-        params = {
-            "engine": "google",
-            "q": query,
-            "api_key": api_key,
-            "num": num_results
-        }
+    logging.info(f"[SEARCH:{search_id}] Searching for: {query}")
+    # Set up the search parameters
+    params = {
+        "engine": "google",
+        "q": query,
+        "api_key": api_key,
+        "num": num_results
+    }
 
-        # Execute the search with timeout
+    # Add research parameters if enabled
+    if research_mode:
+        logging.info(f"[SEARCH:{search_id}] Research mode enabled - limiting to .edu, .org, .gov domains")
+        
+    try:
+        # Set up timeout handling
         import signal
-
+        
         class TimeoutHandler:
             def __init__(self, seconds=30):
                 self.seconds = seconds
                 self.triggered = False
-
+                
             def handle_timeout(self, signum, frame):
                 self.triggered = True
                 raise TimeoutError(f"Search API request timed out after {self.seconds} seconds")
-
-        # Set timeout handler
+        
         timeout_handler = TimeoutHandler(timeout)
-
-        # Initialize original_handler to None
         original_handler = None
-
+        
         # Only use signal on Unix-like systems
         if hasattr(signal, 'SIGALRM'):
             original_handler = signal.signal(signal.SIGALRM, timeout_handler.handle_timeout)
             signal.alarm(timeout)
-
+            
         try:
-            # Execute the search
+            # Execute the search with the current API key
             search = GoogleSearch(params)
             results = search.get_dict()
-
-            # Reset the alarm and restore original handler
-            if hasattr(signal, 'SIGALRM'):
-                signal.alarm(0)
-                if original_handler is not None:
-                    signal.signal(signal.SIGALRM, original_handler)
-
-            # Check for error response
-            if not isinstance(results, dict):
-                raise ValueError("Invalid response format from search API")
-
-            if "error" in results:
-                error_msg = results.get("error", "Unknown error")
-                if "Authentication failed" in error_msg:
-                    raise ValueError("Invalid API key. Please check your SERPAPI_KEY configuration.")
-                elif "quota" in error_msg.lower():
-                    raise ValueError("Search quota exceeded. Please try again later.")
-                else:
-                    raise ValueError(f"Search API error: {error_msg}")
-
-        except TimeoutError as te:
-            logging.error(f"SerpAPI timeout: {str(te)}")
-            raise TimeoutError(f"Search service took too long to respond. Please try again later.")
+            
+            # If API key object exists, mark it as used
+            if api_key_obj is not None and hasattr(api_key_obj, 'mark_used'):
+                try:
+                    api_key_obj.mark_used()
+                    db.session.commit()
+                    logging.debug(f"[SEARCH:{search_id}] Marked API key {api_key_obj.id} as used")
+                except Exception as db_err:
+                    logging.error(f"[SEARCH:{search_id}] Failed to mark API key usage: {str(db_err)}")
+            
         except Exception as e:
-            # Reset the alarm and restore original handler in case of other exceptions
+            # Handle API errors that might require trying a different key
+            error_msg = str(e)
+            error_type = type(e).__name__
+            
+            # If this was a key-specific error and we have an API key object
+            if api_key_obj and hasattr(api_key_obj, 'record_error'):
+                key_error = False
+                
+                # Check for key-related errors
+                if "Authentication failed" in error_msg or "Invalid API key" in error_msg:
+                    key_error = True
+                elif "quota" in error_msg.lower() or "limit" in error_msg.lower():
+                    key_error = True
+                    
+                if key_error:
+                    try:
+                        # Record the error
+                        api_key_obj.record_error(error_msg)
+                        db.session.commit()
+                        logging.warning(f"[SEARCH:{search_id}] API key error recorded for key {api_key_obj.id}: {error_msg}")
+                        
+                        # If we haven't tried a fallback yet, try the next key
+                        if not fallback_attempt:
+                            logging.info(f"[SEARCH:{search_id}] Attempting fallback to next API key after error: {error_msg}")
+                            kwargs['current_key_id'] = api_key_obj.id
+                            
+                            # Flash message to user about the fallback
+                            flash("We're experiencing issues with the search API. Trying an alternative key...", "warning")
+                            
+                            # Call this function recursively with the next key
+                            return search_google(query, num_results, research_mode, timeout, **kwargs)
+                    except Exception as db_err:
+                        logging.error(f"[SEARCH:{search_id}] Failed to record API key error: {str(db_err)}")
+            
+            # Re-raise the original exception if we couldn't handle it or fallback
+            raise
+            
+        finally:
+            # Clean up the alarm regardless of success or failure
             if hasattr(signal, 'SIGALRM'):
                 signal.alarm(0)
                 if original_handler is not None:
                     signal.signal(signal.SIGALRM, original_handler)
-            raise
-
-            # Provide more user-friendly error messages based on common API errors
-            if "authorization" in error_msg.lower() or "api key" in error_msg.lower():
-                raise ValueError("Invalid API key. Please check your SerpAPI key.")
-            elif "quota" in error_msg.lower() or "limit" in error_msg.lower():
-                raise ValueError("API usage limit reached. Please try again later.")
-            else:
-                raise ValueError(f"Search API error: {error_msg}")
-
-        # Validate response format
+        
+        # Validate the results
         if not isinstance(results, dict):
-            logging.error("Invalid response format from SerpAPI")
+            logging.error(f"[SEARCH:{search_id}] Invalid response format from SerpAPI")
             raise ValueError("Invalid response format from search API")
-
-        # Check for API errors
+            
+        # Check for API errors in the response
         if "error" in results:
             error_msg = results.get("error", "Unknown error")
-            if "Invalid API key" in error_msg:
-                raise ValueError("Invalid API key. Please check your SERPAPI_KEY configuration.")
-            logging.error(f"SerpAPI error response: {error_msg}")
+            logging.error(f"[SEARCH:{search_id}] SerpAPI error: {error_msg}")
+            
+            # If this is a key-specific error and we have an API key object
+            if api_key_obj and hasattr(api_key_obj, 'record_error'):
+                key_error = False
+                
+                # Check for key-related errors
+                if "Authentication failed" in error_msg or "Invalid API key" in error_msg:
+                    key_error = True
+                elif "quota" in error_msg.lower() or "limit" in error_msg.lower():
+                    key_error = True
+                    
+                if key_error:
+                    try:
+                        # Record the error
+                        api_key_obj.record_error(error_msg)
+                        db.session.commit()
+                        logging.warning(f"[SEARCH:{search_id}] API key error recorded for key {api_key_obj.id}: {error_msg}")
+                        
+                        # Try the next key if this wasn't already a fallback attempt
+                        if not fallback_attempt:
+                            logging.info(f"[SEARCH:{search_id}] Attempting fallback to next API key after error: {error_msg}")
+                            kwargs['current_key_id'] = api_key_obj.id
+                            
+                            # Flash message to user about the fallback
+                            flash("We're experiencing issues with the search API. Trying an alternative key...", "warning")
+                            
+                            # Call this function recursively with the next key
+                            return search_google(query, num_results, research_mode, timeout, **kwargs)
+                    except Exception as db_err:
+                        logging.error(f"[SEARCH:{search_id}] Failed to record API key error: {str(db_err)}")
+            
+            # If we get here, either it wasn't a key error or we've already tried all keys
             raise ValueError(f"Search API error: {error_msg}")
-
+        
         # Process organic results
         organic_results = results.get("organic_results", [])
         if not organic_results:
-            logging.warning(f"No organic results found for query: {query}")
+            logging.warning(f"[SEARCH:{search_id}] No organic results found for query: {query}")
             return []
-
+            
         # Process the organic search results
         search_results = []
         for result in organic_results:
@@ -161,57 +242,92 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
             title = result.get("title", "No title")
             link = result.get("link", "")
             description = result.get("snippet", "No description available")
-
+            
             # Skip if not a valid link or from Google itself
             if not link.startswith('http') or 'google.com' in link:
                 continue
-
+                
             # Parse the URL to get the domain
             domain = urlparse(link).netloc.lower()
-
+            
             # Store domain in the result metadata
             result_metadata = {
                 "is_wikipedia": 'wikipedia.org' in domain
             }
-
+            
             # Check if Research Mode is enabled, and if so, filter by domain
             if research_mode:
                 # Check if the domain ends with educational extensions
                 if not (domain.endswith('.edu') or domain.endswith('.org') or domain.endswith('.gov')):
-                    logging.info(f"Research mode: Skipping non-educational site: {domain}")
+                    logging.info(f"[SEARCH:{search_id}] Research mode: Skipping non-educational site: {domain}")
                     continue
-
+                    
             # Check if filtering out Wikipedia results was requested
             if kwargs.get('hide_wikipedia', False) and 'wikipedia.org' in domain:
-                logging.info(f"Wikipedia filter: Skipping Wikipedia result: {domain}")
+                logging.info(f"[SEARCH:{search_id}] Wikipedia filter: Skipping Wikipedia result: {domain}")
                 continue
-
+                
             search_results.append({
                 "title": title,
                 "link": link,
                 "description": description,
                 "metadata": result_metadata
             })
-
+            
             # Limit the number of results
             if len(search_results) >= num_results:
                 break
-
-        logging.info(f"Found {len(search_results)} search results")
+                
+        logging.info(f"[SEARCH:{search_id}] Found {len(search_results)} search results")
         return search_results
-
+        
     except TimeoutError as te:
-        logging.error(f"Search timeout: {str(te)}")
-        raise
+        logging.error(f"[SEARCH:{search_id}] SerpAPI timeout: {str(te)}")
+        
+        # Try fallback if this is a timeout error
+        if api_key_obj and not fallback_attempt:
+            try:
+                api_key_obj.record_error(f"Timeout: {str(te)}")
+                db.session.commit()
+                
+                # Try the next key
+                logging.info(f"[SEARCH:{search_id}] Attempting fallback to next API key after timeout")
+                kwargs['current_key_id'] = api_key_obj.id
+                
+                # Flash message to user about the fallback
+                flash("Search timed out. Trying an alternative API key...", "warning")
+                
+                # Call this function recursively with the next key
+                return search_google(query, num_results, research_mode, timeout, **kwargs)
+            except Exception as db_err:
+                logging.error(f"[SEARCH:{search_id}] Failed to handle timeout fallback: {str(db_err)}")
+        
+        # If fallback didn't happen or failed, raise the timeout error
+        raise TimeoutError(f"Search service took too long to respond. Please try again later.")
+        
     except ValueError as ve:
-        logging.error(f"API value error: {str(ve)}")
-        raise
+        logging.error(f"[SEARCH:{search_id}] API value error: {str(ve)}")
+        
+        # If this is a fallback attempt, create a more informative error message
+        if fallback_attempt:
+            raise ValueError(f"{str(ve)} (Multiple API keys attempted)")
+        else:
+            raise
+            
     except requests.exceptions.ConnectionError:
-        logging.error("Network connection error while connecting to search API")
+        logging.error(f"[SEARCH:{search_id}] Network connection error while connecting to search API")
         raise ConnectionError("Network error while connecting to search service. Please check your internet connection.")
+        
     except Exception as e:
-        logging.error(f"Error retrieving search results: {str(e)}")
-        raise Exception(f"Search error: {str(e)}")
+        logging.error(f"[SEARCH:{search_id}] Error retrieving search results: {str(e)}")
+        
+        # All keys failed message if this was a fallback attempt
+        if fallback_attempt:
+            message = "All API keys have failed. Please report this issue."
+            flash(message, "danger")
+            raise Exception(f"Search error: {message}")
+        else:
+            raise Exception(f"Search error: {str(e)}")
 
 def scrape_website(url, timeout=20):
     """
