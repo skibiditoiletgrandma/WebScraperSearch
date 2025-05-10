@@ -1,18 +1,40 @@
-import re
+#!/usr/bin/env python3
 
-def add_db_check_before_commit(file_path):
-    with open(file_path, 'r') as file:
-        content = file.read()
+def fix_scraper_file():
+    with open('scraper.py', 'r') as file:
+        lines = file.readlines()
     
-    # Use regex to find db.session.commit() and replace with conditional check
-    pattern = r'(\s+)db\.session\.commit\(\)'
-    replacement = r'\1if has_db and db is not None:\n\1    db.session.commit()'
+    # Create a new file with fixed content
+    with open('scraper.py.new', 'w') as file:
+        for i, line in enumerate(lines):
+            # Skip the problematic section
+            if i >= 147 and i <= 151:
+                continue
+            
+            # Replace duplicate HAS_DB checks
+            if "if has_db and db is not None:" in line:
+                file.write(line.replace("has_db", "HAS_DB"))
+            else:
+                file.write(line)
+        
+    # Rewrite the file with correct content
+    with open('scraper.py.new', 'r') as f_new:
+        content = f_new.read()
+        
+    # Fix all db.session.commit() calls with proper indentation and single check
+    content = content.replace("db.session.commit()", """if HAS_DB and db is not None:
+                db.session.commit()""")
     
-    updated_content = re.sub(pattern, replacement, content)
+    # Remove any nested/duplicated conditionals
+    content = content.replace("if HAS_DB and db is not None:\n            if HAS_DB and db is not None:", 
+                            "if HAS_DB and db is not None:")
+    content = content.replace("if HAS_DB and db is not None:\n                if HAS_DB and db is not None:", 
+                            "if HAS_DB and db is not None:")
     
-    with open(file_path, 'w') as file:
-        file.write(updated_content)
+    with open('scraper.py', 'w') as file:
+        file.write(content)
     
-    print(f"Fixed db.session.commit() calls in {file_path}")
+    print("Fixed scraper.py file")
 
-add_db_check_before_commit('scraper.py')
+if __name__ == "__main__":
+    fix_scraper_file()
