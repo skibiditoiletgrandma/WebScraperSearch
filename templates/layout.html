@@ -45,6 +45,7 @@
                             <li><hr class="dropdown-divider"></li>
                             {% if current_user.is_admin %}
                             <li><span class="dropdown-item-text text-primary"><i class="fas fa-shield-alt me-2"></i>Admin</span></li>
+                            <li><a class="dropdown-item" href="{{ url_for('manage_api_keys') }}"><i class="fas fa-key me-2"></i>API Keys</a></li>
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('history') }}"><i class="fas fa-history me-2"></i>History</a></li>
