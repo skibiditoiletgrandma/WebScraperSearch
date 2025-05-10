@@ -140,7 +140,9 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                 try:
                     api_key_obj.mark_used()
                     if has_db and db is not None:
-                        db.session.commit()
+                        if has_db and db is not None:
+
+                            db.session.commit()
                     logging.debug(f"[SEARCH:{search_id}] Marked API key {api_key_obj.id} as used")
                 except Exception as db_err:
                     logging.error(f"[SEARCH:{search_id}] Failed to mark API key usage: {str(db_err)}")
@@ -164,7 +166,9 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                     try:
                         # Record the error
                         api_key_obj.record_error(error_msg)
-                        db.session.commit()
+                        if has_db and db is not None:
+
+                            db.session.commit()
                         logging.warning(f"[SEARCH:{search_id}] API key error recorded for key {api_key_obj.id}: {error_msg}")
                         
                         # If we haven't tried a fallback yet, try the next key
@@ -214,7 +218,9 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                     try:
                         # Record the error
                         api_key_obj.record_error(error_msg)
-                        db.session.commit()
+                        if has_db and db is not None:
+
+                            db.session.commit()
                         logging.warning(f"[SEARCH:{search_id}] API key error recorded for key {api_key_obj.id}: {error_msg}")
                         
                         # Try the next key if this wasn't already a fallback attempt
@@ -292,7 +298,8 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
         if api_key_obj and not fallback_attempt:
             try:
                 api_key_obj.record_error(f"Timeout: {str(te)}")
-                db.session.commit()
+                if has_db and db is not None:
+                    db.session.commit()
                 
                 # Try the next key
                 logging.info(f"[SEARCH:{search_id}] Attempting fallback to next API key after timeout")
