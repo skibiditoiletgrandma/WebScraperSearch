@@ -526,25 +526,157 @@ img {
     color: #212529;
 }
 
-/* Better spacing for mobile */
-@media (max-width: 768px) {
+/* Mobile Optimizations - Only applied to small screens */
+@media (max-width: 575.98px) {
+    /* Base container spacing */
     .container {
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
     
-    h2 {
+    /* Typography scaling for mobile only */
+    body {
+        font-size: 0.85rem;
+    }
+    
+    h1 {
         font-size: 1.5rem;
     }
     
+    h2 {
+        font-size: 1.25rem;
+    }
+    
+    h3 {
+        font-size: 1.1rem;
+    }
+    
+    h4, h5, h6 {
+        font-size: 1rem;
+    }
+    
+    .card-title {
+        font-size: 1rem;
+    }
+    
+    .card-subtitle {
+        font-size: 0.85rem;
+    }
+    
+    /* Mobile-only tight component spacing */
+    .card {
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-body {
+        padding: 0.6rem;
+    }
+    
+    .card-header {
+        padding: 0.4rem 0.6rem;
+    }
+    
+    /* Input and form elements on mobile */
+    .form-control {
+        font-size: 0.85rem;
+        padding: 0.3rem 0.4rem;
+        height: auto;
+    }
+    
+    .btn {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.5rem;
+    }
+    
+    /* Theme toggle mobile simplification */
     #theme-toggle span {
         display: none;
     }
     
     #theme-toggle {
-        padding: 0.25rem 0.5rem;
+        padding: 0.2rem 0.4rem;
     }
     
+    /* Settings page mobile optimization */
+    .summary-controls .form-control,
+    #search_pages_limit {
+        max-width: 40px !important;
+        padding-left: 0.2rem;
+        padding-right: 0.2rem;
+        text-align: center;
+    }
+    
+    .summary-controls .d-flex {
+        gap: 0.25rem;
+    }
+    
+    .summary-controls span.text-muted {
+        font-size: 0.75rem;
+    }
+    
+    /* Result cards mobile optimization */
+    .summary-content {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+    
+    /* Adjust mobile spacing for description text */
+    .text-muted {
+        font-size: 0.75rem;
+        line-height: 1.3;
+    }
+    
+    /* Navbar mobile compacting */
+    .navbar-brand {
+        font-size: 1rem;
+        padding: 0.2rem 0;
+    }
+    
+    .nav-link {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Small Tablet Optimizations (576px-767px) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+    /* More moderate size reductions for small tablets */
+    .container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.4rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    /* Settings page tablet optimization */
+    .summary-controls .form-control,
+    #search_pages_limit {
+        max-width: 45px !important;
+    }
+    
+    .summary-controls span.text-muted {
+        font-size: 0.85rem;
+    }
+}
+
+/* All Mobile Devices (below 768px) */
+@media (max-width: 767.98px) {
+    /* Theme toggle visibility */
+    #theme-toggle span {
+        display: none;
+    }
+    
+    /* Stack share buttons */
     .share-buttons {
         flex-direction: column;
         align-items: flex-start;
@@ -554,6 +686,16 @@ img {
     .share-buttons .badge {
         margin-left: 0 !important;
         margin-top: 0.25rem;
+    }
+    
+    /* Dropdown menus */
+    .dropdown-menu {
+        min-width: auto;
+    }
+    
+    /* Form inputs */
+    .input-group {
+        flex-wrap: nowrap;
     }
 }
 
