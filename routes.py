@@ -498,16 +498,21 @@ def search():
         
         # Create a more user-friendly error message
         user_error = "Sorry, we encountered a problem with your search request."
+        error_code = 500  # Default error code
         
         # Add more specific details for common errors
         if isinstance(e, ConnectionError) or "connection" in str(e).lower():
             user_error = "Network connection error. Please check your internet connection and try again."
+            error_code = 503
         elif isinstance(e, TimeoutError) or "timeout" in str(e).lower():
             user_error = "The search took too long to complete. Please try a more specific search term."
+            error_code = 408
         elif "api key" in str(e).lower() or "authorization" in str(e).lower():
-            user_error = "Search API configuration error. Please contact the administrator."
+            user_error = "Search API configuration error. Creating a new account might resolve this issue."
+            error_code = 401
         elif "database" in str(e).lower() or "sql" in str(e).lower():
-            user_error = "Database error. We're working on fixing this issue."
+            user_error = "Database error. Creating a new account might help resolve this issue."
+            error_code = 503
             
             # Try to fix database errors automatically
             try:
@@ -519,9 +524,17 @@ def search():
         # Log that we're showing the error to the user
         logging.info(f"[ERROR:{error_id}] Displaying user-friendly error: {user_error}")
         
-        # Flash the user-friendly error message
-        flash(f"{user_error} (Error ID: {error_id})", "danger")
-        return redirect(url_for("index"))
+        # Add registration suggestion for non-authenticated users
+        if not current_user.is_authenticated:
+            user_error += " If this error persists, please register for a free account to resolve potential authentication issues."
+        
+        return render_template(
+            "error.html",
+            error=user_error,
+            error_id=error_id,
+            status_code=error_code,
+            show_register=not current_user.is_authenticated
+        )
 
 @app.route("/history")
 def history():
