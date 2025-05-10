@@ -930,15 +930,15 @@ def api_share_summary(result_id):
 def get_search_suggestions():
     """API endpoint to get personalized search query recommendations"""
     query = request.args.get("query", "").strip()
-    request_id = generate_request_id('SUGG')
+    request_id = uuid.uuid4().hex[:8] # Simple request ID for logging
     user_id = None
     
     # Get current user ID if authenticated
     if current_user.is_authenticated:
         user_id = current_user.id
-        logging.info(f"[{request_id}] Getting personalized suggestions for user ID: {user_id}")
+        logging.info(f"[SUGG:{request_id}] Getting personalized suggestions for user ID: {user_id}")
     else:
-        logging.info(f"[{request_id}] Getting general suggestions for anonymous user")
+        logging.info(f"[SUGG:{request_id}] Getting general suggestions for anonymous user")
 
     try:
         # Get suggestions using our suggestions module with user context
