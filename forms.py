@@ -94,8 +94,8 @@ class SettingsForm(FlaskForm):
     hide_wikipedia = BooleanField('Hide Wikipedia Results', 
         description='When enabled, results from Wikipedia will be hidden from search results')
     
-    show_feedback_features = BooleanField('Hide Feedback/Rating Features', 
-        description='When enabled, feedback and rating options will be hidden from search results')
+    show_feedback_features = BooleanField('Show Feedback/Rating Features', 
+        description='When enabled, feedback and rating options will be shown in search results')
         
     enable_suggestions = BooleanField('Enable Search Suggestions', 
         description='When enabled, AI-powered suggestions for better search queries will be shown')
