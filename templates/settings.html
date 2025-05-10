@@ -107,8 +107,29 @@
                     
                     <div class="text-center mt-4">
                         {{ form.submit(class="btn btn-primary") }}
+                        <button type="button" onclick="resetSettings()" class="btn btn-outline-danger ms-2">Reset Settings</button>
                         <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
                     </div>
+
+                    <script>
+                        function resetSettings() {
+                            if (confirm('Are you sure you want to reset all settings to their default values?')) {
+                                // Reset search settings
+                                document.getElementById('search_pages_limit').value = '1';
+                                document.getElementById('search_pages_range').value = '1';
+                                document.getElementById('hide_wikipedia').checked = false;
+                                document.getElementById('show_feedback_features').checked = false;
+                                document.getElementById('enable_suggestions').checked = true;
+                                
+                                // Reset summary settings
+                                document.getElementById('generate_summaries').checked = true;
+                                document.getElementById('summary_depth').value = '3';
+                                document.getElementById('summary_depth_range').value = '3';
+                                document.getElementById('summary_complexity').value = '3';
+                                document.getElementById('summary_complexity_range').value = '3';
+                            }
+                        }
+                    </script>
                 </form>
             </div>
         </div>
