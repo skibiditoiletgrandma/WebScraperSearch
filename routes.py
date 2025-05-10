@@ -397,11 +397,15 @@ def search():
                 if generate_summaries:
                     try:
                         logging.debug(f"[RESULT:{result_id}] Generating summary")
+                        # Get user's summary settings or use defaults
+                        user_depth = current_user.summary_depth if current_user.is_authenticated else 3
+                        user_complexity = current_user.summary_complexity if current_user.is_authenticated else 3
+                        
                         summary = summarize_text(
                             content, 
                             title,
-                            depth=summary_depth,
-                            complexity=summary_complexity
+                            depth=user_depth,
+                            complexity=user_complexity
                         )
                         logging.debug(f"[RESULT:{result_id}] Summary generated successfully")
                     except Exception as summary_error:
