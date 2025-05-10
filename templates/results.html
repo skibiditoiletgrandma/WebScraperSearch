@@ -197,17 +197,7 @@
                         <span class="badge bg-secondary ms-1">{{ result.share_count or 0 }}</span>
                     </button>
                 </div>
-                <!-- Toast for share notification -->
-                <div class="toast-container position-fixed bottom-0 end-0 p-3">
-                    <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                <i class="fas fa-check me-2"></i>Share link copied to clipboard!
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    </div>
-                </div>
+                <!-- Share functionality now uses the modal popup instead of toast -->
             </div>
         </div>
         {% endfor %}
@@ -540,6 +530,30 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // Handle the copy-again button in share modal
+    const copyAgainBtn = document.querySelector('.copy-again-btn');
+    if (copyAgainBtn) {
+        copyAgainBtn.addEventListener('click', function() {
+            const shareInput = document.getElementById('share-link-input');
+            if (shareInput && shareInput.value) {
+                // Select the text for better visual feedback
+                shareInput.select();
+                // Copy to clipboard
+                navigator.clipboard.writeText(shareInput.value).then(() => {
+                    // Show feedback
+                    const originalHTML = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => {
+                        this.innerHTML = originalHTML;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showAlert('Failed to copy to clipboard', 'danger');
+                });
+            }
+        });
+    }
 });
 </script>
 
