@@ -147,13 +147,14 @@ header {
 }
 
 /* Dropdown menu fixes */
-.dropdown-menu {
+header .dropdown {
+    position: relative;
     z-index: 9999;
-    position: absolute;
 }
 
-.dropdown {
-    position: relative;
+header .dropdown-menu {
+    position: absolute;
+    z-index: 10000;
 }
 
 /* Theme toggle button styles */
