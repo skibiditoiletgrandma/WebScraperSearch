@@ -219,6 +219,34 @@
     {% endif %}
 </div>
 
+<!-- Share Modal Dialog -->
+<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shareModalLabel">
+                    <i class="fas fa-share-alt me-2"></i>Share Result
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-success mb-3">
+                    <i class="fas fa-check-circle me-2"></i>Link copied to clipboard!
+                </p>
+                <div class="input-group">
+                    <input type="text" id="share-link-input" class="form-control" readonly>
+                    <button class="btn btn-outline-secondary copy-again-btn" type="button">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if enable_suggestions %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -481,10 +509,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         badge.textContent = data.share_count;
                     }
                     
-                    // Show success toast
-                    const toastEl = document.querySelector('.toast');
-                    const toast = new bootstrap.Toast(toastEl);
-                    toast.show();
+                    // Set the URL in the modal input field
+                    const shareInput = document.getElementById('share-link-input');
+                    if (shareInput) {
+                        shareInput.value = data.share_url;
+                    }
+                    
+                    // Show the modal
+                    const shareModal = new bootstrap.Modal(document.getElementById('shareModal'));
+                    shareModal.show();
                 }
             } catch (error) {
                 console.error('Error sharing:', error);
