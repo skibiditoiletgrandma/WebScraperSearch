@@ -928,26 +928,41 @@ def api_share_summary(result_id):
 
 @app.route("/api/suggestions", methods=["GET"])
 def get_search_suggestions():
-    """API endpoint to get search query suggestions"""
+    """API endpoint to get personalized search query recommendations"""
     query = request.args.get("query", "").strip()
-
-    if not query or len(query) < 3:
-        return jsonify({
-            "success": False,
-            "suggestions": []
-        })
+    request_id = generate_request_id('SUGG')
+    user_id = None
+    
+    # Get current user ID if authenticated
+    if current_user.is_authenticated:
+        user_id = current_user.id
+        logging.info(f"[{request_id}] Getting personalized suggestions for user ID: {user_id}")
+    else:
+        logging.info(f"[{request_id}] Getting general suggestions for anonymous user")
 
     try:
-        # Get suggestions using our suggestions module
-        suggestions = get_suggestions_for_ui(query, db)
+        # Get suggestions using our suggestions module with user context
+        suggestions = get_suggestions_for_ui(query, db, user_id)
+        
+        # Log suggestion count
+        logging.debug(f"[{request_id}] Generated {len(suggestions)} suggestions")
+
+        # Group suggestions by type for better organization in UI
+        grouped_suggestions = {}
+        for suggestion in suggestions:
+            suggestion_type = suggestion.get("type", "other")
+            if suggestion_type not in grouped_suggestions:
+                grouped_suggestions[suggestion_type] = []
+            grouped_suggestions[suggestion_type].append(suggestion)
 
         return jsonify({
             "success": True,
-            "suggestions": suggestions
+            "suggestions": suggestions,
+            "grouped_suggestions": grouped_suggestions
         })
 
     except Exception as e:
-        logging.error(f"Error generating suggestions: {str(e)}")
+        logging.error(f"[{request_id}] Error generating suggestions: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e),

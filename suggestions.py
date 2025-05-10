@@ -1,9 +1,10 @@
 """
-Search Query Suggestion Module
-This module provides suggestions for search queries based on various methods:
-1. Keyword expansion based on common search patterns
-2. Analysis of past successful searches from database
-3. NLTK-based suggestions using natural language processing
+Personalized Search Recommendation System
+This module provides a comprehensive recommendation system for search queries:
+1. Personalized recommendations based on user search history
+2. Topic-based suggestions to explore related areas of interest
+3. Advanced query formulation using NLP and semantic analysis
+4. Trending topics and popular searches from community data
 """
 
 import random
@@ -234,17 +235,138 @@ def suggest_query_improvements(query: str, past_queries: List[str] = []) -> Dict
     return results
 
 
-def get_suggestions_for_ui(query: str, db=None) -> List[Dict[str, str]]:
+def get_personal_search_history(db, user_id=None, limit=5):
     """
-    Format suggestions for the UI display with helpful descriptions
+    Get personalized search history for a specific user or general trending searches
+    
+    Args:
+        db: Database connection
+        user_id: Specific user ID to fetch history for (None for global trending)
+        limit: Maximum number of history items to return
+        
+    Returns:
+        List[Dict]: List of search history items with metadata
+    """
+    if not db:
+        return []
+        
+    try:
+        from models import SearchQuery, User
+        from datetime import datetime, timedelta
+        
+        # Base query
+        query = db.session.query(SearchQuery)
+        
+        # If user_id provided, filter by user
+        if user_id:
+            query = query.filter(SearchQuery.user_id == user_id)
+            
+            # Get user's 5 most recent searches
+            recent_searches = query.order_by(
+                SearchQuery.created_at.desc()
+            ).limit(limit).all()
+            
+            return [{
+                "query": search.query_text,
+                "description": f"Searched on {search.created_at.strftime('%b %d')}",
+                "type": "history",
+                "icon": "fa-history"
+            } for search in recent_searches if search.query_text]
+        else:
+            # Get trending searches from last 7 days
+            one_week_ago = datetime.now() - timedelta(days=7)
+            trending = query.filter(SearchQuery.created_at >= one_week_ago).all()
+            
+            # Count frequency of each search query
+            query_counts = Counter([search.query_text for search in trending if search.query_text])
+            
+            # Get top trending searches
+            top_trending = query_counts.most_common(limit)
+            
+            return [{
+                "query": query_text,
+                "description": f"Trending search ({count} searches)",
+                "type": "trending",
+                "icon": "fa-fire"
+            } for query_text, count in top_trending]
+            
+    except Exception as e:
+        print(f"Error accessing search history: {e}")
+        return []
+
+
+def get_topic_suggestions(query: str) -> List[Dict]:
+    """
+    Generate topic-based suggestions related to the current query
+    
+    Args:
+        query (str): The current search query
+        
+    Returns:
+        List[Dict]: List of topic suggestions
+    """
+    # Identify the query category
+    category = identify_query_category(query)
+    if not category:
+        return []
+        
+    # Get related patterns from the category
+    topic_suggestions = []
+    patterns = SEARCH_CATEGORIES.get(category, [])
+    
+    tokens = clean_and_tokenize(query)
+    if not tokens:
+        return []
+    
+    # Use the most important term from the query
+    main_term = tokens[0] if tokens else ""
+    
+    # Create topic suggestions using the patterns
+    for pattern in patterns[:3]:
+        # Avoid suggesting the exact same query
+        suggested_query = f"{pattern} {main_term}"
+        if suggested_query.lower() != query.lower():
+            topic_suggestions.append({
+                "query": suggested_query,
+                "description": f"Related {category} topic",
+                "type": "topic",
+                "icon": "fa-tag"
+            })
+    
+    return topic_suggestions
+
+
+def get_suggestions_for_ui(query: str, db=None, user_id=None) -> List[Dict]:
+    """
+    Format suggestions for the UI display with helpful descriptions organized by sections
     
     Args:
         query (str): The original search query
         db: Database connection for fetching past successful queries
+        user_id: Current user ID for personalized suggestions
         
     Returns:
-        List[Dict[str, str]]: List of suggestion dictionaries with query and description
+        List[Dict]: Comprehensive suggestion data organized by sections
     """
+    if not query or len(query.strip()) < 2:
+        # For empty/short queries, only return personalized and trending suggestions
+        personal_history = get_personal_search_history(db, user_id, limit=3)
+        trending_searches = get_personal_search_history(db, user_id=None, limit=3)
+        
+        recommendations = {
+            "personalized": personal_history,
+            "trending": trending_searches,
+            "query_improvements": [],
+            "related_topics": []
+        }
+        
+        # Flatten for backward compatibility with existing JavaScript
+        flat_suggestions = []
+        for section in recommendations.values():
+            flat_suggestions.extend(section)
+            
+        return flat_suggestions[:8]
+    
     # Get past successful queries from database if available
     past_queries = []
     if db:
@@ -264,40 +386,72 @@ def get_suggestions_for_ui(query: str, db=None) -> List[Dict[str, str]]:
     # Get raw suggestions
     suggestions_dict = suggest_query_improvements(query, past_queries)
     
-    # Format for UI
-    ui_suggestions = []
+    # Format for UI - organized by sections
+    query_improvements = []
     
     # Add improved queries with descriptions
     for suggestion in suggestions_dict["improved_queries"]:
-        ui_suggestions.append({
+        query_improvements.append({
             "query": suggestion,
             "description": "Better structured search query",
-            "type": "improved"
+            "type": "improved",
+            "icon": "fa-lightbulb"
         })
     
     # Add expanded queries with descriptions
     for suggestion in suggestions_dict["expanded_queries"]:
-        ui_suggestions.append({
+        query_improvements.append({
             "query": suggestion,
             "description": "Expanded with related terms",
-            "type": "expanded"
+            "type": "expanded",
+            "icon": "fa-plus-circle"
         })
     
     # Add operator suggestions with descriptions
     for suggestion in suggestions_dict["operator_suggestions"]:
         # Identify which operator is being used
         operator_desc = "Advanced search technique"
+        operator_icon = "fa-code"
         for op, desc in SEARCH_OPERATORS.items():
             if op in suggestion and op not in query:
                 operator_desc = desc
                 break
         
-        ui_suggestions.append({
+        query_improvements.append({
             "query": suggestion,
             "description": operator_desc,
-            "type": "operator"
+            "type": "operator",
+            "icon": operator_icon
         })
     
-    # Randomize and limit to avoid always showing the same suggestions first
-    random.shuffle(ui_suggestions)
-    return ui_suggestions[:6]  # Limit to 6 suggestions for UI
+    # Get topic-based suggestions
+    topic_suggestions = get_topic_suggestions(query)
+    
+    # Get personalized history
+    personal_history = get_personal_search_history(db, user_id, limit=3)
+    
+    # Get trending searches
+    trending_searches = get_personal_search_history(db, user_id=None, limit=3)
+    
+    # Organize all suggestions by category
+    recommendations = {
+        "personalized": personal_history,
+        "trending": trending_searches,
+        "query_improvements": query_improvements[:5],  # Limit to top 5
+        "related_topics": topic_suggestions
+    }
+    
+    # Flatten for backward compatibility with existing JavaScript
+    flat_suggestions = []
+    for section in recommendations.values():
+        flat_suggestions.extend(section)
+    
+    # Deduplicate by query text
+    seen_queries = set()
+    unique_suggestions = []
+    for suggestion in flat_suggestions:
+        if suggestion["query"].lower() not in seen_queries:
+            seen_queries.add(suggestion["query"].lower())
+            unique_suggestions.append(suggestion)
+            
+    return unique_suggestions[:12]  # Return up to 12 suggestions for sidebar

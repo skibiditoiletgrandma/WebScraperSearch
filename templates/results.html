@@ -38,6 +38,85 @@
     </div>
 
     {% if enable_suggestions %}
+    <!-- Personalized Search Recommendation Sidebar -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Main content -->
+            <div class="col-md-8 col-lg-9">
+                <!-- Original results content will be appended here by JavaScript -->
+                <div id="main-content-container"></div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-md-4 col-lg-3">
+                <div id="recommendations-sidebar" class="sticky-top" style="top: 20px;">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                Personalized Recommendations
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <!-- History section -->
+                            <div id="personal-history-section" class="d-none">
+                                <div class="p-3 border-bottom">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-history me-2"></i>
+                                        Your Search History
+                                    </h6>
+                                    <div id="personal-history-list" class="recommendation-section">
+                                        <!-- Personal history items will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Trending section -->
+                            <div id="trending-section" class="d-none">
+                                <div class="p-3 border-bottom">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-fire me-2"></i>
+                                        Trending Searches
+                                    </h6>
+                                    <div id="trending-list" class="recommendation-section">
+                                        <!-- Trending searches will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Related topics section -->
+                            <div id="topics-section" class="d-none">
+                                <div class="p-3 border-bottom">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-tag me-2"></i>
+                                        Related Topics
+                                    </h6>
+                                    <div id="topics-list" class="recommendation-section">
+                                        <!-- Topic suggestions will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Query improvements section -->
+                            <div id="query-improvements-section" class="d-none">
+                                <div class="p-3">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-magic me-2"></i>
+                                        Query Improvements
+                                    </h6>
+                                    <div id="query-improvements-list" class="recommendation-section">
+                                        <!-- Query improvement suggestions will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Legacy container for backward compatibility -->
     <div id="suggestions-container" class="d-none mb-4">
         <div class="card">
             <div class="card-body">
@@ -128,70 +207,214 @@
 {% if enable_suggestions %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // First, move all the current content to the main-content-container
+    const mainContentContainer = document.getElementById('main-content-container');
+    const resultsContainer = document.querySelector('.results-container');
+    const alertInfo = document.querySelector('.alert-info');
+
+    if (mainContentContainer) {
+        // Move search results if they exist
+        if (resultsContainer) {
+            mainContentContainer.appendChild(resultsContainer.cloneNode(true));
+            if (resultsContainer.parentNode) {
+                resultsContainer.parentNode.removeChild(resultsContainer);
+            }
+        }
+        
+        // Move "No results found" alert if it exists
+        if (alertInfo) {
+            mainContentContainer.appendChild(alertInfo.cloneNode(true));
+            if (alertInfo.parentNode) {
+                alertInfo.parentNode.removeChild(alertInfo);
+            }
+        }
+    }
+
+    // Handle search input and suggestions
     const searchInput = document.getElementById('search-input');
+    
+    // Legacy suggestion containers (for backward compatibility)
     const suggestionsContainer = document.getElementById('suggestions-container');
     const suggestionsList = document.getElementById('suggestions-list');
+    
+    // New sidebar section containers
+    const personalHistorySection = document.getElementById('personal-history-section');
+    const trendingSection = document.getElementById('trending-section');
+    const topicsSection = document.getElementById('topics-section');
+    const queryImprovementsSection = document.getElementById('query-improvements-section');
+    
+    // New sidebar list containers
+    const personalHistoryList = document.getElementById('personal-history-list');
+    const trendingList = document.getElementById('trending-list');
+    const topicsList = document.getElementById('topics-list');
+    const queryImprovementsList = document.getElementById('query-improvements-list');
+    
     let typingTimer;
     const doneTypingInterval = 500;
 
-    searchInput.addEventListener('input', function() {
-        clearTimeout(typingTimer);
-        if (this.value.length >= 3) {
-            typingTimer = setTimeout(fetchSuggestions, doneTypingInterval);
-        } else {
-            suggestionsContainer.classList.add('d-none');
-        }
-    });
+    // Setup input event handlers
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(typingTimer);
+            if (this.value.length >= 2) {
+                typingTimer = setTimeout(fetchRecommendations, doneTypingInterval);
+            }
+        });
+    }
 
-    searchInput.addEventListener('blur', function() {
-        setTimeout(() => {
-            suggestionsContainer.classList.add('d-none');
-        }, 200);
-    });
+    // Immediately fetch recommendations on page load
+    fetchRecommendations();
 
-    searchInput.addEventListener('focus', function() {
-        if (this.value.length >= 3 && suggestionsList.children.length > 0) {
-            suggestionsContainer.classList.remove('d-none');
-        }
-    });
-
-    function fetchSuggestions() {
-        const query = searchInput.value;
-        if (query.length < 3) return;
-
+    function fetchRecommendations() {
+        const query = searchInput ? searchInput.value : document.querySelector('h2')?.textContent?.replace('Search Results for "', '').replace('"', '') || '';
+        
         fetch(`/api/suggestions?query=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success && data.suggestions && data.suggestions.length > 0) {
-                    displaySuggestions(data.suggestions);
-                } else {
-                    suggestionsContainer.classList.add('d-none');
+                if (data.success) {
+                    // Display grouped suggestions in the sidebar
+                    if (data.grouped_suggestions) {
+                        displayGroupedRecommendations(data.grouped_suggestions);
+                    }
+                    
+                    // For backward compatibility, also display in the old format
+                    if (data.suggestions && data.suggestions.length > 0 && suggestionsList) {
+                        displayLegacySuggestions(data.suggestions);
+                    }
                 }
             })
             .catch(error => {
-                console.error('Error fetching suggestions:', error);
-                suggestionsContainer.classList.add('d-none');
+                console.error('Error fetching recommendations:', error);
             });
     }
 
-    function displaySuggestions(suggestions) {
+    function displayGroupedRecommendations(groupedSuggestions) {
+        // Clear and hide all sections first
+        clearAndHideAllSections();
+        
+        // Display personalized history
+        if (groupedSuggestions.history && groupedSuggestions.history.length > 0) {
+            displaySectionItems(personalHistoryList, personalHistorySection, groupedSuggestions.history);
+        }
+        
+        // Display trending searches
+        if (groupedSuggestions.trending && groupedSuggestions.trending.length > 0) {
+            displaySectionItems(trendingList, trendingSection, groupedSuggestions.trending);
+        }
+        
+        // Display topic suggestions
+        if (groupedSuggestions.topic && groupedSuggestions.topic.length > 0) {
+            displaySectionItems(topicsList, topicsSection, groupedSuggestions.topic);
+        }
+        
+        // Display query improvements (combining different improvement types)
+        const improvements = [
+            ...(groupedSuggestions.improved || []),
+            ...(groupedSuggestions.expanded || []),
+            ...(groupedSuggestions.operator || [])
+        ];
+        
+        if (improvements.length > 0) {
+            displaySectionItems(queryImprovementsList, queryImprovementsSection, improvements);
+        }
+    }
+    
+    function clearAndHideAllSections() {
+        // Clear and hide all sections
+        if (personalHistoryList) personalHistoryList.innerHTML = '';
+        if (personalHistorySection) personalHistorySection.classList.add('d-none');
+        
+        if (trendingList) trendingList.innerHTML = '';
+        if (trendingSection) trendingSection.classList.add('d-none');
+        
+        if (topicsList) topicsList.innerHTML = '';
+        if (topicsSection) topicsSection.classList.add('d-none');
+        
+        if (queryImprovementsList) queryImprovementsList.innerHTML = '';
+        if (queryImprovementsSection) queryImprovementsSection.classList.add('d-none');
+    }
+    
+    function displaySectionItems(listElement, sectionElement, items) {
+        if (!listElement || !sectionElement || !items.length) return;
+        
+        listElement.innerHTML = '';
+        
+        items.forEach(item => {
+            const button = document.createElement('button');
+            button.className = 'btn btn-outline-primary me-2 mb-2';
+            button.type = 'button';
+            
+            // Use provided icon or default based on type
+            let iconClass = item.icon || 'fa-lightbulb';
+            
+            button.innerHTML = `
+                <i class="fas ${iconClass} me-2"></i>
+                ${item.query}
+            `;
+            
+            // Add tooltip with description
+            if (item.description) {
+                button.setAttribute('data-bs-toggle', 'tooltip');
+                button.setAttribute('data-bs-placement', 'top');
+                button.setAttribute('title', item.description);
+            }
+            
+            button.addEventListener('click', function() {
+                if (searchInput) {
+                    searchInput.value = item.query;
+                    searchInput.form.submit();
+                } else {
+                    // If searchInput is not available, create a form and submit
+                    const form = document.createElement('form');
+                    form.method = 'post';
+                    form.action = '/search';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'query';
+                    input.value = item.query;
+                    
+                    form.appendChild(input);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+            
+            listElement.appendChild(button);
+        });
+        
+        // Show section since we have items
+        sectionElement.classList.remove('d-none');
+        
+        // Initialize tooltips for new buttons
+        const tooltipTriggerList = [].slice.call(listElement.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+
+    // For backward compatibility with old suggestion display
+    function displayLegacySuggestions(suggestions) {
+        if (!suggestionsList) return;
+        
         suggestionsList.innerHTML = '';
 
-        suggestions.forEach(suggestion => {
+        suggestions.slice(0, 5).forEach(suggestion => {
             const item = document.createElement('a');
             item.className = 'list-group-item list-group-item-action py-2';
             item.href = '#';
 
-            let typeIcon = 'fa-lightbulb';
+            // Get icon from suggestion or use default based on type
+            let iconClass = suggestion.icon || 'fa-lightbulb';
             if (suggestion.type === 'operator') {
-                typeIcon = 'fa-code';
+                iconClass = 'fa-code';
             } else if (suggestion.type === 'expanded') {
-                typeIcon = 'fa-plus-circle';
+                iconClass = 'fa-plus-circle';
             }
 
             item.innerHTML = `
                 <div>
-                    <i class="fas ${typeIcon} text-muted me-2"></i>
+                    <i class="fas ${iconClass} text-muted me-2"></i>
                     <strong>${suggestion.query}</strong>
                 </div>
                 <small class="text-muted">${suggestion.description}</small>
@@ -199,23 +422,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
             item.addEventListener('click', function(e) {
                 e.preventDefault();
-                searchInput.value = suggestion.query;
-                suggestionsContainer.classList.add('d-none');
-                searchInput.form.submit();
+                if (searchInput) {
+                    searchInput.value = suggestion.query;
+                    suggestionsContainer.classList.add('d-none');
+                    searchInput.form.submit();
+                }
             });
 
             suggestionsList.appendChild(item);
         });
 
-        suggestionsContainer.classList.remove('d-none');
+        if (suggestionsList.children.length > 0 && suggestionsContainer) {
+            suggestionsContainer.classList.remove('d-none');
+        }
     }
 
-    if (searchInput && searchInput.value.length >= 3) {
-        setTimeout(fetchSuggestions, 300);
-    }
-});
-
-document.addEventListener('DOMContentLoaded', function() {
+    // Handle copy buttons
     const copyButtons = document.querySelectorAll('.copy-btn');
     copyButtons.forEach(button => {
         button.addEventListener('click', function() {
@@ -231,5 +453,52 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<style>
+/* Styling for recommendation sidebar */
+.recommendation-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.recommendation-section .btn {
+    font-size: 0.9rem;
+    padding: 0.3rem 0.6rem;
+    white-space: normal;
+    text-align: left;
+    border-radius: 20px;
+}
+
+/* Sticky sidebar for desktop */
+@media (min-width: 768px) {
+    #recommendations-sidebar {
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+        position: sticky;
+        top: 20px;
+    }
+}
+
+/* Type-specific styling */
+.recommendation-section .btn[data-type="history"] {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.recommendation-section .btn[data-type="trending"] {
+    border-color: #fd7e14;
+}
+
+.recommendation-section .btn[data-type="topic"] {
+    border-color: #20c997;
+}
+
+.recommendation-section .btn[data-type="improved"],
+.recommendation-section .btn[data-type="expanded"],
+.recommendation-section .btn[data-type="operator"] {
+    border-color: #0d6efd;
+}
+</style>
 {% endif %}
 {% endblock %}
