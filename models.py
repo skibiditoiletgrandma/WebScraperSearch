@@ -405,122 +405,134 @@ class Citation(db.Model):
             return citation
 
         # Default format if source type is not recognized:
-        return f{self.authors}. \{self.title}.\" {self.publication_date}.
+        return f"{self.authors}. \"{self.title}\". {self.publication_date}."
 
     def generate_chicago_citation(self):
-        Generate Chicago style citation         if self.source_type == 'journal':
+        """Generate Chicago style citation"""
+        if self.source_type == "journal":
             author_list = self.format_authors_chicago()
-            citation = f"{author_list}. \{self.title}.\ ""
+            citation = f"{author_list}. \"{self.title}\"."
             if self.journal_name:
-                citation += f<em>{self.journal_name}</em>
+                citation += f" <em>{self.journal_name}</em>"
                 if self.volume:
-                    citation += f {self.volume}
+                    citation += f" {self.volume}"
                     if self.issue:
-                        citation += f", no. {self.issue}
+                        citation += f", no. {self.issue}"
                 if self.publication_date:
-                    citation += f ({self.publication_date})""
+                    citation += f" ({self.publication_date})"
                 if self.pages:
-                    citation += f: {self.pages}
-            citation += .
+                    citation += f": {self.pages}"
             if self.doi:
-                citation += f" https://doi.org/{self.doi}.
+                citation += f" https://doi.org/{self.doi}"
             elif self.url:
-                citation += f {self.url}.""
+                citation += f" {self.url}"
             return citation
 
-        elif self.source_type == 'book':
+        elif self.source_type == "book":
             author_list = self.format_authors_chicago()
-            citation = f{author_list}. <em>{self.title}</em>. 
+            citation = f"{author_list}. <em>{self.title}</em>."
             if self.publisher:
-                citation += f{self.publisher}
+                citation += f" {self.publisher}"
                 if self.publication_date:
-                    citation += f", {self.publication_date}
-            citation += .""
+                    citation += f", {self.publication_date}"
             return citation
 
-        elif self.source_type == 'website':
+        elif self.source_type == "website":
             author_list = self.format_authors_chicago()
-            citation = f{author_list}. \{self.title}.\ 
+            citation = f"{author_list}. \"{self.title}\"."
             if self.publication_date:
-                citation += f"{self.publication_date}.
+                citation += f" {self.publication_date}."
             if self.url:
-                citation += f{self.url}""
+                citation += f" {self.url}"
                 if self.access_date:
-                    citation += f (accessed {self.access_date})
-            citation += .
+                    citation += f" (accessed {self.access_date})"
             return citation
 
         # Default format if source type is not recognized:
-        return f"{self.authors}. \{self.title}.\ {self.publication_date}.""
+        return f"{self.authors}. \"{self.title}\". {self.publication_date}."
 
     def format_authors_apa(self):
-        Format author names for APA style         if not self.authors:
-            return 
+        """Format author names for APA style"""
+        if not self.authors:
+            return "Unknown"
 
-        author_list = self.authors.split(";)
+        author_list = self.authors.split(";") if self.authors else []
         if len(author_list) == 1:
             # Single author: Last, F. M.
             return self._format_author_apa(author_list[0])
         elif len(author_list) == 2:
             # Two authors: Last, F. M., & Last, F. M.
-            return f{self._format_author_apa(author_list[0])}, & {self._format_author_apa(author_list[1])}"
+            return f"{self._format_author_apa(author_list[0])}, & {self._format_author_apa(author_list[1])}"
         else:
             # Multiple authors: Last, F. M., Last, F. M., & Last, F. M.
-            formatted_authors = , .join([self._format_author_apa(a) for a in author_list[:-1]])
-            return f{formatted_authors}, & {self._format_author_apa(author_list[-1])}
+            formatted_authors = ", ".join([self._format_author_apa(a) for a in author_list[:-1]])
+            return f"{formatted_authors}, & {self._format_author_apa(author_list[-1])}"
 
     def _format_author_apa(self, author):
-        "Helper to format a single author name for APA         parts = author.strip().split():
+        """Helper to format a single author name for APA"""
+        parts = author.strip().split()
         if len(parts) == 1:
             return parts[0]
         elif len(parts) == 2:
             last_name, first_name = parts[1], parts[0]
-            return f"{last_name}, {first_name[0]}.
+            return f"{last_name}, {first_name[0]}."
         else:
             # Assume first name, middle name, last name format
             first_name, middle_name, last_name = parts[0], parts[1], parts[2]
-            return f{last_name}, {first_name[0]}. {middle_name[0]}.
+            return f"{last_name}, {first_name[0]}. {middle_name[0]}."
 
     def format_authors_mla(self):
-        ""Format author names for MLA style         if not self.authors:
-            return 
+        """Format author names for MLA style"""
+        if not self.authors:
+            return "Unknown"
 
-        author_list = self.authors.split(";)
+        author_list = self.authors.split(";") if self.authors else []
         if len(author_list) == 1:
             # Single author: Last, First
             return self._format_author_mla(author_list[0])
         elif len(author_list) == 2:
             # Two authors: Last, First, and First Last
             first_author = self._format_author_mla(author_list[0])
-            parts = author_list[1].strip().split()
+            parts = author_list[1].strip().split() if author_list[1] else []
             if len(parts) == 1:
                 second_author = parts[0]
             else:
                 first_name = parts[0]
-                last_name =  .join(parts[1:])
-                second_author = f{first_name} {last_name}"
-            return f{first_author}, and {second_author}
+                last_name = " ".join(parts[1:])
+                second_author = f"{first_name} {last_name}"
+            return f"{first_author}, and {second_author}"
         else:
             # More than two authors: Last, First, et al.
-            return f"{self._format_author_mla(author_list[0])}, et al.
+            return f"{self._format_author_mla(author_list[0])}, et al."
 
-    def _format_author_mla(self, author):
-        Helper to format a single author name for MLA         parts = author.strip().split():
+    def _format_author_mla(self, author, surname_first=True):
+        """Helper to format a single author name for MLA"""
+        if not author:
+            return "Unknown Author"
+            
+        parts = author.strip().split()
         if len(parts) == 1:
             return parts[0]
         elif len(parts) == 2:
             first_name, last_name = parts[0], parts[1]
-            return f""{last_name}, {first_name}
+            if surname_first:
+                return f"{last_name}, {first_name}"
+            else:
+                return f"{first_name} {last_name}"
         else:
             # Assume first name, middle name, last name format
             first_name, middle_name, last_name = parts[0], parts[1], parts[2]
-            return f{last_name}, {first_name} {middle_name}"
+            if surname_first:
+                return f"{last_name}, {first_name} {middle_name}"
+            else:
+                return f"{first_name} {middle_name} {last_name}"
 
     def format_authors_chicago(self):
-        Format author names for Chicago style         if not self.authors:
-            return 
+        """Format author names for Chicago style"""
+        if not self.authors:
+            return "Unknown"
 
-        author_list = self.authors.split(";)
+        author_list = self.authors.split(";") if self.authors else []
         if len(author_list) == 1:
             # Single author: Last, First
             return self._format_author_chicago(author_list[0])
@@ -528,52 +540,64 @@ class Citation(db.Model):
             # Up to three authors: Last, First, First Last, and First Last
             formatted_authors = self._format_author_chicago(author_list[0])
             for i in range(1, len(author_list)-1):
-                formatted_authors += f, {self._format_author_name_chicago(author_list[i])}"
-            formatted_authors += f, and {self._format_author_name_chicago(author_list[-1])}
+                formatted_authors += f", {self._format_author_name_chicago(author_list[i])}"
+            formatted_authors += f", and {self._format_author_name_chicago(author_list[-1])}"
             return formatted_authors
         else:
             # More than three authors: First author et al.
-            return f{self._format_author_chicago(author_list[0])} et al.
+            return f"{self._format_author_chicago(author_list[0])} et al."
 
     def _format_author_chicago(self, author):
-        "Helper to format first author name for Chicago         parts = author.strip().split():
+        """Helper to format first author name for Chicago"""
+        if not author:
+            return "Unknown Author"
+            
+        parts = author.strip().split()
         if len(parts) == 1:
             return parts[0]
         elif len(parts) == 2:
             first_name, last_name = parts[0], parts[1]
-            return f"{last_name}, {first_name}
+            return f"{last_name}, {first_name}"
         else:
             # Assume first name, middle name, last name format
             first_name, middle_name, last_name = parts[0], parts[1], parts[2]
-            return f{last_name}, {first_name} {middle_name}
+            return f"{last_name}, {first_name} {middle_name}"
 
     def _format_author_name_chicago(self, author):
-        ""Helper to format non-first author name for Chicago         parts = author.strip().split()":
+        """Format subsequent author names for Chicago"""
+        if not author:
+            return "Unknown Author"
+            
+        parts = author.strip().split()
         if len(parts) == 1:
             return parts[0]
         elif len(parts) == 2:
             first_name, last_name = parts[0], parts[1]
-            return f{first_name} {last_name}"""         else:
+            return f"{first_name} {last_name}"
+        else:
             # Assume first name, middle name, last name format
-            first_name, middle_name, last_name = parts[0], parts[1], parts[2]"""
-            return f{first_name} {middle_name} {last_name}
+            first_name, middle_name, last_name = parts[0], parts[1], parts[2]
+            return f"{first_name} {middle_name} {last_name}"
 
     def get_formatted_citation(self):
-        Return the citation formatted according to the selected style"""         if self.citation_style == APA:"""
+        """Return the citation formatted according to the selected style"""
+        if self.citation_style == "APA":
             return self.generate_apa_citation()
-        elif self.citation_style == "MLA:
+        elif self.citation_style == "MLA":
             return self.generate_mla_citation()
-        elif self.citation_style == Chicago:
+        elif self.citation_style == "CHICAGO":
             return self.generate_chicago_citation()
         else:
-            # Default to APA if style not recognized:
+            # Default to APA if style not recognized
             return self.generate_apa_citation()
 
     def __repr__(self):
-        return f<Citation {self.id}: {self.title}>"
+        """Return string representation of the citation"""
+        return f"Citation {self.id}: {self.title}"
 
 class CookieSearchLimit(db.Model):
-    Model for tracking cookie-based search limits"     __tablename__ = 'cookie_search_limits':
+    """Model for tracking cookie-based search limits"""
+    __tablename__ = 'cookie_search_limits'
 
     id = Column(Integer, primary_key=True)
     cookie_id = Column(String(64), unique=True, nullable=False, index=True)
@@ -581,15 +605,16 @@ class CookieSearchLimit(db.Model):
     last_reset_date = Column(DateTime, default=datetime.utcnow)
 
     def check_and_increment(self):
-        Check limit and increment if allowed         current_date = datetime.utcnow().date():
-        reset_date = self.last_reset_date.date() if self.last_reset_date else current_date:
+        """Check limit and increment if allowed"""
+        current_date = datetime.utcnow().date()
+        reset_date = self.last_reset_date.date() if self.last_reset_date else current_date
 
-        # Reset counter if its a new day:
+        # Reset counter if its a new day
         if current_date > reset_date:
             self.search_count_today = 0
             self.last_reset_date = datetime.utcnow()
 
-        # Check if under limit (15 searches per cookie per day):
+        # Check if under limit (15 searches per cookie per day)
         if self.search_count_today >= 15:
             return False
 
@@ -597,17 +622,18 @@ class CookieSearchLimit(db.Model):
         return True
 
 class ApiKey(db.Model):
-    "Model for storing multiple API keys for services like SerpAPI     __tablename__ = api_keys':
+    """Model for storing multiple API keys for services like SerpAPI"""
+    __tablename__ = 'api_keys'
 
     id = Column(Integer, primary_key=True)
     service = Column(String(50), nullable=False)  # e.g., 'serpapi', 'openai', etc.
     key = Column(String(255), nullable=False)
-    name = Column(String(100), nullable=True)  # Optional name/label for the key:
+    name = Column(String(100), nullable=True)  # Optional name/label for the key
     is_active = Column(Boolean, default=True)  # Whether this key is currently active
     priority = Column(Integer, default=0)  # Priority level (lower number = higher priority)
     usage_count = Column(Integer, default=0)  # Count of how many times this key has been used
     last_used = Column(DateTime)  # When this key was last used
-    last_error = Column(Text)  # Last error message if any:
+    last_error = Column(Text)  # Last error message if any
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def __init__(self, **kwargs):
@@ -615,7 +641,8 @@ class ApiKey(db.Model):
             setattr(self, key, value)
 
     def mark_used(self):
-        "Mark this API key as used, incrementing the usage count         # Ensure we have a valid usage count
+        """Mark this API key as used, incrementing the usage count"""
+        # Ensure we have a valid usage count
         if self.usage_count is None:
             self.usage_count = 0
 
@@ -630,22 +657,23 @@ class ApiKey(db.Model):
         self.last_used = datetime.utcnow()
 
     def record_error(self, error_message):
-        Record an error that occurred when using this API key"         self.last_error = error_message
+        """Record an error that occurred when using this API key"""
+        self.last_error = error_message
         self.last_used = datetime.utcnow()
 
     @classmethod
     def get_next_active_key(cls, service, current_key_id=None):
-        
-        Get the next active API key for the specified service.:
+        """
+        Get the next active API key for the specified service.
         If current_key_id is provided, get the next key after this one.
 
         Args:
             service (str): The service name (e.g., 'serpapi')
             current_key_id (int, optional): The ID of the current key being used
+        """
 
-        Returns:
-            ApiKey: The next active API key object, or None if no active keys are available.:
-        "         query = cls.query.filter_by(service=service, is_active=True)
+        # Returns: ApiKey: The next active API key object, or None if no active keys are available
+        query = cls.query.filter_by(service=service, is_active=True)
 
         if current_key_id is not None:
             # Get the current key's priority
@@ -667,5 +695,5 @@ class ApiKey(db.Model):
         return query.order_by(cls.priority, cls.id).first()
 
     def __repr__(self):
-        masked_key = f{self.key[:4]}...{self.key[-4:]} if self.key and len(self.key) > 8 else ****:
-        return f"<ApiKey service={self.service} name={self.name} key={masked_key} priority={self.priority}>""""""""'"""
+        masked_key = f"{self.key[:4]}...{self.key[-4:]}" if self.key and len(self.key) > 8 else "****"
+        return f"<ApiKey service={self.service} name={self.name} key={masked_key} priority={self.priority}>"

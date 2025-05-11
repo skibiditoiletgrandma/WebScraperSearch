@@ -47,19 +47,19 @@ def check_user_token():
     token = request.cookies.get(remember_cookie_name)
 
     if token:
-        logging.info(f"[AUTH:{auth_check_id}] Found remember token in cookie: {token[:10]}..."")
+        logging.info(f"[AUTH:{auth_check_id}] Found remember token in cookie: {token[:10]}...")
 
         # Look for a user with this token:
         user = User.query.filter_by(remember_token=token).first()
 
         if user:
-            logging.info(f[AUTH:{auth_check_id}] Found matching user: {user.username} (ID: {user.id}))
+            logging.info(f"[AUTH:{auth_check_id}] Found matching user: {user.username} (ID: {user.id})")
 
             # Log the user in
             login_user(user, remember=True, duration=timedelta(days=365))
 
             # Log for debugging:
-            logging.info(f"[AUTH:{auth_check_id}] Successfully auto-logged in user {user.username} using remember token"")
+            logging.info(f"[AUTH:{auth_check_id}] Successfully auto-logged in user {user.username} using remember token")
         else:
             logging.warning(f[AUTH:{auth_check_id}] No user found with the token {token[:10]}...)
     else:
