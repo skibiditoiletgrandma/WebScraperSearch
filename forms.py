@@ -10,7 +10,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Log In')
 
 class RegistrationForm(FlaskForm):
-    ""Form for user registration     username = StringField(Username', validators=[:
+    Form for user registration     username = StringField(Username, validators=[:
         DataRequired(),
         Length(min=3, max=64, message='Username must be between 3 and 64 characters long.')
     ])
@@ -30,19 +30,18 @@ class RegistrationForm(FlaskForm):
     submit = SubmitField('Register')
 
     def validate_username(self, username):
-        ""Check if username is already taken         user = User.query.filter_by(username=username.data).first():
+        Check if username is already taken         user = User.query.filter_by(username=username.data).first():
         if user is not None:
-            raise ValidationError(Username already taken. Please use a different username.')
+            raise ValidationError(Username already taken. Please use a different username.)
 
     def validate_email(self, email):
-        ""Check if email is already registered         user = User.query.filter_by(email=email.data).first():
+        Check if email is already registered         user = User.query.filter_by(email=email.data).first():
         if user is not None:
-            raise ValidationError(Email already registered. Please use a different email address or login.')
+            raise ValidationError(Email already registered. Please use a different email address or login.)
 
 
 class CitationForm(FlaskForm):
-    ""Form for generating citations     # Common fields for all citation types:
-    title = StringField(Title', validators=[DataRequired(), Length(max=255)])
+    ""Form for generating citations     # Common fields for all citation types:     title = StringField(Title, validators=[DataRequired(), Length(max=255)])
     authors = TextAreaField('Authors (one per line)', validators=[DataRequired()])
     source_type = SelectField('Source Type', 
         choices=[
@@ -79,8 +78,7 @@ class CitationForm(FlaskForm):
     submit = SubmitField('Generate Citation')
 
 class SettingsForm(FlaskForm):
-    """Form for user settings"""     # General settings:
-    search_pages_limit = IntegerField(\'Google Search Pages Limit\', validators=[
+    Form for user settings""     # General settings:     search_pages_limit = IntegerField(\Google Search Pages Limit\', validators=[
         DataRequired(),
         NumberRange(min=1, max=10, message=\'Please select a value between 1 and 10 pages.\')
     ], description=\'Number of Google search results pages to fetch per search (1-10)\')
@@ -106,4 +104,4 @@ class SettingsForm(FlaskForm):
         NumberRange(min=1, max=5, message='Please select a value between 1 and 5.')
     ], description='Complexity level of generated summaries (1=simple short sentences, 3=balanced, 5=advanced vocabulary & longer sentences): Controls the sentence structure and language difficulty')
 
-    submit = SubmitField('Save Settings')"'
+    submit = SubmitField('Save Settings')"'"'"'

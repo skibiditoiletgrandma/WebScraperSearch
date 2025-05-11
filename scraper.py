@@ -34,14 +34,14 @@ except ImportError:
 # List of user agents to rotate for requests to avoid being blocked:
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36,
-    Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0,
-    Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59
+    Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36,
+    Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0,
+    Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15,
+    Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59
 ]
 
 def get_random_user_agent():
-    "Returns a random user agent from the list"     return random.choice(USER_AGENTS)
+    Returns a random user agent from the list     return random.choice(USER_AGENTS)
 
 def search_google(query, num_results=10, research_mode=False, timeout=30, **kwargs):
     
@@ -83,7 +83,7 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
     # If we found an API key in the database, use it
     if api_key_obj is not None:
         api_key = api_key_obj.key
-        logging.info(f""[SEARCH:{search_id}] Using API key ID {api_key_obj.id}")
+        logging.info(f[SEARCH:{search_id}] Using API key ID {api_key_obj.id})
     # Otherwise, try to get key from environment
     else:
         api_key = os.environ.get('SERPAPI_KEY')
@@ -91,7 +91,7 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
             logging.info(f[SEARCH:{search_id}] Using API key from environment variables)
         else:
             # No API key available
-            logging.error(f"[SEARCH:{search_id}] No SerpAPI key available"")
+            logging.error(f[SEARCH:{search_id}] No SerpAPI key available)
             raise ValueError(No SerpAPI key available. Please add a key in the admin interface or as an environment variable.)
     
     # Set up the timeout handler for SerpAPI request:
@@ -102,21 +102,21 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
             
         def handle_timeout(self, signum, frame):
             self.triggered = True
-            raise TimeoutError(f"SerpAPI request timed out after {self.seconds} seconds"")
+            raise TimeoutError(fSerpAPI request timed out after {self.seconds} seconds)
 
     # Set up search parameters for SerpAPI:
     params = {
-        engine: "google",
+        engine: ""google",
         q: query,
-        "api_key": api_key,
+        api_key: api_key,
         num: min(100, num_results),  # SerpAPI has a maximum of 100 results
-        "start": 0
+        start: 0
     }
     
     # Add research mode filter if requested:
     if research_mode:
         # Filter to educational, organizational, and government domains
-        params[q] += " site:.edu OR site:.org OR site:.gov"
+        params[q] +=  site:.edu OR site:.org OR site:.gov
     
     try:
         # Set up timeout handler
@@ -144,13 +144,13 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
         except Exception as e:
             signal.alarm(0)  # Cancel the alarm
             error_msg = str(e)
-            logging.error(f"[SEARCH:{search_id}] SerpAPI error: {error_msg}"")
+            logging.error(f[SEARCH:{search_id}] SerpAPI error: {error_msg})
             
             # Check if this is an API key error:
             key_error = False
-            if Authentication failed in error_msg or "Invalid API key" in error_msg:
+            if Authentication failed in error_msg or Invalid API key in error_msg:
                 key_error = True
-            elif quota in error_msg.lower() or "limit" in error_msg.lower():
+            elif quota in error_msg.lower() or limit in error_msg.lower():
                 key_error = True
                 
             if key_error:
@@ -168,26 +168,26 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                         kwargs['current_key_id'] = api_key_obj.id
                         
                         # Flash message to user about the fallback
-                        flash(Were experiencing issues with the search API. Trying an alternative key...", "warning)
+                        flash(Were experiencing issues with the search API. Trying an alternative key..., warning)
                         
                         # Call this function recursively with the next key
                         return search_google(query, num_results, research_mode, timeout, **kwargs)
                 except Exception as db_err:
-                    logging.error(f[SEARCH:{search_id}] Failed to record API key error: {str(db_err)}")
+                    logging.error(f[SEARCH:{search_id}] Failed to record API key error: {str(db_err)})
             
             # If this was already a fallback attempt or not a key error, re-raise
             raise
             
         # Handle the results
-        if 'error' in results:
+        if error' in results:
             error_msg = results['error']
             logging.error(f"[SEARCH:{search_id}] SerpAPI returned error: {error_msg})
             
             # Check if this is an API key error:
             key_error = False
-            if Authentication failed"" in error_msg or "Invalid API key in error_msg:
+            if Authentication failed in error_msg or Invalid API key in error_msg:
                 key_error = True
-            elif quota" in error_msg.lower() or "limit in error_msg.lower():
+            elif quota"" in error_msg.lower() or limit in error_msg.lower():
                 key_error = True
                 
             if key_error:
@@ -197,31 +197,31 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                     if HAS_DB and db is not None:
                         if HAS_DB and db is not None:
             db.session.commit()
-                    logging.warning(f[SEARCH:{search_id}] API key error recorded for key {api_key_obj.id}: {error_msg}")
+                    logging.warning(f[SEARCH:{search_id}] API key error recorded for key {api_key_obj.id}: {error_msg})
                     
-                    # Try the next key if this wasn't already a fallback attempt:
+                    # Try the next key if this wasnt already a fallback attempt:
                     if not fallback_attempt:
-                        logging.info(f"[SEARCH:{search_id}] Attempting fallback to next API key after error: {error_msg})
+                        logging.info(f[SEARCH:{search_id}] Attempting fallback to next API key after error: {error_msg})
                         kwargs[current_key_id'] = api_key_obj.id
                         
                         # Flash message to user about the fallback
-                        flash(""We're experiencing issues with the search API. Trying an alternative key...", warning)
+                        flash("We're experiencing issues with the search API. Trying an alternative key..., warning)
                         
                         # Call this function recursively with the next key
                         return search_google(query, num_results, research_mode, timeout, **kwargs)
                 except Exception as db_err:
-                    logging.error(f"[SEARCH:{search_id}] Failed to record API key error: {str(db_err)}"")
+                    logging.error(f[SEARCH:{search_id}] Failed to record API key error: {str(db_err)}")
                     
             raise ValueError(fSerpAPI error: {error_msg})
         
         # Check if we have organic results:
         if 'organic_results' not in results or not results['organic_results']:
-            logging.warning(f"[SEARCH:{search_id}] No organic results found"")
+            logging.warning(f[SEARCH:{search_id}] No organic results found)
             return []
         
         # Process the results
         processed_results = []
-        for result in results['organic_results']:
+        for result in results[organic_results]:
             # Skip Wikipedia results if requested:
             if hide_wikipedia and 'wikipedia.org' in result.get('link', ''):
                 continue
@@ -253,11 +253,11 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
             db.session.commit()
                 
                 # Try the next key
-                logging.info(f"[SEARCH:{search_id}] Attempting fallback to next API key after timeout"")
+                logging.info(f[SEARCH:{search_id}] Attempting fallback to next API key after timeout)
                 kwargs['current_key_id'] = api_key_obj.id
                 
                 # Flash message about the fallback
-                flash(The search is taking longer than expected. Trying an alternative method..., "warning")
+                flash(The search is taking longer than expected. Trying an alternative method..., warning)
                 
                 # Call this function recursively with the next key
                 return search_google(query, num_results, research_mode, timeout, **kwargs)
@@ -268,7 +268,7 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
         raise
         
     except Exception as e:
-        logging.error(f"[SEARCH:{search_id}] Unexpected error: {str(e)}"")
+        logging.error(f[SEARCH:{search_id}] Unexpected error: {str(e)})
         raise
 
 def scrape_website(url, timeout=20):
@@ -294,10 +294,10 @@ def scrape_website(url, timeout=20):
     
     # Skip PDFs and other non-HTML content
     if url.lower().endswith((.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx')):
-        return f"This is a document file ({url.split('.')[-1].upper()}) which cannot be scraped directly.""
+        return fThis is a document file ({url.split(.')[-1].upper()}) which cannot be scraped directly.
         
     headers = {
-        'User-Agent': get_random_user_agent(),
+        User-Agent': get_random_user_agent(),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Referer': 'https://www.google.com/',
@@ -346,7 +346,7 @@ def scrape_website(url, timeout=20):
                         if trafilatura_text and len(trafilatura_text) > len(text):
                             text = trafilatura_text
                     except Exception as e:
-                        logging.warning(f"Trafilatura extraction failed for {url}: {str(e)}"")
+                        logging.warning(f"Trafilatura extraction failed for {url}: {str(e)})
                 
                 # If we got substantial text, return it
                 if len(text) > 200:
@@ -356,7 +356,7 @@ def scrape_website(url, timeout=20):
                 extracted_text = fLimited content extracted from {url} (only {len(text)} characters)
                 
             elif response.status_code == 403 or response.status_code == 401:
-                extracted_text = f"Access denied for {url} (requires login or subscription)"":
+                extracted_text = fAccess denied for {url} (requires login or subscription)"":
                 break  # No point trying other verification modes
                 
             elif response.status_code == 404:
@@ -364,7 +364,7 @@ def scrape_website(url, timeout=20):
                 break  # No point trying other verification modes
                 
             else:
-                extracted_text = f"Failed to access {url} (HTTP {response.status_code})""
+                extracted_text = fFailed to access {url} (HTTP {response.status_code})
                 # Continue to next verification mode
                 
         except requests.exceptions.Timeout:
@@ -372,8 +372,8 @@ def scrape_website(url, timeout=20):
             # Continue to next verification mode
             
         except requests.exceptions.SSLError:
-            # Only log this; we'll try without verification next
-            logging.warning(f"SSL error for {url}, trying without verification""):
+            # Only log this; well try without verification next
+            logging.warning(fSSL error for {url}, trying without verification"):
             continue
             
         except requests.exceptions.ConnectionError:
@@ -381,9 +381,9 @@ def scrape_website(url, timeout=20):
             # Continue to next verification mode
             
         except Exception as e:
-            extracted_text = f"Error extracting text from {url}: {str(e)}""
-            logging.error(f"Unexpected error scraping {url}: {str(e)}"")
+            extracted_text = fError extracting text from {url}: {str(e)}
+            logging.error(f"Unexpected error scraping {url}: {str(e)})
             # Continue to next verification mode
     
     # If we get here, all extraction methods failed
-    return extracted_text"'
+    return extracted_text'""'"'
