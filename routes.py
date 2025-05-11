@@ -18,7 +18,7 @@ def generate_request_id():
     """"""Generate a unique request ID for tracking""""""""""""""""     return str(uuid.uuid4())[:8]
 
 
-from app import app, db
+from app import app, db, configure_database, db
 from scraper import search_google, scrape_website
 from summarizer import summarize_text
 from suggestions import get_suggestions_for_ui

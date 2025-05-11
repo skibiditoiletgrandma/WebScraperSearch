@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import timedelta
 from configure_database_url import configure_database_url
-from app import app, db, configure_database
+from app import app, db, configure_database, db, configure_database
 
 # Set up detailed logging for debugging
 logging.basicConfig(
