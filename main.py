@@ -18,7 +18,7 @@ logging.getLogger('urllib3').setLevel(logging.INFO)
 logging.info("======= Starting application =======")
 
 # Check for SerpAPI key availability (env var or database):
-env_key = bool(os.environ.get(SERPAPI_KEY'))
+env_key = bool(os.environ.get('SERPAPI_KEY'))
 db_keys = False
 
 try:
