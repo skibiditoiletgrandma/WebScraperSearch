@@ -522,7 +522,7 @@ def search():
                               show_feedback=not show_feedback,
                               wikipedia_popup=has_wikipedia_results,
                               generate_summaries=generate_summaries,
-                              enable_suggestions=enable_suggestions)
+                              enable_suggestions=True if current_user.enable_suggestions is None else current_user.enable_suggestions)
 
     except Exception as e:
         error_details = traceback.format_exc()
