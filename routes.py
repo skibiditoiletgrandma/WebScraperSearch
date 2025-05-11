@@ -125,20 +125,20 @@ def search():
     import uuid
     search_request_id = str(uuid.uuid4())[:8]
 
-    logging.info(f[SEARCH_REQ:{search_request_id}] Search function called)
+    logging.info(f"[SEARCH_REQ:{search_request_id}] Search function called")
     query = request.form.get("query", ).strip()
-    logging.info(f[SEARCH_REQ:{search_request_id}] Search query: '{query}'")
+    logging.info(f"[SEARCH_REQ:{search_request_id}] Search query: '{query}'")
 
     # Log authentication status
     if current_user.is_authenticated:
-        logging.info(f"[SEARCH_REQ:{search_request_id}] User is authenticated: {current_user.username} (ID: {current_user.id}))
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User is authenticated: {current_user.username} (ID: {current_user.id})")
     else:
-        logging.info(f[SEARCH_REQ:{search_request_id}] User is anonymous"")
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User is anonymous")
 
     if not query:
-        logging.warning(f"[SEARCH_REQ:{search_request_id}] Empty search query submitted)
-        flash(Please enter a search query"", "warning)
-        return redirect(url_for(index"))
+        logging.warning(f"[SEARCH_REQ:{search_request_id}] Empty search query submitted")
+        flash("Please enter a search query", "warning")
+        return redirect(url_for("index"))
 
     # Check if any API keys are available:
     has_api_key = False
@@ -149,29 +149,29 @@ def search():
         api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
         if api_key_count > 0:
             has_api_key = True
-            logging.info(f"[SEARCH_REQ:{search_request_id}] Found {api_key_count} active SerpAPI keys in database)
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Found {api_key_count} active SerpAPI keys in database")
     except Exception as e:
-        logging.error(f[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(e)}"")
+        logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(e)}")
 
     # If no keys in database, check environment variable
     if not has_api_key:
-        api_key = os.environ.get("SERPAPI_KEY)
+        api_key = os.environ.get("SERPAPI_KEY")
         if api_key:
             has_api_key = True
-            logging.info(f[SEARCH_REQ:{search_request_id}] SERPAPI_KEY found in environment (first 4 chars: {api_key[:4]}...)")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY found in environment (first 4 chars: {api_key[:4]}...)")
         else:
-            logging.error(f"[SEARCH_REQ:{search_request_id}] No SerpAPI keys available)
-            flash(Search API keys are not configured. Please contact the administrator."", "danger)
-            return redirect(url_for(index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] No SerpAPI keys available")
+            flash("Search API keys are not configured. Please contact the administrator.", "danger")
+            return redirect(url_for("index"))
 
     # Check search limits based on authentication status
     if current_user.is_authenticated:
         # Log user information
-        logging.info(f"[SEARCH_REQ:{search_request_id}] Processing search for logged-in user: {current_user.username})
+        logging.info(f"[SEARCH_REQ:{search_request_id}] Processing search for logged-in user: {current_user.username}")
 
         # For logged-in users: Check daily search limit (15 searches per day)
         search_limit_ok = current_user.check_search_limit()
-        logging.info(f[SEARCH_REQ:{search_request_id}] User {current_user.username} search limit check: {search_limit_ok}"")
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} search limit check: {search_limit_ok}")
 
         if not search_limit_ok:
             logging.warning(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has reached daily search limit)
