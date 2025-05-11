@@ -284,22 +284,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let typingTimer;
     const doneTypingInterval = 500;
+    const initialQuery = document.querySelector('h2')?.textContent?.match(/"([^"]+)"/)?.[1] || '';
 
-    // Setup input event handlers
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
+    // Setup input event handlers for both main search and research mode
+    const searchInputs = document.querySelectorAll('input[type="search"], input[name="query"]');
+    searchInputs.forEach(input => {
+        input.addEventListener('input', function() {
             clearTimeout(typingTimer);
             if (this.value.length >= 2) {
-                typingTimer = setTimeout(fetchRecommendations, doneTypingInterval);
+                typingTimer = setTimeout(() => fetchRecommendations(this.value), doneTypingInterval);
+            } else {
+                clearAndHideAllSections();
             }
         });
+    });
+
+    // Immediately fetch recommendations on page load if we have an initial query
+    if (initialQuery) {
+        fetchRecommendations(initialQuery);
     }
 
-    // Immediately fetch recommendations on page load
-    fetchRecommendations();
-
-    function fetchRecommendations() {
-        const query = searchInput ? searchInput.value : document.querySelector('h2')?.textContent?.replace('Search Results for "', '').replace('"', '') || '';
+    function fetchRecommendations(query) {
+        if (!query) return;
         
         fetch(`/api/suggestions?query=${encodeURIComponent(query)}`)
             .then(response => response.json())
