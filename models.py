@@ -384,7 +384,7 @@ class Citation(db.Model):
                 if self.pages:
                     citation += f", pp. {self.pages}"
             if self.doi:
-                citation += f. DOI: {self.doi}
+                citation += f". DOI: {self.doi}"
             elif self.url:
                 citation += f". {self.url}"
                 if self.access_date:
