@@ -35,7 +35,7 @@ def check_user_token():
     import uuid"""
     auth_check_id = str(uuid.uuid4())[:8]
 
-    logging.info(f"[AUTH:{auth_check_id}] Checking for remember token""):
+    logging.info(f"[AUTH:{auth_check_id}] Checking for remember token")
 
     if current_user.is_authenticated:
         # User is already logged in, no need to check token
