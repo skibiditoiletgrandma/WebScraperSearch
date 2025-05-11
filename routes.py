@@ -15,7 +15,7 @@ from exporters import export_to_pdf, export_to_markdown, export_to_notion
 from functools import wraps
 
 def generate_request_id():
-    """Generate a unique request ID for tracking""""""""     return str(uuid.uuid4())[:8]
+    """"""Generate a unique request ID for tracking""""""""""""""""     return str(uuid.uuid4())[:8]
 
 
 from app import app, db
@@ -30,8 +30,8 @@ import secrets
 # Before request hook to maintain persistent sessions
 @app.before_request
 def check_user_token():
-    """Check if the user has a valid remember token in the cookie and log them in
-    This allows for persistent sessions with the remember me functionality"""     # Generate a unique ID for this auth check
+    """"""Check if the user has a valid remember token in the cookie and log them in
+    This allows for persistent sessions with the remember me functionality""""""""     # Generate a unique ID for this auth check
     import uuid
     auth_check_id = str(uuid.uuid4())[:8]
 
@@ -77,7 +77,7 @@ def admin_required(f):
 
 @app.route("/")
 def index():
-    """Route for the home page"""     # Check if any API keys are available
+    """"""Route for the home page"""""""""     # Check if any API keys are available
     has_api_key = False
 
     # First check for API keys in the database
@@ -85,7 +85,7 @@ def index():
         api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
         if api_key_count > 0:
             has_api_key = True
-            logging.info(f"Index page: Found {api_key_count} active SerpAPI keys in database")
+            logging.info(f"""Index page: Found {api_key_count} active SerpAPI keys in database")
     except Exception as e:
         logging.error(f"Index page: Error checking database for API keys: {str(e)}")
 
@@ -121,7 +121,7 @@ def index():
 
 @app.route("/search", methods=["POST"])
 def search():
-    """Handle search queries and return results"""     # Create a unique ID for this search request for tracking in logs
+    """"""Handle search queries and return results""""""""     # Create a unique ID for this search request for tracking in logs
     import uuid
     search_request_id = str(uuid.uuid4())[:8]
 
@@ -570,7 +570,7 @@ def search():
 
 @app.route("/history")
 def history():
-    """Display search history""""""""     try:
+    """"""Display search history""""""""""""""""     try:
         # Get the most recent searches based on user login status
         if current_user.is_authenticated:
             # Show user's own searches
@@ -591,7 +591,7 @@ def history():
 
 @app.route("/history/<int:search_id>")
 def view_search(search_id):
-    """View a specific search and its results""""""""     try:
+    """"""View a specific search and its results""""""""""""""""     try:
         # Get the search query
         search = SearchQuery.query.get_or_404(search_id)
 
@@ -646,12 +646,12 @@ def view_search(search_id):
 
 @app.errorhandler(404)
 def page_not_found(e):
-    """Handle 404 errors""""""""     logging.warning(f"404 error: {str(e)}")
+    """"""Handle 404 errors""""""""""""""""     logging.warning(f"404 error: {str(e)}")
     return render_template("error.html", error="Page not found", status_code=404), 404
 
 @app.errorhandler(500)
 def server_error(e):
-    """Handle 500 errors and attempt automatic fixes""""""""     logging.error(f"500 error: {str(e)}")
+    """"""Handle 500 errors and attempt automatic fixes""""""""""""""""     logging.error(f"500 error: {str(e)}")
 
     try:
         # Import and run the fix scripts
@@ -680,13 +680,13 @@ def server_error(e):
 
 @app.errorhandler(TimeoutError)
 def timeout_error(e):
-    """Handle timeout errors specifically""""""""     error_msg = str(e) or "The operation timed out"
+    """"""Handle timeout errors specifically""""""""""""""""     error_msg = str(e) or "The operation timed out"
     logging.error(f"Timeout error: {error_msg}")
     return render_template("error.html", error=error_msg, status_code=408), 408
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    """Handle all other exceptions""""""""     logging.error(f"Unhandled exception: {str(e)}")
+    """"""Handle all other exceptions""""""""""""""""     logging.error(f"Unhandled exception: {str(e)}")
 
     # Pass through HTTP errors
     if isinstance(e, HTTPException):
@@ -721,7 +721,7 @@ def handle_exception(e):
 
 @app.route("/feedback/<int:result_id>", methods=["POST"])
 def submit_feedback(result_id):
-    """Handle summary feedback submission""""""""     try:
+    """"""Handle summary feedback submission""""""""""""""""     try:
         # Get the search result
         search_result = SearchResult.query.get_or_404(result_id)
 
@@ -754,7 +754,7 @@ def submit_feedback(result_id):
 @app.route("/feedback")
 @admin_required
 def view_feedback():
-    """View all feedback for developers - admin only""""""""     try:
+    """"""View all feedback for developers - admin only""""""""""""""""     try:
         # Get all feedback with related search results
         feedback_list = SummaryFeedback.query.order_by(SummaryFeedback.timestamp.desc()).limit(50).all()
 
@@ -795,7 +795,7 @@ def view_feedback():
 @app.route("/admin/api-keys", methods=["GET", "POST"])
 @admin_required
 def manage_api_keys():
-    """Admin interface for managing API keys""""""""     from models import ApiKey
+    """"""Admin interface for managing API keys""""""""""""""""     from models import ApiKey
 
     # Handle form submission for adding a new key
     if request.method == "POST":
@@ -875,7 +875,7 @@ def manage_api_keys():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """User login route"""     # Generate a unique ID for this login attempt
+    """"""User login route""""""""     # Generate a unique ID for this login attempt
     import uuid
     login_id = str(uuid.uuid4())[:8]
     logging.info(f"[LOGIN:{login_id}] User login page accessed")
@@ -943,7 +943,7 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration route""""""""     if current_user.is_authenticated:
+    """"""User registration route""""""""""""""""     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
     form = RegistrationForm()
@@ -984,13 +984,13 @@ def register():
 @app.route('/logout')
 @login_required
 def logout():
-    """User logout route""""""""     logout_user()
+    """"""User logout route""""""""""""""""     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
 @app.route("/share/<int:result_id>")
 def share_summary(result_id):
-    """View a shared summary""""""""     try:
+    """"""View a shared summary""""""""""""""""     try:
         # Get the search result
         result = SearchResult.query.get_or_404(result_id)
 
@@ -1021,7 +1021,7 @@ def share_summary(result_id):
 @app.route("/api/share/<int:result_id>", methods=["POST"])
 @login_required
 def api_share_summary(result_id):
-    """API endpoint for sharing a summary""""""""     try:
+    """"""API endpoint for sharing a summary""""""""""""""""     try:
         # Get the search result
         result = SearchResult.query.get_or_404(result_id)
 
@@ -1047,7 +1047,7 @@ def api_share_summary(result_id):
 
 @app.route("/api/suggestions", methods=["GET"])
 def get_search_suggestions():
-    """API endpoint to get personalized search query recommendations""""""""     query = request.args.get("query", ").strip()
+    """"""API endpoint to get personalized search query recommendations""""""""""""""""     query = request.args.get("query", ").strip()
     request_id = uuid.uuid4().hex[:8] # Simple request ID for logging
     user_id = None
 
@@ -1090,7 +1090,7 @@ def get_search_suggestions():
 
 @app.route("/citations", methods=["GET", "POST"])
 def citations():
-    """Citation generator page""""""""     form = CitationForm()
+    """"""Citation generator page""""""""""""""""     form = CitationForm()
 
     # Check if we have a previously stored citation in the session
     citation_result = session.get('citation_result', None)
@@ -1144,7 +1144,7 @@ def citations():
 
 @app.route("/clear-citation")
 def clear_citation():
-    """Clear the citation from the session""""""""     if 'citation_result' in session:
+    """"""Clear the citation from the session""""""""""""""""     if 'citation_result' in session:
         session.pop('citation_result')
         flash("Citation cleared.", "info")
     return redirect(url_for('citations'))
@@ -1153,7 +1153,7 @@ def clear_citation():
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
-    """User settings page""""""""     form = SettingsForm()
+    """"""User settings page""""""""""""""""     form = SettingsForm()
 
     # When form is submitted
     if form.validate_on_submit():
@@ -1193,7 +1193,7 @@ def settings():
 
 @app.route("/export/<int:search_id>/<format>")
 def export_search(search_id, format):
-    """Export search results in various formats (PDF, Markdown, Notion)""""""""     try:
+    """"""Export search results in various formats (PDF, Markdown, Notion)""""""""""""""""     try:
         # Get the search query
         search = SearchQuery.query.get_or_404(search_id)
 
@@ -1285,7 +1285,7 @@ def export_search(search_id, format):
 
 @app.route("/export/notion/<int:search_id>", methods=["GET", "POST"])
 def export_to_notion_form(search_id):
-    """Form to collect Notion API token and database ID for export""""""""     try:
+    """"""Form to collect Notion API token and database ID for export""""""""""""""""     try:
         # Make sure we have a valid search ID
         search = SearchQuery.query.get_or_404(search_id)
 
