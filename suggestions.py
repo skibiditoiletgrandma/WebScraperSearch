@@ -38,6 +38,7 @@ try:
     nltk.data.find('taggers/averaged_perceptron_tagger')
 except LookupError:
     nltk.download('averaged_perceptron_tagger')
+    nltk.download('averaged_perceptron_tagger_eng')
 
 # Load English stopwords
 STOPWORDS = set(stopwords.words('english'))
