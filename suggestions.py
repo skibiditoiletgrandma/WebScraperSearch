@@ -35,11 +35,23 @@ except LookupError:
     nltk.download('stopwords')
 
 # Download required NLTK data
-for package in ['punkt', 'wordnet', 'stopwords', 'averaged_perceptron_tagger']:
+nltk_packages = {
+    'punkt': 'tokenizers/punkt',
+    'wordnet': 'corpora/wordnet',
+    'stopwords': 'corpora/stopwords',
+    'averaged_perceptron_tagger': 'taggers/averaged_perceptron_tagger'
+}
+
+for package, path in nltk_packages.items():
     try:
-        nltk.data.find(f'tokenizers/{package}' if package == 'punkt' else f'corpora/{package}' if package in ['wordnet', 'stopwords'] else f'taggers/{package}')
+        nltk.data.find(path)
     except LookupError:
         nltk.download(package, quiet=True)
+        # Verify download
+        try:
+            nltk.data.find(path)
+        except LookupError:
+            print(f"Warning: Failed to download {package}")
 
 # Load English stopwords
 try:
