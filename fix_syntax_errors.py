@@ -18,6 +18,7 @@ def fix_string_docstrings():
 
                 # Fix common docstring issues
                 fixes = [
+                    (r'"{6,}([^"]*)"{6,}', r'"""\1"""'),  # Fix multiple triple quotes
                     (r'""([^"]*)"(\s*return|\s*pass|\s*[a-zA-Z])', r'"""\1"""\2'),  # Fix unclosed docstrings
                     (r'""([^"]*)"(\s+)', r'"""\1"""\2'),  # Fix docstrings without closure
                     (r'"([^"]*)"(\s+)def', r'"""\1"""\2def'),  # Fix function docstrings
