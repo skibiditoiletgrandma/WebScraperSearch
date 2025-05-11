@@ -46,7 +46,7 @@
                 <!-- Original results content will be appended here by JavaScript -->
                 <div id="main-content-container"></div>
             </div>
-            
+
             <!-- Sidebar -->
             <div class="col-md-4 col-lg-3">
                 <div id="recommendations-sidebar" class="sticky-top" style="top: 20px;">
@@ -58,6 +58,12 @@
                             </h5>
                         </div>
                         <div class="card-body p-0">
+                            <!-- Error message section -->
+                            <div id="suggestions-error" class="alert alert-danger d-none">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Failed to generate personalized recommendations. Please try again later.
+                            </div>
+
                             <!-- History section -->
                             <div id="personal-history-section" class="d-none">
                                 <div class="p-3 border-bottom">
@@ -70,7 +76,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Trending section -->
                             <div id="trending-section" class="d-none">
                                 <div class="p-3 border-bottom">
@@ -83,7 +89,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Related topics section -->
                             <div id="topics-section" class="d-none">
                                 <div class="p-3 border-bottom">
@@ -96,7 +102,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Query improvements section -->
                             <div id="query-improvements-section" class="d-none">
                                 <div class="p-3">
@@ -115,7 +121,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Legacy container for backward compatibility -->
     <div id="suggestions-container" class="d-none mb-4">
         <div class="card">
@@ -253,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultsContainer.parentNode.removeChild(resultsContainer);
             }
         }
-        
+
         // Move "No results found" alert if it exists
         if (alertInfo) {
             mainContentContainer.appendChild(alertInfo.cloneNode(true));
@@ -265,23 +271,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle search input and suggestions
     const searchInput = document.getElementById('search-input');
-    
+
     // Legacy suggestion containers (for backward compatibility)
     const suggestionsContainer = document.getElementById('suggestions-container');
     const suggestionsList = document.getElementById('suggestions-list');
-    
+
     // New sidebar section containers
     const personalHistorySection = document.getElementById('personal-history-section');
     const trendingSection = document.getElementById('trending-section');
     const topicsSection = document.getElementById('topics-section');
     const queryImprovementsSection = document.getElementById('query-improvements-section');
-    
+
     // New sidebar list containers
     const personalHistoryList = document.getElementById('personal-history-list');
     const trendingList = document.getElementById('trending-list');
     const topicsList = document.getElementById('topics-list');
     const queryImprovementsList = document.getElementById('query-improvements-list');
-    
+
     let typingTimer;
     const doneTypingInterval = 500;
     const initialQuery = document.querySelector('h2')?.textContent?.match(/"([^"]+)"/)?.[1] || '';
@@ -306,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fetchRecommendations(query) {
         if (!query) return;
-        
+
         fetch(`/api/suggestions?query=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(data => {
@@ -315,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.grouped_suggestions) {
                         displayGroupedRecommendations(data.grouped_suggestions);
                     }
-                    
+
                     // For backward compatibility, also display in the old format
                     if (data.suggestions && data.suggestions.length > 0 && suggestionsList) {
                         displayLegacySuggestions(data.suggestions);
@@ -324,33 +330,35 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching recommendations:', error);
+                document.getElementById('suggestions-error').classList.remove('d-none');
             });
     }
 
     function displayGroupedRecommendations(groupedSuggestions) {
-        // Clear and hide all sections first
+        // Clear and hide all sections including error message
         clearAndHideAllSections();
-        
+        document.getElementById('suggestions-error').classList.add('d-none');
+
         // Display personalized history
         if (groupedSuggestions.personalized && groupedSuggestions.personalized.length > 0) {
             displaySectionItems(personalHistoryList, personalHistorySection, groupedSuggestions.personalized);
         }
-        
+
         // Display trending searches
         if (groupedSuggestions.trending && groupedSuggestions.trending.length > 0) {
             displaySectionItems(trendingList, trendingSection, groupedSuggestions.trending);
         }
-        
+
         // Display topic suggestions
         if (groupedSuggestions.topic && groupedSuggestions.topic.length > 0) {
             displaySectionItems(topicsList, topicsSection, groupedSuggestions.topic);
         }
-        
+
         // Display query improvements
         if (groupedSuggestions.improved) {
             displaySectionItems(queryImprovementsList, queryImprovementsSection, groupedSuggestions.improved);
         }
-        
+
         // Display expanded and operator suggestions
         if (groupedSuggestions.expanded || groupedSuggestions.operator) {
             const improvements = [
@@ -362,47 +370,47 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     function clearAndHideAllSections() {
         // Clear and hide all sections
         if (personalHistoryList) personalHistoryList.innerHTML = '';
         if (personalHistorySection) personalHistorySection.classList.add('d-none');
-        
+
         if (trendingList) trendingList.innerHTML = '';
         if (trendingSection) trendingSection.classList.add('d-none');
-        
+
         if (topicsList) topicsList.innerHTML = '';
         if (topicsSection) topicsSection.classList.add('d-none');
-        
+
         if (queryImprovementsList) queryImprovementsList.innerHTML = '';
         if (queryImprovementsSection) queryImprovementsSection.classList.add('d-none');
     }
-    
+
     function displaySectionItems(listElement, sectionElement, items) {
         if (!listElement || !sectionElement || !items.length) return;
-        
+
         listElement.innerHTML = '';
-        
+
         items.forEach(item => {
             const button = document.createElement('button');
             button.className = 'btn btn-outline-primary me-2 mb-2';
             button.type = 'button';
-            
+
             // Use provided icon or default based on type
             let iconClass = item.icon || 'fa-lightbulb';
-            
+
             button.innerHTML = `
                 <i class="fas ${iconClass} me-2"></i>
                 ${item.query}
             `;
-            
+
             // Add tooltip with description
             if (item.description) {
                 button.setAttribute('data-bs-toggle', 'tooltip');
                 button.setAttribute('data-bs-placement', 'top');
                 button.setAttribute('title', item.description);
             }
-            
+
             button.addEventListener('click', function() {
                 if (searchInput) {
                     searchInput.value = item.query;
@@ -412,24 +420,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     const form = document.createElement('form');
                     form.method = 'post';
                     form.action = '/search';
-                    
+
                     const input = document.createElement('input');
                     input.type = 'hidden';
                     input.name = 'query';
                     input.value = item.query;
-                    
+
                     form.appendChild(input);
                     document.body.appendChild(form);
                     form.submit();
                 }
             });
-            
+
             listElement.appendChild(button);
         });
-        
+
         // Show section since we have items
         sectionElement.classList.remove('d-none');
-        
+
         // Initialize tooltips for new buttons
         const tooltipTriggerList = [].slice.call(listElement.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.map(function(tooltipTriggerEl) {
@@ -440,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // For backward compatibility with old suggestion display
     function displayLegacySuggestions(suggestions) {
         if (!suggestionsList) return;
-        
+
         suggestionsList.innerHTML = '';
 
         suggestions.slice(0, 5).forEach(suggestion => {
@@ -488,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const title = this.getAttribute('data-title');
             const description = this.getAttribute('data-description');
             const summary = this.getAttribute('data-summary');
-            
+
             try {
                 // Call API to increment share count
                 const response = await fetch(`/api/share/${resultId}`, {
@@ -497,25 +505,25 @@ document.addEventListener('DOMContentLoaded', function() {
                         'Content-Type': 'application/json'
                     }
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Copy share URL to clipboard
                     await navigator.clipboard.writeText(data.share_url);
-                    
+
                     // Update share count badge
                     const badge = this.querySelector('.badge');
                     if (badge) {
                         badge.textContent = data.share_count;
                     }
-                    
+
                     // Set the URL in the modal input field
                     const shareInput = document.getElementById('share-link-input');
                     if (shareInput) {
                         shareInput.value = data.share_url;
                     }
-                    
+
                     // Show the modal
                     const shareModal = new bootstrap.Modal(document.getElementById('shareModal'));
                     shareModal.show();
@@ -526,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Handle copy buttons
     const copyButtons = document.querySelectorAll('.copy-btn');
     copyButtons.forEach(button => {
@@ -541,7 +549,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
-    
+
     // Handle the copy-again button in share modal
     const copyAgainBtn = document.querySelector('.copy-again-btn');
     if (copyAgainBtn) {
