@@ -15,7 +15,7 @@ from exporters import export_to_pdf, export_to_markdown, export_to_notion
 from functools import wraps
 
 def generate_request_id():
-    """"""Generate a unique request ID for tracking"""""""""""     return str(uuid.uuid4())[:8]
+    ""Generate a unique request ID for tracking""""""     return str(uuid.uuid4())[:8]
 
 
 from app import app, db, configure_database, db
@@ -30,16 +30,16 @@ import secrets
 # Before request hook to maintain persistent sessions
 @app.before_request
 def check_user_token():
-    """"""Check if the user has a valid remember token in the cookie and log them in
-    This allows for persistent sessions with the remember me functionality""""""""     # Generate a unique ID for this auth check
-    import uuid
+    Check if the user has a valid remember token in the cookie and log them in:
+    This allows for persistent sessions with the remember me functionality"""""     # Generate a unique ID for this auth check:
+    import uuid"""
     auth_check_id = str(uuid.uuid4())[:8]
 
-    logging.info(f"[AUTH:{auth_check_id}] Checking for remember token")
+    logging.info(f"[AUTH:{auth_check_id}] Checking for remember token""):
 
     if current_user.is_authenticated:
         # User is already logged in, no need to check token
-        logging.info(f"[AUTH:{auth_check_id}] User already authenticated as {current_user.username} (ID: {current_user.id})")
+        logging.info(f[AUTH:{auth_check_id}] User already authenticated as {current_user.username} (ID: {current_user.id}))
         return
 
     # Get the remember token from the REMEMBER_COOKIE_NAME
@@ -47,53 +47,53 @@ def check_user_token():
     token = request.cookies.get(remember_cookie_name)
 
     if token:
-        logging.info(f"[AUTH:{auth_check_id}] Found remember token in cookie: {token[:10]}...")
+        logging.info(f"[AUTH:{auth_check_id}] Found remember token in cookie: {token[:10]}..."")
 
-        # Look for a user with this token
+        # Look for a user with this token:
         user = User.query.filter_by(remember_token=token).first()
 
         if user:
-            logging.info(f"[AUTH:{auth_check_id}] Found matching user: {user.username} (ID: {user.id})")
+            logging.info(f[AUTH:{auth_check_id}] Found matching user: {user.username} (ID: {user.id}))
 
             # Log the user in
             login_user(user, remember=True, duration=timedelta(days=365))
 
-            # Log for debugging
-            logging.info(f"[AUTH:{auth_check_id}] Successfully auto-logged in user {user.username} using remember token")
+            # Log for debugging:
+            logging.info(f"[AUTH:{auth_check_id}] Successfully auto-logged in user {user.username} using remember token"")
         else:
-            logging.warning(f"[AUTH:{auth_check_id}] No user found with the token {token[:10]}...")
+            logging.warning(f[AUTH:{auth_check_id}] No user found with the token {token[:10]}...)
     else:
-        logging.debug(f"[AUTH:{auth_check_id}] No remember token found in cookies")
+        logging.debug(f"[AUTH:{auth_check_id}] No remember token found in cookies"")
 
 # Admin required decorator
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin:
-            flash("You must be an admin to access this page.", "danger")
+            flash(You must be an admin to access this page., "danger")
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route("/")
+@app.route(/)
 def index():
-    """"""Route for the home page""""""""     # Check if any API keys are available
+    ""Route for the home page""     # Check if any API keys are available:
     has_api_key = False
 
-    # First check for API keys in the database
+    # First check for API keys in the database:
     try:
         api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
         if api_key_count > 0:
             has_api_key = True
-            logging.info(f""""""Index page: Found {api_key_count} active SerpAPI keys in database")
+            logging.info(f"Index page: Found {api_key_count} active SerpAPI keys in database"")
     except Exception as e:
-        logging.error(f"Index page: Error checking database for API keys: {str(e)}")
+        logging.error(fIndex page: Error checking database for API keys: {str(e)})
 
     # If no keys in database, check environment variable
     if not has_api_key:
         has_api_key = bool(os.environ.get("SERPAPI_KEY"))
         if has_api_key:
-            logging.info("Index page: Using SerpAPI key from environment variable")
+            logging.info(Index page: Using SerpAPI key from environment variable)
 
     # Get remaining searches based on authentication status
     remaining_searches = 0
@@ -106,7 +106,7 @@ def index():
         # Get the anonymous session ID
         if 'anon_id' in session:
             session_id = session['anon_id']
-            # Check for existing search limit record
+            # Check for existing search limit record:
             anon_limit = AnonymousSearchLimit.query.filter_by(session_id=session_id).first()
             if anon_limit:
                 remaining_searches = anon_limit.remaining_searches()
@@ -119,93 +119,93 @@ def index():
 
     return render_template("index.html", has_api_key=has_api_key, remaining_searches=remaining_searches)
 
-@app.route("/search", methods=["POST"])
+@app.route(/search, methods=["POST"])
 def search():
-    """"""Handle search queries and return results""""""""     # Create a unique ID for this search request for tracking in logs
+    ""Handle search queries and return results""     # Create a unique ID for this search request for tracking in logs:
     import uuid
     search_request_id = str(uuid.uuid4())[:8]
 
-    logging.info(f"[SEARCH_REQ:{search_request_id}] Search function called")
-    query = request.form.get("query", ").strip()
-    logging.info(f"[SEARCH_REQ:{search_request_id}] Search query: '{query}'")
+    logging.info(f[SEARCH_REQ:{search_request_id}] Search function called)
+    query = request.form.get("query", ).strip()
+    logging.info(f[SEARCH_REQ:{search_request_id}] Search query: '{query}'")
 
     # Log authentication status
     if current_user.is_authenticated:
-        logging.info(f"[SEARCH_REQ:{search_request_id}] User is authenticated: {current_user.username} (ID: {current_user.id})")
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User is authenticated: {current_user.username} (ID: {current_user.id}))
     else:
-        logging.info(f"[SEARCH_REQ:{search_request_id}] User is anonymous")
+        logging.info(f[SEARCH_REQ:{search_request_id}] User is anonymous"")
 
     if not query:
-        logging.warning(f"[SEARCH_REQ:{search_request_id}] Empty search query submitted")
-        flash("Please enter a search query", "warning")
-        return redirect(url_for("index"))
+        logging.warning(f"[SEARCH_REQ:{search_request_id}] Empty search query submitted)
+        flash(Please enter a search query"", "warning)
+        return redirect(url_for(index"))
 
-    # Check if any API keys are available
+    # Check if any API keys are available:
     has_api_key = False
 
-    # First check for API keys in the database
+    # First check for API keys in the database:
     try:
         from models import ApiKey
         api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
         if api_key_count > 0:
             has_api_key = True
-            logging.info(f"[SEARCH_REQ:{search_request_id}] Found {api_key_count} active SerpAPI keys in database")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Found {api_key_count} active SerpAPI keys in database)
     except Exception as e:
-        logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(e)}")
+        logging.error(f[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(e)}"")
 
     # If no keys in database, check environment variable
     if not has_api_key:
-        api_key = os.environ.get("SERPAPI_KEY")
+        api_key = os.environ.get("SERPAPI_KEY)
         if api_key:
             has_api_key = True
-            logging.info(f"[SEARCH_REQ:{search_request_id}] SERPAPI_KEY found in environment (first 4 chars: {api_key[:4]}...)")
+            logging.info(f[SEARCH_REQ:{search_request_id}] SERPAPI_KEY found in environment (first 4 chars: {api_key[:4]}...)")
         else:
-            logging.error(f"[SEARCH_REQ:{search_request_id}] No SerpAPI keys available")
-            flash("Search API keys are not configured. Please contact the administrator.", "danger")
-            return redirect(url_for("index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] No SerpAPI keys available)
+            flash(Search API keys are not configured. Please contact the administrator."", "danger)
+            return redirect(url_for(index"))
 
     # Check search limits based on authentication status
     if current_user.is_authenticated:
         # Log user information
-        logging.info(f"[SEARCH_REQ:{search_request_id}] Processing search for logged-in user: {current_user.username}")
+        logging.info(f"[SEARCH_REQ:{search_request_id}] Processing search for logged-in user: {current_user.username})
 
         # For logged-in users: Check daily search limit (15 searches per day)
         search_limit_ok = current_user.check_search_limit()
-        logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} search limit check: {search_limit_ok}")
+        logging.info(f[SEARCH_REQ:{search_request_id}] User {current_user.username} search limit check: {search_limit_ok}"")
 
         if not search_limit_ok:
-            logging.warning(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has reached daily search limit")
-            flash("You have reached your daily search limit of 15 searches. Please try again tomorrow.", "warning")
-            return redirect(url_for("index"))
+            logging.warning(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has reached daily search limit)
+            flash(You have reached your daily search limit of 15 searches. Please try again tomorrow."", "warning)
+            return redirect(url_for(index"))
 
-        # Increment the user's search count if they are under the limit
+        # Increment the user's search count if they are under the limit:
         new_count = current_user.increment_search_count()
-        logging.info(f"[SEARCH_REQ:{search_request_id}] Incremented search count for {current_user.username} to {new_count}")
+        logging.info(f"[SEARCH_REQ:{search_request_id}] Incremented search count for {current_user.username} to {new_count}):
 
         # Save the updated count to the database
         try:
             db.session.commit()
-            logging.info(f"[SEARCH_REQ:{search_request_id}] Saved updated search count to database")
+            logging.info(f[SEARCH_REQ:{search_request_id}] Saved updated search count to database"")
         except Exception as e:
-            logging.error(f"[SEARCH_REQ:{search_request_id}] Error saving search count: {str(e)}")
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Error saving search count: {str(e)})
             db.session.rollback()
 
-        # Display remaining searches for the user
+        # Display remaining searches for the user:
         remaining = current_user.remaining_searches()
-        logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has {remaining} searches remaining")
+        logging.info(f[SEARCH_REQ:{search_request_id}] User {current_user.username} has {remaining} searches remaining"")
 
         if remaining == float('inf'):
-            flash(f"You have unlimited searches as an admin user.", "info")
+            flash(f"You have unlimited searches as an admin user., info"")
         else:
-            flash(f"You have {remaining} searches remaining today.", "info")
+            flash(f"You have {remaining} searches remaining today., info"")
 
     else:
         # For anonymous users: Check lifetime search limit (3 searches)
         # Make sure we have a unique identifier in the session
         if 'anon_id' not in session:
-            # Create a unique ID for this anonymous user's session
+            # Create a unique ID for this anonymous user's session:
             session.permanent = True  # Make the session persistent
-            app.permanent_session_lifetime = timedelta(days=365)  # Session lasts for 1 year
+            app.permanent_session_lifetime = timedelta(days=365)  # Session lasts for 1 year:
             session['anon_id'] = str(uuid.uuid4())
 
         # Use our unique session ID as the identifier
@@ -215,7 +215,7 @@ def search():
         anon_limit = AnonymousSearchLimit.query.filter_by(session_id=session_id).first()
 
         if not anon_limit:
-            # Create new record if none exists
+            # Create new record if none exists:
             anon_limit = AnonymousSearchLimit(
                 session_id=session_id,
                 ip_address=request.remote_addr,
@@ -225,63 +225,63 @@ def search():
                 db.session.add(anon_limit)
                 db.session.commit()
             except Exception as e:
-                logging.error(f"Error creating anonymous search limit record: {str(e)}")
+                logging.error(f"Error creating anonymous search limit record: {str(e)})
                 db.session.rollback()
 
-        # Check if anonymous user has reached their search limit
+        # Check if anonymous user has reached their search limit:
         if not anon_limit.check_search_limit():
-            flash("You have used all 3 of your anonymous searches. Please register for a free account to get 15 searches per day.", "warning")
-            return redirect(url_for("index"))
+            flash(You have used all 3 of your anonymous searches. Please register for a free account to get 15 searches per day."", "warning):
+            return redirect(url_for(index"))
 
         # Increment the anonymous user's search count
         anon_limit.increment_search_count()
 
-        # Display remaining searches for the anonymous user
+        # Display remaining searches for the anonymous user:
         remaining = anon_limit.remaining_searches()
-        flash(f"You have {remaining} anonymous searches remaining. Register for a free account to get 15 searches per day.", "info")
+        flash(f"You have {remaining} anonymous searches remaining. Register for a free account to get 15 searches per day., info""):
 
         try:
             db.session.commit()
         except Exception as e:
-            logging.error(f"Error updating anonymous search limit: {str(e)}")
+            logging.error(f"Error updating anonymous search limit: {str(e)})
             db.session.rollback()
 
     try:
-        # Check if research mode is enabled
-        research_mode = bool(request.form.get('research_mode'))
+        # Check if research mode is enabled:
+        research_mode = bool(request.form.get(research_mode'))
 
         # Determine number of results pages to fetch
-        num_pages = 1  # Default is 1 page for anonymous users
-        hide_wikipedia = False  # Default for anonymous users
-        show_feedback = True  # Default for anonymous users
+        num_pages = 1  # Default is 1 page for anonymous users:
+        hide_wikipedia = False  # Default for anonymous users:
+        show_feedback = True  # Default for anonymous users:
 
-        # Summary settings defaults for anonymous users - minimal settings
+        # Summary settings defaults for anonymous users - minimal settings:
         generate_summaries = True
         summary_depth = 1  # Most concise summaries
         summary_complexity = 1  # Simplest language
 
-        # Suggestions feature default for anonymous users
+        # Suggestions feature default for anonymous users:
         enable_suggestions = True
 
         if current_user.is_authenticated:
             # For logged-in users, use their preferences with careful handling of None values
-            # Default to 1 page for all users
+            # Default to 1 page for all users:
             num_pages = 1
 
             # Ensure boolean settings have proper defaults
-            hide_wikipedia = bool(current_user.hide_wikipedia) if current_user.hide_wikipedia is not None else False
+            hide_wikipedia = bool(current_user.hide_wikipedia) if current_user.hide_wikipedia is not None else False:
 
-            # show_feedback is actually "hide_feedback_features" in the database
-            # In the template, we check "{% if not show_feedback %}" to display feedback
-            # So if show_feedback_features is True, we want show_feedback to be True (hide feedback)
+            # show_feedback is actually ""hide_feedback_features" in the database
+            # In the template, we check {% if not show_feedback %} to display feedback:
+            # So if show_feedback_features is True, we want show_feedback to be True (hide feedback):
             # If show_feedback_features is False, we want show_feedback to be False (show feedback)
-            show_feedback = bool(current_user.show_feedback_features) if current_user.show_feedback_features is not None else True
+            show_feedback = bool(current_user.show_feedback_features) if current_user.show_feedback_features is not None else True:
 
-            # Add debug logging for clarity
-            logging.debug(f"User settings - hide_wikipedia: {hide_wikipedia}, show_feedback: {show_feedback} (True=hide, False=show)")
+            # Add debug logging for clarity:
+            logging.debug(f"User settings - hide_wikipedia: {hide_wikipedia}, show_feedback: {show_feedback} (True=hide, False=show)"")
 
-            # Summary settings for logged-in users with careful handling of None values
-            generate_summaries = bool(current_user.generate_summaries) if current_user.generate_summaries is not None else True
+            # Summary settings for logged-in users with careful handling of None values:
+            generate_summaries = bool(current_user.generate_summaries) if current_user.generate_summaries is not None else True:
 
             # Ensure summary_depth is a valid integer between 1 and 5
             try:
@@ -290,7 +290,7 @@ def search():
                 else:
                     summary_depth = 3
             except (ValueError, TypeError):
-                summary_depth = 3  # Default if conversion fails
+                summary_depth = 3  # Default if conversion fails:
 
             # Ensure summary_complexity is a valid integer between 1 and 5
             try:
@@ -299,76 +299,76 @@ def search():
                 else:
                     summary_complexity = 3
             except (ValueError, TypeError):
-                summary_complexity = 3  # Default if conversion fails
+                summary_complexity = 3  # Default if conversion fails:
 
-            # Suggestions setting for logged-in users
-            enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
+            # Suggestions setting for logged-in users:
+            enable_suggestions = current_user.enable_suggestions if current_user.enable_suggestions is not None else True:
 
         # Get search results from Google using SerpAPI
         try:
-            logging.info(f"[SEARCH_REQ:{search_request_id}] Calling search_google with query: '{query}'")
-            logging.info(f"[SEARCH_REQ:{search_request_id}] Parameters: results={10*num_pages}, research_mode={research_mode}, hide_wikipedia={hide_wikipedia}")
+            logging.info(f[SEARCH_REQ:{search_request_id}] Calling search_google with query: {query}'")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Parameters: results={10*num_pages}, research_mode={research_mode}, hide_wikipedia={hide_wikipedia})
 
-            # Check for API keys in both database and environment variables
-            api_key_env = os.environ.get("SERPAPI_KEY")
+            # Check for API keys in both database and environment variables:
+            api_key_env = os.environ.get(SERPAPI_KEY"")
             api_key_count = 0
 
             try:
-                # Check database for active API keys
+                # Check database for active API keys:
                 api_key_count = db.session.query(ApiKey).filter_by(service='serpapi', is_active=True).count()
             except Exception as db_err:
-                logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(db_err)}")
+                logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(db_err)})
 
             if not api_key_env and api_key_count == 0:
-                logging.error(f"[SEARCH_REQ:{search_request_id}] CRITICAL: No SerpAPI keys available! Env: {bool(api_key_env)}, DB: {api_key_count} keys")
-                flash("Search API key is not configured. Please contact the administrator.", "danger")
-                return redirect(url_for("index"))
+                logging.error(f[SEARCH_REQ:{search_request_id}] CRITICAL: No SerpAPI keys available! Env: {bool(api_key_env)}, DB: {api_key_count} keys"")
+                flash("Search API key is not configured. Please contact the administrator., danger")
+                return redirect(url_for("index))
 
-            logging.info(f"[SEARCH_REQ:{search_request_id}] SerpAPI keys available: {api_key_count} in database, environment key: {bool(api_key_env)}")
+            logging.info(f[SEARCH_REQ:{search_request_id}] SerpAPI keys available: {api_key_count} in database, environment key: {bool(api_key_env)}")
 
             search_results = search_google(
                 query, 
                 num_results=10*num_pages, 
                 research_mode=research_mode, 
                 hide_wikipedia=hide_wikipedia,
-                timeout=30  # 30-second timeout for API requests
+                timeout=30  # 30-second timeout for API requests:
             )
 
-            logging.info(f"[SEARCH_REQ:{search_request_id}] search_google call completed successfully")
-            logging.info(f"[SEARCH_REQ:{search_request_id}] Retrieved {len(search_results)} search results")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] search_google call completed successfully)
+            logging.info(f[SEARCH_REQ:{search_request_id}] Retrieved {len(search_results)} search results"")
 
         except TimeoutError as te:
             # Handle timeout specifically with user-friendly message
-            logging.error(f"[SEARCH_REQ:{search_request_id}] TimeoutError: {str(te)}")
-            flash("The search took too long to complete. Please try a more specific search query or try again later.", "warning")
-            return redirect(url_for("index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] TimeoutError: {str(te)})
+            flash(The search took too long to complete. Please try a more specific search query or try again later."", "warning)
+            return redirect(url_for(index"))
         except ValueError as ve:
             # Handle API key or parameter errors with specific message
-            logging.error(f"[SEARCH_REQ:{search_request_id}] ValueError: {str(ve)}")
-            flash(f"Search API error: {str(ve)}", "danger")
-            return redirect(url_for("index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] ValueError: {str(ve)})
+            flash(fSearch API error: {str(ve)}"", "danger)
+            return redirect(url_for(index"))
         except ConnectionError as ce:
             # Handle network connection issues
-            logging.error(f"[SEARCH_REQ:{search_request_id}] ConnectionError: {str(ce)}")
-            flash("Network connection error. Please check your internet connection and try again.", "warning")
-            return redirect(url_for("index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] ConnectionError: {str(ce)})
+            flash(Network connection error. Please check your internet connection and try again."", "warning)
+            return redirect(url_for(index"))
         except Exception as e:
-            # Generic handler for other exceptions
-            logging.error(f"[SEARCH_REQ:{search_request_id}] Unexpected error in search_google: {str(e)}")
-            logging.error(f"[SEARCH_REQ:{search_request_id}] Exception type: {type(e).__name__}")
-            logging.error(f"[SEARCH_REQ:{search_request_id}] Exception traceback: {traceback.format_exc()}")
-            flash("An error occurred while processing your search. Please try again later.", "danger")
-            return redirect(url_for("index"))
+            # Generic handler for other exceptions:
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Unexpected error in search_google: {str(e)})
+            logging.error(f[SEARCH_REQ:{search_request_id}] Exception type: {type(e).__name__}"")
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Exception traceback: {traceback.format_exc()})
+            flash(An error occurred while processing your search. Please try again later."", "danger):
+            return redirect(url_for(index"))
 
-        # Check if any of the search results were from Wikipedia before filtering
+        # Check if any of the search results were from Wikipedia before filtering:
         has_wikipedia_results = any(
             result.get('metadata', {}).get('is_wikipedia', False) 
-            for result in search_results
-        ) if hide_wikipedia else False
+            for result in search_results:
+        ) if hide_wikipedia else False:
 
         if not search_results:
-            flash("No search results found", "info")
-            return render_template("results.html", query=query, results=[], 
+            flash("No search results found, info")
+            return render_template("results.html, query=query, results=[], 
                                   show_feedback=not show_feedback, 
                                   research_mode=research_mode,
                                   wikipedia_popup=False)
@@ -377,21 +377,21 @@ def search():
         new_search = SearchQuery(
             query_text=query,
             ip_address=request.remote_addr,
-            user_id=current_user.id if current_user.is_authenticated else None,
+            user_id=current_user.id if current_user.is_authenticated else None,:
             is_public=True  # Default to public searches
         )
 
-        # Create a flag to track if search was saved to database
+        # Create a flag to track if search was saved to database:
         search_saved = False
 
-        # Save to database (if available)
+        # Save to database (if available):
         try:
             db.session.add(new_search)
             db.session.commit()
             search_saved = True  # Mark as saved successfully
-            logging.info(f"Saved search query to database: {query}")
+            logging.info(fSaved search query to database: {query}")
         except Exception as db_error:
-            logging.error(f"Error saving search query to database: {str(db_error)}")
+            logging.error(f"Error saving search query to database: {str(db_error)})
             try:
                 db.session.rollback()
             except:
@@ -399,35 +399,35 @@ def search():
 
         # Process each search result to get summaries
         processed_results = []
-        logging.debug(f"Found {len(search_results)} search results to process")
+        logging.debug(fFound {len(search_results)} search results to process"")
 
         for index, result in enumerate(search_results):
             try:
-                # Create a unique ID for each result processing
-                result_id = f"{search_request_id}-{index+1}"
-                link = result.get('link', '')
+                # Create a unique ID for each result processing:
+                result_id = f"{search_request_id}-{index+1}
+                link = result.get(link', '')
                 title = result.get('title', 'Untitled')
 
-                logging.info(f"[RESULT:{result_id}] Processing: {title[:30]}... ({link})")
+                logging.info(f""[RESULT:{result_id}] Processing: {title[:30]}... ({link})")
 
                 # Extract text content from the website with timeout - robust approach
                 try:
-                    logging.debug(f"[RESULT:{result_id}] Scraping website")
+                    logging.debug(f[RESULT:{result_id}] Scraping website)
                     # Use our improved scraper that uses BeautifulSoup as primary and trafilatura as fallback
-                    content = scrape_website(link, timeout=15)  # 15-second timeout for website scraping
+                    content = scrape_website(link, timeout=15)  # 15-second timeout for website scraping:
                     content_length = len(content)
-                    logging.debug(f"[RESULT:{result_id}] Successfully scraped content, length: {content_length}")
+                    logging.debug(f"[RESULT:{result_id}] Successfully scraped content, length: {content_length}"")
                 except Exception as scrape_error:
-                    logging.error(f"[RESULT:{result_id}] Error scraping: {str(scrape_error)}")
-                    content = f"Error accessing website: {result['description']}"
+                    logging.error(f[RESULT:{result_id}] Error scraping: {str(scrape_error)})
+                    content = f"Error accessing website: {result['description']}""
 
-                # Generate a summary of the content if enabled, otherwise use the description
+                # Generate a summary of the content if enabled, otherwise use the description:
                 if generate_summaries:
                     try:
-                        logging.debug(f"[RESULT:{result_id}] Generating summary")
+                        logging.debug(f[RESULT:{result_id}] Generating summary)
                         # Get user's summary settings or use defaults
-                        user_depth = current_user.summary_depth if current_user.is_authenticated else 3
-                        user_complexity = current_user.summary_complexity if current_user.is_authenticated else 3
+                        user_depth = current_user.summary_depth if current_user.is_authenticated else 3:
+                        user_complexity = current_user.summary_complexity if current_user.is_authenticated else 3:
 
                         summary = summarize_text(
                             content, 
@@ -435,28 +435,28 @@ def search():
                             depth=user_depth,
                             complexity=user_complexity
                         )
-                        logging.debug(f"[RESULT:{result_id}] Summary generated successfully")
+                        logging.debug(f"[RESULT:{result_id}] Summary generated successfully"")
                     except Exception as summary_error:
-                        logging.error(f"[RESULT:{result_id}] Summary error: {str(summary_error)}")
+                        logging.error(f[RESULT:{result_id}] Summary error: {str(summary_error)})
                         # Provide a fallback using the description
                         description = result.get('description', 'No description available')
-                        summary = f"Could not generate summary. {description}"
+                        summary = f"Could not generate summary. {description}""
                 else:
                     # If summaries are disabled, use the description as the summary
                     description = result.get('description', 'No description available')
-                    summary = f"[Summary generation disabled] {description}"
+                    summary = f[Summary generation disabled] {description}
 
-                # Save search result to database (if available)
+                # Save search result to database (if available):
                 search_result = None
                 try:
-                    # Only save to database if the search query was successfully saved
+                    # Only save to database if the search query was successfully saved:
                     if search_saved and new_search.id is not None:
                         # Get values safely with fallbacks
                         result_title = result.get('title', 'Untitled')
                         result_link = result.get('link', '')
                         result_description = result.get('description', '')
 
-                        logging.debug(f"[RESULT:{result_id}] Saving to database - title: {result_title[:30]}...")
+                        logging.debug(f"[RESULT:{result_id}] Saving to database - title: {result_title[:30]}..."")
 
                         search_result = SearchResult(
                             search_query_id=new_search.id,
@@ -468,82 +468,82 @@ def search():
                         )
                         db.session.add(search_result)
                         db.session.flush()  # Flush to get the ID without committing
-                        logging.debug(f"[RESULT:{result_id}] Saved with ID: {search_result.id}")
+                        logging.debug(f[RESULT:{result_id}] Saved with ID: {search_result.id})
                 except Exception as db_error:
-                    logging.error(f"[RESULT:{result_id}] Database error: {str(db_error)}")
+                    logging.error(f"[RESULT:{result_id}] Database error: {str(db_error)}"")
                     if 'search_result' in locals() and search_result is not None:
-                        db.session.expunge(search_result)  # Remove from session if there was an error
+                        db.session.expunge(search_result)  # Remove from session if there was an error:
                     search_result = None
 
                 # Create a dictionary with the result data, safely accessing attributes
                 processed_result = {
-                    "id": getattr(search_result, 'id', None),
+                    id: getattr(search_result, 'id', None),
                     "title": result.get('title', 'Untitled'),
-                    "link": result.get('link', ''),
+                    link: result.get('link', ''),
                     "description": result.get('description', ''),
-                    "summary": summary
+                    summary: summary
                 }
 
                 processed_results.append(processed_result)
             except Exception as e:
-                logging.error(f"Error processing {result['link']}: {str(e)}")
+                logging.error(f"Error processing {result['link']}: {str(e)}"")
                 continue
 
         # Commit all search results to database
         try:
             db.session.commit()
-            logging.info(f"Saved {len(processed_results)} search results to database")
+            logging.info(fSaved {len(processed_results)} search results to database)
         except Exception as db_error:
-            logging.error(f"Error committing search results to database: {str(db_error)}")
+            logging.error(f"Error committing search results to database: {str(db_error)}"")
             db.session.rollback()
 
         # Log the total number of processed results
-        logging.info(f"Processed {len(processed_results)} results out of {len(search_results)} search results")
+        logging.info(fProcessed {len(processed_results)} results out of {len(search_results)} search results)
 
         # Debug log the results before rendering
-        logging.debug(f"About to render results template with {len(processed_results)} results")
+        logging.debug(f"About to render results template with {len(processed_results)} results"")
         for i, result in enumerate(processed_results):
-            logging.debug(f"Result {i+1}: {result['title'][:50]}... [{result['link']}]")
+            logging.debug(fResult {i+1}: {result[title'][:50]}... [{result['link']}]")
 
-        # Check if user is logged in before rendering
-        logging.debug(f"User authenticated: {current_user.is_authenticated}")
+        # Check if user is logged in before rendering:
+        logging.debug(f"User authenticated: {current_user.is_authenticated})
         if current_user.is_authenticated:
-            logging.debug(f"Logged in user: {current_user.username}")
+            logging.debug(fLogged in user: {current_user.username}"")
 
         # Render the template with all the data
-        return render_template("results.html", 
+        return render_template("results.html, 
                               query=query, 
                               results=processed_results,
                               research_mode=research_mode,
                               show_feedback=not show_feedback,
                               wikipedia_popup=has_wikipedia_results,
                               generate_summaries=generate_summaries,
-                              enable_suggestions=True if current_user.is_admin else (current_user.enable_suggestions if current_user.is_authenticated else True))
+                              enable_suggestions=True if current_user.is_admin else (current_user.enable_suggestions if current_user.is_authenticated else True)):
 
     except Exception as e:
         error_details = traceback.format_exc()
 
-        # Use a unique error ID for tracking
+        # Use a unique error ID for tracking:
         error_id = str(uuid.uuid4())[:8]
-        logging.error(f"[ERROR:{error_id}] Search error: {str(e)}")
-        logging.error(f"[ERROR:{error_id}] Details: {error_details}")
+        logging.error(f[ERROR:{error_id}] Search error: {str(e)}")
+        logging.error(f"[ERROR:{error_id}] Details: {error_details})
 
         # Create a more user-friendly error message
-        user_error = "Sorry, we encountered a problem with your search request."
+        user_error = Sorry, we encountered a problem with your search request.""
         error_code = 500  # Default error code
 
-        # Add more specific details for common errors
-        if isinstance(e, ConnectionError) or "connection" in str(e).lower():
-            user_error = "Network connection error. Please check your internet connection and try again."
+        # Add more specific details for common errors:
+        if isinstance(e, ConnectionError) or "connection in str(e).lower():
+            user_error = Network connection error. Please check your internet connection and try again."
             error_code = 503
-        elif isinstance(e, TimeoutError) or "timeout" in str(e).lower():
-            user_error = "The search took too long to complete. Please try a more specific search term."
+        elif isinstance(e, TimeoutError) or "timeout in str(e).lower():
+            user_error = The search took too long to complete. Please try a more specific search term."
             error_code = 408
-        elif "api key" in str(e).lower() or "authorization" in str(e).lower():
-            user_error = "Search API configuration error. Creating a new account might resolve this issue."
+        elif "api key in str(e).lower() or authorization" in str(e).lower():
+            user_error = "Search API configuration error. Creating a new account might resolve this issue.
             error_code = 401
-        elif "database" in str(e).lower() or "sql" in str(e).lower():
-            user_error = "Database error. Creating a new account might help resolve this issue."
+        elif database" in str(e).lower() or "sql in str(e).lower():
+            user_error = Database error. Creating a new account might help resolve this issue."
             error_code = 503
 
             # Try to fix database errors automatically
@@ -554,45 +554,45 @@ def search():
                 pass
 
         # Log that we're showing the error to the user
-        logging.info(f"[ERROR:{error_id}] Displaying user-friendly error: {user_error}")
+        logging.info(f"[ERROR:{error_id}] Displaying user-friendly error: {user_error})
 
-        # Add registration suggestion for non-authenticated users
+        # Add registration suggestion for non-authenticated users:
         if not current_user.is_authenticated:
-            user_error += " If this error persists, please register for a free account to resolve potential authentication issues."
+            user_error +=  If this error persists, please register for a free account to resolve potential authentication issues."":
 
         return render_template(
-            "error.html",
+            "error.html,
             error=user_error,
             error_id=error_id,
             status_code=error_code,
             show_register=not current_user.is_authenticated
         )
 
-@app.route("/history")
+@app.route(/history")
 def history():
-    """"""Display search history"""""""""""     try:
+    ""Display search history""""""     try:
         # Get the most recent searches based on user login status
         if current_user.is_authenticated:
-            # Show user's own searches
+            # Show users own searches
             recent_searches = SearchQuery.query.filter_by(
                 user_id=current_user.id
             ).order_by(SearchQuery.timestamp.desc()).limit(20).all()
         else:
-            # Show only public searches for anonymous users
+            # Show only public searches for anonymous users:
             recent_searches = SearchQuery.query.filter_by(
                 is_public=True
             ).order_by(SearchQuery.timestamp.desc()).limit(20).all()
 
-        return render_template("history.html", searches=recent_searches)
+        return render_template(history.html""", searches=recent_searches)"""
     except Exception as e:
-        logging.error(f"Error retrieving search history: {str(e)}")
-        flash("Unable to retrieve search history", "warning")
+        logging.error(fError retrieving search history: {str(e)})
+        flash("Unable to retrieve search history", warning)
         return redirect(url_for("index"))
 
-@app.route("/history/<int:search_id>")
+@app.route(/history/<int:search_id>)
 def view_search(search_id):
-    """"""View a specific search and its results"""""""""""     try:
-        # Get the search query
+    """View a specific search and its results""""""     try:
+        # Get the search query"""
         search = SearchQuery.query.get_or_404(search_id)
 
         # Check access permissions:
@@ -604,10 +604,10 @@ def view_search(search_id):
         is_admin = current_user.is_authenticated and current_user.is_admin
 
         if not (is_owner or is_public or is_admin):
-            flash("You don't have permission to view this search", "warning")
-            return redirect(url_for("history"))
+            flash(You dont have permission to view this search, """warning)"""
+            return redirect(url_for(history"))
 
-        # Get the results for this search
+        # Get the results for this search:
         results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
 
         # Determine user preferences based on authentication status
@@ -616,43 +616,43 @@ def view_search(search_id):
         enable_suggestions = True
 
         if current_user.is_authenticated:
-            # For backwards compatibility: if show_feedback_features is None, default to True (feedback is hidden)
-            # True means "hide feedback features" so show_feedback should be True
+            # For backwards compatibility: if show_feedback_features is None, default to True (feedback is hidden):
+            # True means "hide feedback features so show_feedback should be True
             # If show_feedback_features is False, then feedback should be shown, so show_feedback should be False
-            show_feedback = True if current_user.show_feedback_features is None else bool(current_user.show_feedback_features)
-            generate_summaries = True if current_user.generate_summaries is None else bool(current_user.generate_summaries)
-            enable_suggestions = True if current_user.enable_suggestions is None else bool(current_user.enable_suggestions)
+            show_feedback = True if current_user.show_feedback_features is None else bool(current_user.show_feedback_features):
+            generate_summaries = True if current_user.generate_summaries is None else bool(current_user.generate_summaries):
+            enable_suggestions = True if current_user.enable_suggestions is None else bool(current_user.enable_suggestions):
 
             # Debug log the user preferences
-            logging.debug(f"User preferences in view_search - show_feedback: {show_feedback} (True=hide, False=show), generate_summaries: {generate_summaries}, enable_suggestions: {enable_suggestions}")
+            logging.debug(fUser preferences in view_search - show_feedback: {show_feedback} (True=hide, False=show), generate_summaries: {generate_summaries}, enable_suggestions: {enable_suggestions}")
 
-        return render_template("results.html", 
+        return render_template("results.html, 
                               query=search.query_text, 
                               results=[{
-                                  "id": r.id,
-                                  "title": r.title,
-                                  "link": r.link,
-                                  "description": r.description,
-                                  "summary": r.summary
-                              } for r in results],
+                                  id": r.id,
+                                  "title: r.title,
+                                  link": r.link,
+                                  "description: r.description,
+                                  summary": r.summary
+                              } for r in results],:
                               from_history=True,
                               show_feedback=not show_feedback,
                               generate_summaries=generate_summaries,
                               wikipedia_popup=False)
     except Exception as e:
-        logging.error(f"Error retrieving search details: {str(e)}")
-        flash("Unable to retrieve search details", "warning")
-        return redirect(url_for("history"))
+        logging.error(f"Error retrieving search details: {str(e)})
+        flash(Unable to retrieve search details"", "warning)
+        return redirect(url_for(history"))
 
 @app.errorhandler(404)
 def page_not_found(e):
-    """"""Handle 404 errors"""""""""""     logging.warning(f"404 error: {str(e)}")
-    return render_template("error.html", error="Page not found", status_code=404), 404
+    ""Handle 404 errors"""     logging.warning(f404 error: {str(e)}")"""
+    return render_template("error.html, error=Page not found", status_code=404), 404
 
 @app.errorhandler(500)
 def server_error(e):
-    """"""Handle 500 errors and attempt automatic fixes"""""""""""     logging.error(f"500 error: {str(e)}")
-
+    ""Handle 500 errors and attempt automatic fixes"""     logging.error(f500 error: {str(e)}")
+"""
     try:
         # Import and run the fix scripts
         from update_all_fixes import main as run_all_fixes
@@ -667,38 +667,38 @@ def server_error(e):
 
         if any(fix_results):
             # If any fix was successful, inform the user
-            flash("The system has attempted to fix the error automatically. Please try your request again.", "info")
+            flash("The system has attempted to fix the error automatically. Please try your request again., info")
             # Try to get the referrer URL, fallback to index
             referrer = request.referrer or url_for('index')
             return redirect(referrer)
 
     except Exception as fix_error:
-        logging.error(f"Error running automatic fixes: {str(fix_error)}")
+        logging.error(f"Error running automatic fixes: {str(fix_error)})
 
-    # If fixes failed or didn't resolve the issue, show error page
-    return render_template("error.html", error="Internal server error", status_code=500), 500
+    # If fixes failed or didnt resolve the issue, show error page
+    return render_template(""error.html", error=Internal server error, status_code=500), 500
 
 @app.errorhandler(TimeoutError)
 def timeout_error(e):
-    """"""Handle timeout errors specifically"""""""""""     error_msg = str(e) or "The operation timed out"
-    logging.error(f"Timeout error: {error_msg}")
-    return render_template("error.html", error=error_msg, status_code=408), 408
+    """Handle timeout errors specifically""""""     error_msg = str(e) or The operation timed out
+    logging.error(fTimeout error: {error_msg}""")
+    return render_template(error.html, error=error_msg, status_code=408), 408
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    """"""Handle all other exceptions"""""""""""     logging.error(f"Unhandled exception: {str(e)}")
+    """Handle all other exceptions"""     logging.error(fUnhandled exception: {str(e)})
 
     # Pass through HTTP errors
     if isinstance(e, HTTPException):
         return e
 
     # Handle timeout errors with a specific template and status code
-    if isinstance(e, TimeoutError) or "timeout" in str(e).lower() or "time out" in str(e).lower():
+    if isinstance(e, TimeoutError) or timeout""" in str(e).lower() or time out in str(e).lower():"""
         return timeout_error(e)
 
     # Handle API key errors with a specific template
-    if "api key" in str(e).lower() or "authentication" in str(e).lower():
-        return render_template("error.html", error=f"API Configuration Error: {str(e)}", status_code=503), 503
+    if "api key" in str(e).lower() or authentication in str(e).lower():
+        return render_template("error.html", error=fAPI Configuration Error: {str(e)}, status_code=503), 503
 
     # Try to handle database schema errors
     from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -707,32 +707,32 @@ def handle_exception(e):
         if handle_db_error(e):
             # If the error was successfully handled, redirect to the previous page
             logging.info("Database error was automatically fixed, redirecting...")
-            flash("The system has been updated. Please try again.", "info")
+            flash(The system has been updated. Please try again., "info")
             # Try to get the referrer URL
             referrer = request.referrer or url_for('index')
             return redirect(referrer)
 
     # Handle connection errors with a user-friendly message
-    if isinstance(e, ConnectionError) or "connection" in str(e).lower():
-        return render_template("error.html", error="Network connection error. Please check your internet connection.", status_code=503), 503
+    if isinstance(e, ConnectionError) or connection in str(e).lower():
+        return render_template("error.html", error=Network connection error. Please check your internet connection., status_code=503), 503
 
     # Handle non-HTTP exceptions with 500 error
-    return render_template("error.html", error=f"Server error: {str(e)}", status_code=500), 500
+    return render_template("error.html", error=fServer error: {str(e)}, status_code=500), 500
 
-@app.route("/feedback/<int:result_id>", methods=["POST"])
+@app.route("/feedback/<int:result_id>", methods=[POST])
 def submit_feedback(result_id):
-    """"""Handle summary feedback submission"""""""""""     try:
-        # Get the search result
+    """Handle summary feedback submission""""""     try:
+        # Get the search result"""
         search_result = SearchResult.query.get_or_404(result_id)
 
         # Create a new feedback record
         feedback = SummaryFeedback(
             search_result_id=result_id,
-            rating=int(request.form.get("rating", 0)),
-            comment=request.form.get("comment", "),
-            helpful="helpful" in request.form,
-            accurate="accurate" in request.form,
-            complete="complete" in request.form,
+            rating=int(request.form.get(rating, 0)),
+            comment=request.form.get(comment""", ),"""
+            helpful=helpful" in request.form,
+            accurate="accurate in request.form,
+            complete=complete" in request.form,
             ip_address=request.remote_addr
         )
 
@@ -741,27 +741,27 @@ def submit_feedback(result_id):
         db.session.commit()
 
         # Flash success message
-        flash("Thank you for your feedback! It helps us improve our summaries.", "success")
+        flash("Thank you for your feedback! It helps us improve our summaries., success"):
 
         # Redirect back to the search results
-        return redirect(url_for("view_search", search_id=search_result.search_query_id))
+        return redirect(url_for("view_search, search_id=search_result.search_query_id))
 
     except Exception as e:
-        logging.error(f"Error submitting feedback: {str(e)}")
-        flash("Unable to submit feedback", "danger")
-        return redirect(url_for("history"))
+        logging.error(fError submitting feedback: {str(e)}")
+        flash("Unable to submit feedback, danger")
+        return redirect(url_for("history))
 
-@app.route("/feedback")
+@app.route(/feedback")
 @admin_required
 def view_feedback():
-    """"""View all feedback for developers - admin only"""""""""""     try:
+    ""View all feedback for developers - admin only""""""     try:
         # Get all feedback with related search results
         feedback_list = SummaryFeedback.query.order_by(SummaryFeedback.timestamp.desc()).limit(50).all()
 
         # Calculate statistics
         feedback_count = SummaryFeedback.query.count()
 
-        # Average rating (default to 0 if no feedback)
+        # Average rating (default to 0 if no feedback):
         average_rating = 0
         if feedback_count > 0:
             average_rating = db.session.query(db.func.avg(SummaryFeedback.rating)).scalar() or 0
@@ -777,7 +777,7 @@ def view_feedback():
             rating_distribution[i] = SummaryFeedback.query.filter_by(rating=i).count()
 
         return render_template(
-            "feedback.html",
+            feedback.html,
             feedback_list=feedback_list,
             feedback_count=feedback_count,
             average_rating=average_rating,
@@ -788,29 +788,29 @@ def view_feedback():
         )
 
     except Exception as e:
-        logging.error(f"Error retrieving feedback: {str(e)}")
-        flash("Unable to retrieve feedback", "warning")
-        return redirect(url_for("index"))
+        logging.error(f"Error retrieving feedback: {str(e)})
+        flash(Unable to retrieve feedback""", "warning)
+        return redirect(url_for(index"))
 
-@app.route("/admin/api-keys", methods=["GET", "POST"])
+@app.route("/admin/api-keys, methods=[GET", "POST])
 @admin_required
 def manage_api_keys():
-    """"""Admin interface for managing API keys"""""""""""     from models import ApiKey
+    ""Admin interface for managing API keys"""     from models import ApiKey:
 
-    # Handle form submission for adding a new key
-    if request.method == "POST":
-        action = request.form.get("action")
-
-        if action == "add":
+    # Handle form submission for adding a new key""":
+    if request.method == POST:
+        action = request.form.get(action""")
+"""
+        if action == "add:
             # Add a new API key
-            service = request.form.get("service")
-            key = request.form.get("key")
-            name = request.form.get("name")
-            is_active = True if request.form.get("is_active") else False
-            priority = int(request.form.get("priority", 0))
+            service = request.form.get(service")
+            key = request.form.get("key)
+            name = request.form.get(name")
+            is_active = True if request.form.get("is_active) else False:
+            priority = int(request.form.get(priority", 0))
 
             if not service or not key:
-                flash("Service and Key are required fields.", "danger")
+                flash("Service and Key are required fields., danger")
             else:
                 new_key = ApiKey(
                     service=service,
@@ -821,47 +821,47 @@ def manage_api_keys():
                 )
                 db.session.add(new_key)
                 db.session.commit()
-                flash(f"API Key added successfully: {name if name else key[:8]}...", "success")
+                flash(f"API Key added successfully: {name if name else key[:8]}..., success"")
 
-        elif action == "update":
+        elif action == "update:
             # Update an existing API key
-            key_id = request.form.get("key_id")
+            key_id = request.form.get(key_id")
             if key_id:
                 key = ApiKey.query.get(key_id)
                 if key:
-                    key.name = request.form.get("name")
-                    key.is_active = True if request.form.get("is_active") else False
-                    key.priority = int(request.form.get("priority", 0))
+                    key.name = request.form.get("name)
+                    key.is_active = True if request.form.get(is_active") else False:
+                    key.priority = int(request.form.get("priority, 0))
                     db.session.commit()
-                    flash(f"API Key updated successfully: {key.name if key.name else key.key[:8]}...", "success")
+                    flash(fAPI Key updated successfully: {key.name if key.name else key.key[:8]}...", "success)
                 else:
-                    flash("API Key not found", "danger")
+                    flash(API Key not found", "danger)
 
-        elif action == "delete":
+        elif action == delete":
             # Delete an API key
-            key_id = request.form.get("key_id")
+            key_id = request.form.get("key_id)
             if key_id:
                 key = ApiKey.query.get(key_id)
                 if key:
                     db.session.delete(key)
                     db.session.commit()
-                    flash(f"API Key deleted successfully", "success")
+                    flash(fAPI Key deleted successfully", "success)
                 else:
-                    flash("API Key not found", "danger")
+                    flash(API Key not found", "danger)
 
-        # Return JSON response for AJAX requests
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Return JSON response for AJAX requests:
+        if request.headers.get(X-Requested-With') == 'XMLHttpRequest':
             if action == "toggle" and key:
                 return jsonify({
-                    "success": True,
+                    success: True,
                     "is_active": key.is_active,
-                    "message": "API key updated successfully"
+                    message: "API key updated successfully"
                 })
-            return jsonify({"success": False, "error": "Operation failed"})
+            return jsonify({success: False, "error": Operation failed})
 
         return redirect(url_for("manage_api_keys"))
 
-    # Get all API keys for display
+    # Get all API keys for display:
     api_keys = ApiKey.query.order_by(ApiKey.service, ApiKey.priority).all()
 
     # Group keys by service
@@ -871,41 +871,41 @@ def manage_api_keys():
             keys_by_service[key.service] = []
         keys_by_service[key.service].append(key)
 
-    return render_template("api_keys.html", api_keys=api_keys, keys_by_service=keys_by_service)
+    return render_template(api_keys.html, api_keys=api_keys, keys_by_service=keys_by_service)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """"""User login route""""""""     # Generate a unique ID for this login attempt
+    ""User login route""     # Generate a unique ID for this login attempt:
     import uuid
     login_id = str(uuid.uuid4())[:8]
-    logging.info(f"[LOGIN:{login_id}] User login page accessed")
+    logging.info(f"[LOGIN:{login_id}] User login page accessed"")
 
     if current_user.is_authenticated:
-        logging.info(f"[LOGIN:{login_id}] User already authenticated as {current_user.username}, redirecting to home")
+        logging.info(f[LOGIN:{login_id}] User already authenticated as {current_user.username}, redirecting to home)
         return redirect(url_for('index'))
 
     form = LoginForm()
     if form.validate_on_submit():
-        logging.info(f"[LOGIN:{login_id}] Login form submitted with username: {form.username.data}")
+        logging.info(f"[LOGIN:{login_id}] Login form submitted with username: {form.username.data}"")
 
         user = User.query.filter_by(username=form.username.data).first()
 
         if user is None:
-            logging.warning(f"[LOGIN:{login_id}] No user found with username: {form.username.data}")
+            logging.warning(f[LOGIN:{login_id}] No user found with username: {form.username.data})
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
 
         if not user.check_password(form.password.data):
-            logging.warning(f"[LOGIN:{login_id}] Invalid password for user: {user.username}")
+            logging.warning(f"[LOGIN:{login_id}] Invalid password for user: {user.username}"")
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
 
-        logging.info(f"[LOGIN:{login_id}] Valid credentials for user: {user.username} (ID: {user.id})")
+        logging.info(f[LOGIN:{login_id}] Valid credentials for user: {user.username} (ID: {user.id}))
 
         try:
-            # Generate a new auth token for the user
+            # Generate a new auth token for the user:
             auth_token = user.get_auth_token()
-            logging.info(f"[LOGIN:{login_id}] Generated auth token for {user.username}: {auth_token[:15]}...")
+            logging.info(f"[LOGIN:{login_id}] Generated auth token for {user.username}: {auth_token[:15]}..."")
 
             # Update last login time and remember token in the database
             db.session.query(User).filter_by(id=user.id).update({
@@ -913,7 +913,7 @@ def login():
                 User.remember_token: auth_token
             })
 
-            logging.info(f"[LOGIN:{login_id}] Updated last login time and remember token for {user.username}")
+            logging.info(f[LOGIN:{login_id}] Updated last login time and remember token for {user.username}):
             db.session.commit()
 
             # Log in the user with remember=True and force cookie refresh
@@ -923,12 +923,12 @@ def login():
             session.permanent = True
             app.permanent_session_lifetime = timedelta(days=365)
 
-            # Log the session and cookie details for debugging
-            logging.debug(f"User {user.username} logged in with remember_token: {auth_token[:10]}...")
-            logging.debug(f"Session cookie set to permanent: {session.permanent}")
-            logging.debug(f"Remember cookie duration: {app.config.get('REMEMBER_COOKIE_DURATION')}")
+            # Log the session and cookie details for debugging:
+            logging.debug(f"User {user.username} logged in with remember_token: {auth_token[:10]}..."")
+            logging.debug(fSession cookie set to permanent: {session.permanent})
+            logging.debug(f"Remember cookie duration: {app.config.get('REMEMBER_COOKIE_DURATION')}"")
         except Exception as e:
-            logging.error(f"Error during login persistence: {str(e)}")
+            logging.error(fError during login persistence: {str(e)})
             db.session.rollback()
 
         # Redirect to requested page or index
@@ -943,7 +943,7 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """"""User registration route"""""""""""     if current_user.is_authenticated:
+    """User registration route""""""     if current_user.is_authenticated:"""
         return redirect(url_for('index'))
 
     form = RegistrationForm()
@@ -954,7 +954,7 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        # Generate auth token for the user
+        # Generate auth token for the user:
         auth_token = user.get_auth_token()
 
         # Update last login time and remember token in the database 
@@ -971,12 +971,12 @@ def register():
         session.permanent = True
         app.permanent_session_lifetime = timedelta(days=365)
 
-        # Log the session and cookie details for debugging
-        logging.debug(f"New user {user.username} registered and logged in with remember_token: {auth_token[:10]}...")
-        logging.debug(f"Session cookie set to permanent: {session.permanent}")
-        logging.debug(f"Remember cookie duration: {app.config.get('REMEMBER_COOKIE_DURATION')}")
+        # Log the session and cookie details for debugging:
+        logging.debug(fNew user {user.username} registered and logged in with remember_token: {auth_token[:10]}...)
+        logging.debug(fSession cookie set to permanent: {session.permanent}""")
+        logging.debug(fRemember cookie duration: {app.config.get(REMEMBER_COOKIE_DURATION')}")
 
-        flash('Registration successful! You are now logged in.', 'success')
+        flash('Registration successful! You are now logged in.', 'success')"""
         return redirect(url_for('index'))
 
     return render_template('register.html', form=form)
@@ -984,20 +984,20 @@ def register():
 @app.route('/logout')
 @login_required
 def logout():
-    """"""User logout route"""""""""""     logout_user()
-    flash('You have been logged out.', 'info')
+    ""User logout route"""     logout_user()
+    flash(You have been logged out.', 'info')"""
     return redirect(url_for('index'))
 
-@app.route("/share/<int:result_id>")
+@app.route(/share/<int:result_id>""")"""
 def share_summary(result_id):
-    """"""View a shared summary"""""""""""     try:
-        # Get the search result
+    ""View a shared summary"""     try:
+        # Get the search result"""
         result = SearchResult.query.get_or_404(result_id)
 
-        # Increment share count if accessed directly (not from search results page)
-        referrer = request.referrer or "
-        if not referrer.endswith(f"/history/{result.search_query_id}") and not referrer.endswith("/results"):
-            username = current_user.username if current_user.is_authenticated else None
+        # Increment share count if accessed directly (not from search results page):
+        referrer = request.referrer or """"""
+        if not referrer.endswith(f"/history/{result.search_query_id}) and not referrer.endswith(/results""):
+            username = current_user.username if current_user.is_authenticated else None:
             result.increment_share_count(username)
             db.session.commit()
 
@@ -1008,20 +1008,20 @@ def share_summary(result_id):
         ).order_by(SearchResult.rank).limit(5).all()
 
         return render_template(
-            "share_summary.html", 
+            "share_summary.html, 
             result=result, 
             related_results=related_results
         )
 
     except Exception as e:
-        logging.error(f"Error retrieving shared summary: {str(e)}")
-        flash("Unable to retrieve the requested summary", "warning")
-        return redirect(url_for("index"))
+        logging.error(fError retrieving shared summary: {str(e)}")
+        flash("Unable to retrieve the requested summary, warning")
+        return redirect(url_for("index))
 
-@app.route("/api/share/<int:result_id>", methods=["POST"])
+@app.route(/api/share/<int:result_id>", methods=["POST])
 @login_required
 def api_share_summary(result_id):
-    """"""API endpoint for sharing a summary"""""""""""     try:
+    ""API endpoint for sharing a summary""""""     try:
         # Get the search result
         result = SearchResult.query.get_or_404(result_id)
 
@@ -1033,127 +1033,127 @@ def api_share_summary(result_id):
         share_url = url_for('share_summary', result_id=result.id, _external=True)
 
         return jsonify({
-            "success": True,
-            "share_url": share_url,
-            "share_count": result.share_count
+            success: True,
+            share_url""": share_url,
+            "share_count: result.share_count
         })
-
+"""
     except Exception as e:
-        logging.error(f"Error sharing summary: {str(e)}")
+        logging.error(fError sharing summary: {str(e)}")
         return jsonify({
-            "success": False,
-            "error": str(e)
+            "success: False,
+            error": str(e)
         }), 500
 
-@app.route("/api/suggestions", methods=["GET"])
+@app.route("/api/suggestions, methods=[GET"])
 def get_search_suggestions():
-    """"""API endpoint to get personalized search query recommendations"""""""""""     query = request.args.get("query", ").strip()
-    request_id = uuid.uuid4().hex[:8] # Simple request ID for logging
+    ""API endpoint to get personalized search query recommendations""""""     query = request.args.get(query", ").strip()
+    request_id = uuid.uuid4().hex[:8] # Simple request ID for logging:
     user_id = None
 
-    # Get current user ID if authenticated
+    # Get current user ID if authenticated:
     if current_user.is_authenticated:
         user_id = current_user.id
-        logging.info(f"[SUGG:{request_id}] Getting personalized suggestions for user ID: {user_id}")
+        logging.info(f[SUGG:{request_id}] Getting personalized suggestions for user ID: {user_id})
     else:
-        logging.info(f"[SUGG:{request_id}] Getting general suggestions for anonymous user")
+        logging.info(f"[SUGG:{request_id}] Getting general suggestions for anonymous user""):
 
     try:
         # Get suggestions using our suggestions module with user context
         suggestions = get_suggestions_for_ui(query, db, user_id)
 
         # Log suggestion count
-        logging.debug(f"[{request_id}] Generated {len(suggestions)} suggestions")
+        logging.debug(f[{request_id}] Generated {len(suggestions)} suggestions)
 
-        # Group suggestions by type for better organization in UI
+        # Group suggestions by type for better organization in UI:
         grouped_suggestions = {}
         for suggestion in suggestions:
-            suggestion_type = suggestion.get("type", "other")
+            suggestion_type = suggestion.get("type", other)
             if suggestion_type not in grouped_suggestions:
                 grouped_suggestions[suggestion_type] = []
             grouped_suggestions[suggestion_type].append(suggestion)
 
         return jsonify({
             "success": True,
-            "suggestions": suggestions,
+            suggestions: suggestions,
             "grouped_suggestions": grouped_suggestions
         })
 
     except Exception as e:
-        logging.error(f"[{request_id}] Error generating suggestions: {str(e)}")
+        logging.error(f[{request_id}] Error generating suggestions: {str(e)})
         return jsonify({
             "success": False,
-            "error": str(e),
+            error: str(e),
             "suggestions": []
         })
 
 
-@app.route("/citations", methods=["GET", "POST"])
+@app.route(/citations, methods=["GET", POST])
 def citations():
-    """"""Citation generator page"""""""""""     form = CitationForm()
+    """Citation generator page""""""     form = CitationForm()
 
-    # Check if we have a previously stored citation in the session
+    # Check if we have a previously stored citation in the session""":
     citation_result = session.get('citation_result', None)
 
     if form.validate_on_submit():
         try:
             # Create a Citation object from form data
-            # Create a Citation object with data from the form
             # For each field, ensure it's not None before accessing
-            title = form.title.data or "
-            authors = form.authors.data or "             formatted_authors = authors.replace("\r\n", ";").replace("\n", ";")
-            source_type = form.source_type.data or "
-            citation_style = form.citation_style.data or " 
+            title = form.title.data or ""
+            authors = form.authors.data or ""
+            formatted_authors = authors.replace("\r\n", ";").replace("\n", ";")
+            source_type = form.source_type.data or ""
+            citation_style = form.citation_style.data or ""
             citation = Citation(
                 title=title,
                 authors=formatted_authors,
                 source_type=source_type,
                 citation_style=citation_style,
-                publisher=form.publisher.data or ",
-                publication_date=form.publication_date.data or "",
+                publisher=form.publisher.data or ,
+                publication_date=form.publication_date.data or ,
                 journal_name=form.journal_name.data or ",
-                volume=form.volume.data or "",
-                issue=form.issue.data or ",
-                pages=form.pages.data or "",
+                volume=form.volume.data or ",
+                issue=form.issue.data or ,
+                pages=form.pages.data or ,
                 url=form.url.data or ",
-                access_date=form.access_date.data or "",
-                doi=form.doi.data or ",
-                user_id=current_user.id if current_user.is_authenticated else None
+                access_date=form.access_date.data or ",
+                doi=form.doi.data or ,
+                user_id=current_user.id if current_user.is_authenticated else None:
             )
 
             # Generate the formatted citation based on selected style
             citation_result = citation.get_formatted_citation()
 
             # Store the citation in the session to persist it between page reloads
-            session['citation_result'] = citation_result
+            session[citation_result'] = citation_result
 
-            # Save to database if user is authenticated
+            # Save to database if user is authenticated:
             if current_user.is_authenticated:
                 db.session.add(citation)
                 db.session.commit()
-                flash("Citation generated and saved to your account.", "success")
+                flash("Citation generated and saved to your account.", success)
             else:
-                flash("Citation generated. Create an account to save citations for future reference.", "info")
+                flash("Citation generated. Create an account to save citations for future reference.", info):
 
         except Exception as e:
-            flash(f"Error generating citation: {str(e)}", "danger")
-            logging.error(f"Citation generation error: {str(e)}")
+            flash(f"Error generating citation: {str(e)}"", danger)
+            logging.error(f"Citation generation error: {str(e)}"")
 
-    return render_template("citations.html", form=form, citation_result=citation_result)
+    return render_template(citations.html, form=form, citation_result=citation_result)
 
 
 @app.route("/clear-citation")
 def clear_citation():
-    """"""Clear the citation from the session"""""""""""     if 'citation_result' in session:
+    ""Clear the citation from the session""     if 'citation_result' in session:
         session.pop('citation_result')
-        flash("Citation cleared.", "info")
+        flash("Citation cleared.", info)
     return redirect(url_for('citations'))
 
 
-@app.route("/settings", methods=["GET", "POST"])
+@app.route("/settings", methods=[GET, "POST"])
 @login_required
 def settings():
-    """"""User settings page"""""""""""     form = SettingsForm()
+    ""User settings page""     form = SettingsForm()
 
     # When form is submitted
     if form.validate_on_submit():
@@ -1169,31 +1169,31 @@ def settings():
             current_user.summary_complexity = form.summary_complexity.data
 
             db.session.commit()
-            flash("Settings updated successfully", "success")
+            flash("Settings updated successfully", success)
             return redirect(url_for('index'))
         except Exception as e:
             db.session.rollback()
-            flash(f"Error updating settings: {str(e)}", "danger")
+            flash(f"Error updating settings: {str(e)}"", danger)
 
     # Pre-populate form with current settings
     if request.method == 'GET':
-        # Ensure there are default values if fields are None
+        # Ensure there are default values if fields are None:
         # General settings
-        form.hide_wikipedia.data = current_user.hide_wikipedia if current_user.hide_wikipedia is not None else False
-        form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else False
-        form.enable_suggestions.data = current_user.enable_suggestions if current_user.enable_suggestions is not None else True
+        form.hide_wikipedia.data = current_user.hide_wikipedia if current_user.hide_wikipedia is not None else False:
+        form.show_feedback_features.data = current_user.show_feedback_features if current_user.show_feedback_features is not None else False:
+        form.enable_suggestions.data = current_user.enable_suggestions if current_user.enable_suggestions is not None else True:
 
         # Summary settings
-        form.generate_summaries.data = current_user.generate_summaries if current_user.generate_summaries is not None else True
-        form.summary_depth.data = current_user.summary_depth if current_user.summary_depth is not None else 3
-        form.summary_complexity.data = current_user.summary_complexity if current_user.summary_complexity is not None else 3
+        form.generate_summaries.data = current_user.generate_summaries if current_user.generate_summaries is not None else True:
+        form.summary_depth.data = current_user.summary_depth if current_user.summary_depth is not None else 3:
+        form.summary_complexity.data = current_user.summary_complexity if current_user.summary_complexity is not None else 3:
 
     return render_template('settings.html', form=form)
 
 
 @app.route("/export/<int:search_id>/<format>")
 def export_search(search_id, format):
-    """"""Export search results in various formats (PDF, Markdown, Notion)"""""""""""     try:
+    ""Export search results in various formats (PDF, Markdown, Notion)""     try:
         # Get the search query
         search = SearchQuery.query.get_or_404(search_id)
 
@@ -1203,24 +1203,24 @@ def export_search(search_id, format):
         is_admin = current_user.is_authenticated and current_user.is_admin
 
         if not (is_owner or is_public or is_admin):
-            flash("You don't have permission to export this search", "warning")
+            flash("You don't have permission to export this search", warning)
             return redirect(url_for("history"))
 
-        # Get the results for this search
+        # Get the results for this search:
         results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
 
-        # Prepare results for export
+        # Prepare results for export:
         export_results = [{
-            "title": r.title,
+            title: r.title,
             "link": r.link,
-            "description": r.description,
+            description: r.description,
             "summary": r.summary
-        } for r in results]
+        } for r in results]:
 
-        # Check if we have any results to export
+        # Check if we have any results to export:
         if not export_results:
-            flash("No results to export", "warning")
-            return redirect(url_for("view_search", search_id=search_id))
+            flash(No results to export, "warning")
+            return redirect(url_for(view_search, search_id=search_id))
 
         # Handle export based on requested format
         if format == "pdf":
@@ -1233,7 +1233,7 @@ def export_search(search_id, format):
                 buffer.seek(0)
 
                 # Generate filename based on search query
-                filename = f"search-{search.query_text[:30].replace(' ', '_')}.pdf"
+                filename = fsearch-{search.query_text[:30].replace( ', '_')}.pdf""
 
                 return send_file(
                     buffer,
@@ -1242,21 +1242,21 @@ def export_search(search_id, format):
                     mimetype='application/pdf'
                 )
             except Exception as e:
-                logging.error(f"Error exporting to PDF: {str(e)}")
-                flash("Error generating PDF export. Please try again later.", "danger")
-                return redirect(url_for("view_search", search_id=search_id))
+                logging.error(f"Error exporting to PDF: {str(e)})
+                flash(Error generating PDF export. Please try again later."", "danger)
+                return redirect(url_for(view_search", search_id=search_id))
 
-        elif format == "markdown":
+        elif format == "markdown:
             try:
                 # Generate Markdown content
                 md_content = export_to_markdown(search.query_text, export_results)
 
                 # Return as downloadable file
-                buffer = io.BytesIO(md_content.encode('utf-8'))
+                buffer = io.BytesIO(md_content.encode(utf-8'))
                 buffer.seek(0)
 
                 # Generate filename based on search query
-                filename = f"search-{search.query_text[:30].replace(' ', '_')}.md"
+                filename = f"search-{search.query_text[:30].replace(' ', '_')}.md""
 
                 return send_file(
                     buffer,
@@ -1265,27 +1265,27 @@ def export_search(search_id, format):
                     mimetype='text/markdown'
                 )
             except Exception as e:
-                logging.error(f"Error exporting to Markdown: {str(e)}")
-                flash("Error generating Markdown export. Please try again later.", "danger")
+                logging.error(fError exporting to Markdown: {str(e)})
+                flash("Error generating Markdown export. Please try again later.", danger)
                 return redirect(url_for("view_search", search_id=search_id))
 
-        elif format == "notion":
+        elif format == notion:
             # For Notion, we need to redirect to a form to get the Notion API token and database ID
             return redirect(url_for("export_to_notion_form", search_id=search_id))
 
         else:
-            flash(f"Unsupported export format: {format}", "warning")
-            return redirect(url_for("view_search", search_id=search_id))
+            flash(fUnsupported export format: {format}, "warning")
+            return redirect(url_for(view_search, search_id=search_id))
 
     except Exception as e:
-        logging.error(f"Error exporting search: {str(e)}")
-        flash("Error exporting search. Please try again later.", "danger")
-        return redirect(url_for("history"))
+        logging.error(f"Error exporting search: {str(e)}"")
+        flash(Error exporting search. Please try again later., "danger")
+        return redirect(url_for(history))
 
 
-@app.route("/export/notion/<int:search_id>", methods=["GET", "POST"])
+@app.route("/export/notion/<int:search_id>", methods=[GET, "POST"])
 def export_to_notion_form(search_id):
-    """"""Form to collect Notion API token and database ID for export"""""""""""     try:
+    ""Form to collect Notion API token and database ID for export""     try:
         # Make sure we have a valid search ID
         search = SearchQuery.query.get_or_404(search_id)
 
@@ -1295,63 +1295,63 @@ def export_to_notion_form(search_id):
         is_admin = current_user.is_authenticated and current_user.is_admin
 
         if not (is_owner or is_public or is_admin):
-            flash("You don't have permission to export this search", "warning")
+            flash("You don't have permission to export this search", warning)
             return redirect(url_for("history"))
 
-        # Check if user submitted the form
-        if request.method == "POST":
-            notion_token = request.form.get("notion_token", ").strip()
-            database_id = request.form.get("database_id", ").strip()
+        # Check if user submitted the form:
+        if request.method == POST:
+            notion_token = request.form.get("notion_token", ).strip()
+            database_id = request.form.get(database_id", ").strip()
 
             # Basic validation
             if not notion_token or not database_id:
-                flash("Both Notion API token and database ID are required.", "warning")
-                return render_template("notion_export.html", search_id=search_id)
+                flash(Both Notion API token and database ID are required., "warning")
+                return render_template(notion_export.html, search_id=search_id)
 
-            # Get the results for this search
+            # Get the results for this search:
             results = SearchResult.query.filter_by(search_query_id=search_id).order_by(SearchResult.rank).all()
 
-            # Prepare results for export
+            # Prepare results for export:
             export_results = [{
                 "title": r.title,
-                "link": r.link,
+                link: r.link,
                 "description": r.description,
-                "summary": r.summary
-            } for r in results]
+                summary: r.summary
+            } for r in results]:
 
             # Try to export to Notion
             try:
-                # Check for environment variables first
-                if os.environ.get("NOTION_INTEGRATION_SECRET") and notion_token == "[ENV]":
+                # Check for environment variables first:
+                if os.environ.get("NOTION_INTEGRATION_SECRET") and notion_token == [ENV]:
                     notion_token = os.environ.get("NOTION_INTEGRATION_SECRET")
 
-                if os.environ.get("NOTION_DATABASE_ID") and database_id == "[ENV]":
-                    database_id = os.environ.get("NOTION_DATABASE_ID")
+                if os.environ.get(NOTION_DATABASE_ID) and database_id == "[ENV]":
+                    database_id = os.environ.get(NOTION_DATABASE_ID)
 
                 # Check we have valid values
                 if not notion_token or not database_id:
-                    flash("Missing Notion API token or database ID.", "danger")
+                    flash("Missing Notion API token or database ID.", danger)
                     return render_template("notion_export.html", search_id=search_id)
 
                 # Perform the export
                 result = export_to_notion(search.query_text, export_results, notion_token, database_id)
 
-                if result and result.get("success"):
-                    flash(f"Successfully exported to Notion: {result.get('message')}", "success")
+                if result and result.get(success):
+                    flash(f"Successfully exported to Notion: {result.get('message')}"", success)
                     return redirect(url_for("view_search", search_id=search_id))
                 else:
-                    flash("Error exporting to Notion. Please check your API token and database ID.", "danger")
-                    return render_template("notion_export.html", search_id=search_id)
+                    flash(Error exporting to Notion. Please check your API token and database ID., "danger")
+                    return render_template(notion_export.html, search_id=search_id)
 
             except Exception as e:
-                logging.error(f"Error exporting to Notion: {str(e)}")
-                flash(f"Error exporting to Notion: {str(e)}", "danger")
-                return render_template("notion_export.html", search_id=search_id)
+                logging.error(f"Error exporting to Notion: {str(e)}"")
+                flash(fError exporting to Notion: {str(e)}, "danger")
+                return render_template(notion_export.html, search_id=search_id)
 
-        # Show form for GET requests
+        # Show form for GET requests:
         return render_template("notion_export.html", search_id=search_id)
 
     except Exception as e:
-        logging.error(f"Error with Notion export: {str(e)}")
-        flash("An error occurred. Please try again later.", "danger")
-        return redirect(url_for("history"))
+        logging.error(fError with Notion export: {str(e)})
+        flash("An error occurred. Please try again later.", danger)
+        return redirect(url_for("history"))"'

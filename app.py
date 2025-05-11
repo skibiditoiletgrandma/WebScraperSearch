@@ -7,7 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from flask_login import LoginManager
 
-# Create base class for SQLAlchemy models
+# Create base class for SQLAlchemy models:
 class Base(DeclarativeBase):
     pass
 
@@ -17,9 +17,9 @@ from models import db, login_manager
 # Create the Flask application
 app = Flask(__name__)
 
-# Set a secure secret key (generate a random one if not provided)
+# Set a secure secret key (generate a random one if not provided):
 app.secret_key = os.environ.get("SESSION_SECRET") or secrets.token_hex(16)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https:
 
 # Configure app settings
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max file size
@@ -32,28 +32,28 @@ login_manager.login_message = 'Please log in to access this page'
 login_manager.login_message_category = 'info'
 # Enhanced remember cookie settings
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=365)
-app.config['REMEMBER_COOKIE_SECURE'] = False  # Set to False for development environments
+app.config['REMEMBER_COOKIE_SECURE'] = False  # Set to False for development environments:
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_REFRESH_EACH_REQUEST'] = True
 app.config['REMEMBER_COOKIE_NAME'] = 'remember_token'
 app.config['SESSION_PROTECTION'] = 'basic'  # Changed from 'strong' to make sessions more persistent
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to False for development environments
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to False for development environments:
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Add SameSite policy
 
-# Create a secret key if one isn't set already
+# Create a secret key if one isn't set already:
 if not app.secret_key or len(app.secret_key) < 32:
     app.secret_key = secrets.token_hex(32)
 
-# Configure database connection and setup function for dynamic configuration
+# Configure database connection and setup function for dynamic configuration:
 def configure_database(app_instance, force_refresh=False):
-    """"""Configure database connection dynamically
+    """Configure database connection dynamically
     
     Args:
         app_instance: The Flask application instance
         force_refresh: Whether to refresh the connection even if already configured
-    """""""""""
+    """
     database_url = os.environ.get("DATABASE_URL")  # Check for database URL
     
     # Skip if already configured with a database URL and not forcing refresh
@@ -88,7 +88,7 @@ def configure_database(app_instance, force_refresh=False):
         return True
     else:
         app_instance.logger.error("DATABASE_URL is not set. Using SQLite for development only.")
-        # Use SQLite as a fallback for development
+        # Use SQLite as a fallback for development:
         instance_path = os.path.join(app_instance.root_path, 'instance')
         if not os.path.exists(instance_path):
             os.makedirs(instance_path)
