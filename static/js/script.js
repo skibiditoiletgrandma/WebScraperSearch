@@ -169,6 +169,57 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.map(function(tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+
+    // API Key Management
+    // Handle toggle buttons
+    document.querySelectorAll('form[action*="api-keys"][action*="toggle"]').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const button = form.querySelector('button');
+            const keyId = form.querySelector('input[name="key_id"]').value;
+
+            // Show loading state
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+
+            // Submit form via AJAX
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update button state
+                    button.classList.toggle('btn-warning');
+                    button.classList.toggle('btn-success');
+                    button.innerHTML = data.is_active ? 'Disable' : 'Enable';
+
+                    // Update status badge
+                    const statusBadge = document.querySelector(`#status-badge-${keyId}`);
+                    if (statusBadge) {
+                        statusBadge.className = `badge ${data.is_active ? 'bg-success' : 'bg-secondary'}`;
+                        statusBadge.textContent = data.is_active ? 'Active' : 'Inactive';
+                    }
+
+                    showAlert('API key updated successfully', 'success');
+                } else {
+                    throw new Error(data.error || 'Failed to update API key');
+                }
+            })
+            .catch(error => {
+                button.innerHTML = originalText;
+                showAlert(error.message, 'danger');
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+        });
+    });
 });
 
 /**
@@ -209,9 +260,9 @@ function displaySuggestions(suggestions) {
     const suggestionsList = document.getElementById('suggestions-list');
     const suggestionsContainer = document.getElementById('suggestions-container');
     const searchInput = document.getElementById('search-query');
-    
+
     if (!suggestionsList || !suggestionsContainer || !searchInput) return;
-    
+
     // Clear previous suggestions
     suggestionsList.innerHTML = '';
 
@@ -242,7 +293,7 @@ function displaySuggestions(suggestions) {
 
         suggestionsList.appendChild(button);
     });
-    
+
     // Show suggestions container if we have suggestions
     if (suggestionsList.children.length > 0) {
         suggestionsContainer.classList.remove('d-none');

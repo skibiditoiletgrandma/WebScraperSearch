@@ -703,7 +703,7 @@ def handle_exception(e):
         return e
 
     # Handle timeout errors with a specific template and status code
-    if isinstance(e, TimeoutError) or "timeout" in str(e).lower() or "time out" in str(e).lower():
+    if isinstance(e, TimeoutError) or "timeout" in str(e).lower() or ""time out" in str(e).lower():
         return timeout_error(e)
 
     # Handle API key errors with a specific template
@@ -861,6 +861,16 @@ def manage_api_keys():
                     flash(f"API Key deleted successfully", "success")
                 else:
                     flash("API Key not found", "danger")
+
+        # Return JSON response for AJAX requests
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if action == "toggle" and key:
+                return jsonify({
+                    "success": True,
+                    "is_active": key.is_active,
+                    "message": "API key updated successfully"
+                })
+            return jsonify({"success": False, "error": "Operation failed"})
 
         return redirect(url_for("manage_api_keys"))
 
