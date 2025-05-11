@@ -438,12 +438,42 @@ def get_suggestions_for_ui(query: str, db=None, user_id=None) -> List[Dict]:
     
     # Organize all suggestions by category
     recommendations = {
-        "personalized": personal_history,
-        "trending": trending_searches,
-        "improved": query_improvements[:5],  # Limit to top 5
-        "topic": topic_suggestions,
-        "expanded": suggestions_dict.get("expanded_queries", [])[:3],
-        "operator": suggestions_dict.get("operator_suggestions", [])[:2]
+        "personalized": [{
+            "query": x["query"],
+            "description": x["description"],
+            "type": "history",
+            "icon": "fa-history"
+        } for x in personal_history],
+        "trending": [{
+            "query": x["query"],
+            "description": x["description"],
+            "type": "trending",
+            "icon": "fa-fire"
+        } for x in trending_searches],
+        "improved": [{
+            "query": x,
+            "description": "Better structured search query",
+            "type": "improved",
+            "icon": "fa-lightbulb"
+        } for x in query_improvements[:5]],
+        "topic": [{
+            "query": x["query"],
+            "description": x["description"],
+            "type": "topic",
+            "icon": "fa-tag"
+        } for x in topic_suggestions],
+        "expanded": [{
+            "query": x,
+            "description": "Expanded search query",
+            "type": "expanded",
+            "icon": "fa-plus-circle"
+        } for x in suggestions_dict.get("expanded_queries", [])[:3]],
+        "operator": [{
+            "query": x,
+            "description": "Advanced search operator",
+            "type": "operator",
+            "icon": "fa-code"
+        } for x in suggestions_dict.get("operator_suggestions", [])[:2]]
     }
     
     # Flatten for backward compatibility with existing JavaScript

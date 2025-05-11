@@ -330,9 +330,19 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching recommendations:', error);
-                document.getElementById('suggestions-error').classList.remove('d-none');
+                clearAndHideAllSections();
+                const errorDiv = document.getElementById('suggestions-error');
+                if (errorDiv) {
+                    errorDiv.classList.remove('d-none');
+                }
             });
     }
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 
     function displayGroupedRecommendations(groupedSuggestions) {
         // Clear and hide all sections including error message
@@ -387,28 +397,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function displaySectionItems(listElement, sectionElement, items) {
-        if (!listElement || !sectionElement || !items.length) return;
+        if (!listElement || !sectionElement || !items || !items.length) return;
 
         listElement.innerHTML = '';
+        sectionElement.classList.remove('d-none');
 
         items.forEach(item => {
             const button = document.createElement('button');
-            button.className = 'btn btn-outline-primary me-2 mb-2';
+            button.className = `btn btn-outline-${getButtonStyle(item.type)} me-2 mb-2`;
             button.type = 'button';
-
-            // Use provided icon or default based on type
-            let iconClass = item.icon || 'fa-lightbulb';
-
+            
+            const iconClass = item.icon || getIconClass(item.type);
+            
             button.innerHTML = `
                 <i class="fas ${iconClass} me-2"></i>
                 ${item.query}
             `;
-
-            // Add tooltip with description
+            
             if (item.description) {
                 button.setAttribute('data-bs-toggle', 'tooltip');
                 button.setAttribute('data-bs-placement', 'top');
                 button.setAttribute('title', item.description);
+            }
+
+            function getButtonStyle(type) {
+                switch(type) {
+                    case 'history': return 'secondary';
+                    case 'trending': return 'warning';
+                    case 'topic': return 'success';
+                    case 'improved': return 'info';
+                    case 'expanded': return 'primary';
+                    case 'operator': return 'dark';
+                    default: return 'primary';
+                }
+            }
+
+            function getIconClass(type) {
+                switch(type) {
+                    case 'history': return 'fa-history';
+                    case 'trending': return 'fa-fire';
+                    case 'topic': return 'fa-tag';
+                    case 'improved': return 'fa-lightbulb';
+                    case 'expanded': return 'fa-plus-circle';
+                    case 'operator': return 'fa-code';
+                    default: return 'fa-lightbulb';
+                }
             }
 
             button.addEventListener('click', function() {
