@@ -348,40 +348,41 @@ class Citation(db.Model):
             if self.doi:
                 citation += f". https://doi.org/{self.doi}"
             elif self.url:
-                citation += f". Retrieved from {self.url}""
+                citation += f". Retrieved from {self.url}"
             return citation
 
         elif self.source_type == 'book':
             author_list = self.format_authors_apa()
-            citation = f{author_list} ({self.publication_date}). <em>{self.title}</em>. 
+            citation = f"{author_list} ({self.publication_date}). <em>{self.title}</em>."
             if self.publisher:
-                citation += f"{self.publisher}.""
+                citation += f" {self.publisher}."
             return citation
 
         elif self.source_type == 'website':
             author_list = self.format_authors_apa()
-            citation = f{author_list} ({self.publication_date}). {self.title}. 
+            citation = f"{author_list} ({self.publication_date}). {self.title}."
             if self.url:
-                citation += f"Retrieved from {self.url}""
+                citation += f" Retrieved from {self.url}"
             return citation
 
         # Default format if source type is not recognized:
-        return f{self.authors} ({self.publication_date}). {self.title}.
+        return f"{self.authors} ({self.publication_date}). {self.title}."
 
     def generate_mla_citation(self):
-        ""Generate MLA style citation         if self.source_type == journal':
+        """Generate MLA style citation"""
+        if self.source_type == 'journal':
             author_list = self.format_authors_mla()
-            citation = f"{author_list}. \""{self.title}.\ 
+            citation = f"{author_list}. \"{self.title}\"."
             if self.journal_name:
-                citation += f"<em>{self.journal_name}</em>""
+                citation += f" <em>{self.journal_name}</em>"
                 if self.volume:
-                    citation += f, vol. {self.volume}
+                    citation += f", vol. {self.volume}"
                     if self.issue:
-                        citation += f", no. {self.issue}""
+                        citation += f", no. {self.issue}"
                 if self.publication_date:
-                    citation += f, {self.publication_date}
+                    citation += f", {self.publication_date}"
                 if self.pages:
-                    citation += f", pp. {self.pages}""
+                    citation += f", pp. {self.pages}"
             if self.doi:
                 citation += f. DOI: {self.doi}
             elif self.url:
