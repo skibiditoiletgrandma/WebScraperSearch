@@ -7,7 +7,6 @@ import trafilatura
 import random
 import time
 import os
-import signal
 from serpapi import GoogleSearch
 from flask import flash
 
@@ -32,7 +31,6 @@ except ImportError:
     
     HAS_DB = False
     db = None
-
 # List of user agents to rotate for requests to avoid being blocked
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -139,7 +137,8 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                 try:
                     api_key_obj.mark_used()
                     if HAS_DB and db is not None:
-                        db.session.commit()
+                        if HAS_DB and db is not None:
+            db.session.commit()
                     logging.debug(f"[SEARCH:{search_id}] Marked API key {api_key_obj.id} as used")
                 except Exception as db_err:
                     logging.error(f"[SEARCH:{search_id}] Failed to mark API key usage: {str(db_err)}")
@@ -161,7 +160,8 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                     # Record the error
                     api_key_obj.record_error(error_msg)
                     if HAS_DB and db is not None:
-                        db.session.commit()
+                        if HAS_DB and db is not None:
+            db.session.commit()
                     logging.warning(f"[SEARCH:{search_id}] API key error recorded for key {api_key_obj.id}: {error_msg}")
                     
                     # If we haven't tried a fallback yet, try the next key
@@ -197,7 +197,8 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
                     # Record the error
                     api_key_obj.record_error(error_msg)
                     if HAS_DB and db is not None:
-                        db.session.commit()
+                        if HAS_DB and db is not None:
+            db.session.commit()
                     logging.warning(f"[SEARCH:{search_id}] API key error recorded for key {api_key_obj.id}: {error_msg}")
                     
                     # Try the next key if this wasn't already a fallback attempt
@@ -250,7 +251,8 @@ def search_google(query, num_results=10, research_mode=False, timeout=30, **kwar
             try:
                 api_key_obj.record_error(f"Timeout: {str(te)}")
                 if HAS_DB and db is not None:
-                    db.session.commit()
+                    if HAS_DB and db is not None:
+            db.session.commit()
                 
                 # Try the next key
                 logging.info(f"[SEARCH:{search_id}] Attempting fallback to next API key after timeout")
