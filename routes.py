@@ -257,6 +257,14 @@ def search():
 
         # Summary settings defaults for anonymous users - minimal settings:
         generate_summaries = True
+    except Exception as e:
+        # In case of any exception, use the default values
+        logging.error(f"Error setting up search parameters: {str(e)}")
+        research_mode = False
+        num_pages = 1
+        hide_wikipedia = False
+        show_feedback = True
+        generate_summaries = True
         summary_depth = 1  # Most concise summaries
         summary_complexity = 1  # Simplest language
 
@@ -320,11 +328,11 @@ def search():
                 logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(db_err)}")
 
             if not api_key_env and api_key_count == 0:
-                logging.error(f[SEARCH_REQ:{search_request_id}] CRITICAL: No SerpAPI keys available! Env: {bool(api_key_env)}, DB: {api_key_count} keys"")
-                flash("Search API key is not configured. Please contact the administrator., danger")
-                return redirect(url_for("index))
+                logging.error(f"[SEARCH_REQ:{search_request_id}] CRITICAL: No SerpAPI keys available! Env: {bool(api_key_env)}, DB: {api_key_count} keys")
+                flash("Search API key is not configured. Please contact the administrator.", "danger")
+                return redirect(url_for("index"))
 
-            logging.info(f[SEARCH_REQ:{search_request_id}] SerpAPI keys available: {api_key_count} in database, environment key: {bool(api_key_env)}")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] SerpAPI keys available: {api_key_count} in database, environment key: {bool(api_key_env)}")
 
             search_results = search_google(
                 query, 
@@ -334,31 +342,31 @@ def search():
                 timeout=30  # 30-second timeout for API requests:
             )
 
-            logging.info(f"[SEARCH_REQ:{search_request_id}] search_google call completed successfully)
-            logging.info(f[SEARCH_REQ:{search_request_id}] Retrieved {len(search_results)} search results"")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] search_google call completed successfully")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Retrieved {len(search_results)} search results")
 
         except TimeoutError as te:
             # Handle timeout specifically with user-friendly message
-            logging.error(f"[SEARCH_REQ:{search_request_id}] TimeoutError: {str(te)})
-            flash(The search took too long to complete. Please try a more specific search query or try again later."", "warning)
-            return redirect(url_for(index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] TimeoutError: {str(te)}")
+            flash("The search took too long to complete. Please try a more specific search query or try again later.", "warning")
+            return redirect(url_for("index"))
         except ValueError as ve:
             # Handle API key or parameter errors with specific message
-            logging.error(f"[SEARCH_REQ:{search_request_id}] ValueError: {str(ve)})
-            flash(fSearch API error: {str(ve)}"", "danger)
-            return redirect(url_for(index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] ValueError: {str(ve)}")
+            flash(f"Search API error: {str(ve)}", "danger")
+            return redirect(url_for("index"))
         except ConnectionError as ce:
             # Handle network connection issues
-            logging.error(f"[SEARCH_REQ:{search_request_id}] ConnectionError: {str(ce)})
-            flash(Network connection error. Please check your internet connection and try again."", "warning)
-            return redirect(url_for(index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] ConnectionError: {str(ce)}")
+            flash("Network connection error. Please check your internet connection and try again.", "warning")
+            return redirect(url_for("index"))
         except Exception as e:
             # Generic handler for other exceptions:
-            logging.error(f"[SEARCH_REQ:{search_request_id}] Unexpected error in search_google: {str(e)})
-            logging.error(f[SEARCH_REQ:{search_request_id}] Exception type: {type(e).__name__}"")
-            logging.error(f"[SEARCH_REQ:{search_request_id}] Exception traceback: {traceback.format_exc()})
-            flash(An error occurred while processing your search. Please try again later."", "danger):
-            return redirect(url_for(index"))
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Unexpected error in search_google: {str(e)}")
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Exception type: {type(e).__name__}")
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Exception traceback: {traceback.format_exc()}")
+            flash("An error occurred while processing your search. Please try again later.", "danger")
+            return redirect(url_for("index"))
 
         # Check if any of the search results were from Wikipedia before filtering:
         has_wikipedia_results = any(
@@ -367,8 +375,8 @@ def search():
         ) if hide_wikipedia else False:
 
         if not search_results:
-            flash("No search results found, info")
-            return render_template("results.html, query=query, results=[], 
+            flash("No search results found", "info")
+            return render_template("results.html", query=query, results=[], 
                                   show_feedback=not show_feedback, 
                                   research_mode=research_mode,
                                   wikipedia_popup=False)
@@ -389,9 +397,9 @@ def search():
             db.session.add(new_search)
             db.session.commit()
             search_saved = True  # Mark as saved successfully
-            logging.info(fSaved search query to database: {query}")
+            logging.info(f"Saved search query to database: {query}")
         except Exception as db_error:
-            logging.error(f"Error saving search query to database: {str(db_error)})
+            logging.error(f"Error saving search query to database: {str(db_error)}")
             try:
                 db.session.rollback()
             except:
@@ -399,24 +407,24 @@ def search():
 
         # Process each search result to get summaries
         processed_results = []
-        logging.debug(fFound {len(search_results)} search results to process"")
+        logging.debug(f"Found {len(search_results)} search results to process")
 
         for index, result in enumerate(search_results):
             try:
                 # Create a unique ID for each result processing:
-                result_id = f"{search_request_id}-{index+1}
-                link = result.get(link', '')
+                result_id = f"{search_request_id}-{index+1}"
+                link = result.get('link', '')
                 title = result.get('title', 'Untitled')
 
-                logging.info(f""[RESULT:{result_id}] Processing: {title[:30]}... ({link})")
+                logging.info(f"[RESULT:{result_id}] Processing: {title[:30]}... ({link})")
 
                 # Extract text content from the website with timeout - robust approach
                 try:
-                    logging.debug(f[RESULT:{result_id}] Scraping website)
+                    logging.debug(f"[RESULT:{result_id}] Scraping website")
                     # Use our improved scraper that uses BeautifulSoup as primary and trafilatura as fallback
                     content = scrape_website(link, timeout=15)  # 15-second timeout for website scraping:
                     content_length = len(content)
-                    logging.debug(f"[RESULT:{result_id}] Successfully scraped content, length: {content_length}"")
+                    logging.debug(f"[RESULT:{result_id}] Successfully scraped content, length: {content_length}")
                 except Exception as scrape_error:
                     logging.error(f[RESULT:{result_id}] Error scraping: {str(scrape_error)})
                     content = f"Error accessing website: {result['description']}""
