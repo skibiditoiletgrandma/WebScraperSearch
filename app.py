@@ -48,12 +48,12 @@ if not app.secret_key or len(app.secret_key) < 32:
 
 # Configure database connection and setup function for dynamic configuration
 def configure_database(app_instance, force_refresh=False):
-    """Configure database connection dynamically
+    """"""Configure database connection dynamically
     
     Args:
         app_instance: The Flask application instance
         force_refresh: Whether to refresh the connection even if already configured
-    """
+    """""""""""
     database_url = os.environ.get("DATABASE_URL")  # Check for database URL
     
     # Skip if already configured with a database URL and not forcing refresh
