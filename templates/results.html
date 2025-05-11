@@ -332,8 +332,8 @@ document.addEventListener('DOMContentLoaded', function() {
         clearAndHideAllSections();
         
         // Display personalized history
-        if (groupedSuggestions.history && groupedSuggestions.history.length > 0) {
-            displaySectionItems(personalHistoryList, personalHistorySection, groupedSuggestions.history);
+        if (groupedSuggestions.personalized && groupedSuggestions.personalized.length > 0) {
+            displaySectionItems(personalHistoryList, personalHistorySection, groupedSuggestions.personalized);
         }
         
         // Display trending searches
@@ -346,15 +346,20 @@ document.addEventListener('DOMContentLoaded', function() {
             displaySectionItems(topicsList, topicsSection, groupedSuggestions.topic);
         }
         
-        // Display query improvements (combining different improvement types)
-        const improvements = [
-            ...(groupedSuggestions.improved || []),
-            ...(groupedSuggestions.expanded || []),
-            ...(groupedSuggestions.operator || [])
-        ];
+        // Display query improvements
+        if (groupedSuggestions.improved) {
+            displaySectionItems(queryImprovementsList, queryImprovementsSection, groupedSuggestions.improved);
+        }
         
-        if (improvements.length > 0) {
-            displaySectionItems(queryImprovementsList, queryImprovementsSection, improvements);
+        // Display expanded and operator suggestions
+        if (groupedSuggestions.expanded || groupedSuggestions.operator) {
+            const improvements = [
+                ...(groupedSuggestions.expanded || []),
+                ...(groupedSuggestions.operator || [])
+            ];
+            if (improvements.length > 0) {
+                displaySectionItems(queryImprovementsList, queryImprovementsSection, improvements);
+            }
         }
     }
     

@@ -440,8 +440,10 @@ def get_suggestions_for_ui(query: str, db=None, user_id=None) -> List[Dict]:
     recommendations = {
         "personalized": personal_history,
         "trending": trending_searches,
-        "query_improvements": query_improvements[:5],  # Limit to top 5
-        "related_topics": topic_suggestions
+        "improved": query_improvements[:5],  # Limit to top 5
+        "topic": topic_suggestions,
+        "expanded": suggestions_dict.get("expanded_queries", [])[:3],
+        "operator": suggestions_dict.get("operator_suggestions", [])[:2]
     }
     
     # Flatten for backward compatibility with existing JavaScript
