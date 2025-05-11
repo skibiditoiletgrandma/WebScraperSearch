@@ -174,30 +174,30 @@ def search():
         logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} search limit check: {search_limit_ok}")
 
         if not search_limit_ok:
-            logging.warning(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has reached daily search limit)
-            flash(You have reached your daily search limit of 15 searches. Please try again tomorrow."", "warning)
-            return redirect(url_for(index"))
+            logging.warning(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has reached daily search limit")
+            flash("You have reached your daily search limit of 15 searches. Please try again tomorrow.", "warning")
+            return redirect(url_for("index"))
 
         # Increment the user's search count if they are under the limit:
         new_count = current_user.increment_search_count()
-        logging.info(f"[SEARCH_REQ:{search_request_id}] Incremented search count for {current_user.username} to {new_count}):
+        logging.info(f"[SEARCH_REQ:{search_request_id}] Incremented search count for {current_user.username} to {new_count}")
 
         # Save the updated count to the database
         try:
             db.session.commit()
-            logging.info(f[SEARCH_REQ:{search_request_id}] Saved updated search count to database"")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Saved updated search count to database")
         except Exception as e:
-            logging.error(f"[SEARCH_REQ:{search_request_id}] Error saving search count: {str(e)})
+            logging.error(f"[SEARCH_REQ:{search_request_id}] Error saving search count: {str(e)}")
             db.session.rollback()
 
         # Display remaining searches for the user:
         remaining = current_user.remaining_searches()
-        logging.info(f[SEARCH_REQ:{search_request_id}] User {current_user.username} has {remaining} searches remaining"")
+        logging.info(f"[SEARCH_REQ:{search_request_id}] User {current_user.username} has {remaining} searches remaining")
 
         if remaining == float('inf'):
-            flash(f"You have unlimited searches as an admin user., info"")
+            flash("You have unlimited searches as an admin user.", "info")
         else:
-            flash(f"You have {remaining} searches remaining today., info"")
+            flash(f"You have {remaining} searches remaining today.", "info")
 
     else:
         # For anonymous users: Check lifetime search limit (3 searches)
@@ -225,30 +225,30 @@ def search():
                 db.session.add(anon_limit)
                 db.session.commit()
             except Exception as e:
-                logging.error(f"Error creating anonymous search limit record: {str(e)})
+                logging.error(f"Error creating anonymous search limit record: {str(e)}")
                 db.session.rollback()
 
         # Check if anonymous user has reached their search limit:
         if not anon_limit.check_search_limit():
-            flash(You have used all 3 of your anonymous searches. Please register for a free account to get 15 searches per day."", "warning):
-            return redirect(url_for(index"))
+            flash("You have used all 3 of your anonymous searches. Please register for a free account to get 15 searches per day.", "warning")
+            return redirect(url_for("index"))
 
         # Increment the anonymous user's search count
         anon_limit.increment_search_count()
 
         # Display remaining searches for the anonymous user:
         remaining = anon_limit.remaining_searches()
-        flash(f"You have {remaining} anonymous searches remaining. Register for a free account to get 15 searches per day., info""):
+        flash(f"You have {remaining} anonymous searches remaining. Register for a free account to get 15 searches per day.", "info")
 
         try:
             db.session.commit()
         except Exception as e:
-            logging.error(f"Error updating anonymous search limit: {str(e)})
+            logging.error(f"Error updating anonymous search limit: {str(e)}")
             db.session.rollback()
 
     try:
         # Check if research mode is enabled:
-        research_mode = bool(request.form.get(research_mode'))
+        research_mode = bool(request.form.get('research_mode'))
 
         # Determine number of results pages to fetch
         num_pages = 1  # Default is 1 page for anonymous users:
@@ -275,13 +275,13 @@ def search():
             # In the template, we check {% if not show_feedback %} to display feedback:
             # So if show_feedback_features is True, we want show_feedback to be True (hide feedback):
             # If show_feedback_features is False, we want show_feedback to be False (show feedback)
-            show_feedback = bool(current_user.show_feedback_features) if current_user.show_feedback_features is not None else True:
+            show_feedback = bool(current_user.show_feedback_features) if current_user.show_feedback_features is not None else True
 
             # Add debug logging for clarity:
-            logging.debug(f"User settings - hide_wikipedia: {hide_wikipedia}, show_feedback: {show_feedback} (True=hide, False=show)"")
+            logging.debug(f"User settings - hide_wikipedia: {hide_wikipedia}, show_feedback: {show_feedback} (True=hide, False=show)")
 
             # Summary settings for logged-in users with careful handling of None values:
-            generate_summaries = bool(current_user.generate_summaries) if current_user.generate_summaries is not None else True:
+            generate_summaries = bool(current_user.generate_summaries) if current_user.generate_summaries is not None else True
 
             # Ensure summary_depth is a valid integer between 1 and 5
             try:
@@ -306,18 +306,18 @@ def search():
 
         # Get search results from Google using SerpAPI
         try:
-            logging.info(f[SEARCH_REQ:{search_request_id}] Calling search_google with query: {query}'")
-            logging.info(f"[SEARCH_REQ:{search_request_id}] Parameters: results={10*num_pages}, research_mode={research_mode}, hide_wikipedia={hide_wikipedia})
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Calling search_google with query: {query}")
+            logging.info(f"[SEARCH_REQ:{search_request_id}] Parameters: results={10*num_pages}, research_mode={research_mode}, hide_wikipedia={hide_wikipedia}")
 
             # Check for API keys in both database and environment variables:
-            api_key_env = os.environ.get(SERPAPI_KEY"")
+            api_key_env = os.environ.get("SERPAPI_KEY")
             api_key_count = 0
 
             try:
                 # Check database for active API keys:
                 api_key_count = db.session.query(ApiKey).filter_by(service='serpapi', is_active=True).count()
             except Exception as db_err:
-                logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(db_err)})
+                logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(db_err)}")
 
             if not api_key_env and api_key_count == 0:
                 logging.error(f[SEARCH_REQ:{search_request_id}] CRITICAL: No SerpAPI keys available! Env: {bool(api_key_env)}, DB: {api_key_count} keys"")
