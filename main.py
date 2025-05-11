@@ -15,7 +15,7 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 
 # Add startup message
-logging.info("======= Starting application =======)
+logging.info("======= Starting application =======")
 
 # Check for SerpAPI key availability (env var or database):
 env_key = bool(os.environ.get(SERPAPI_KEY'))
