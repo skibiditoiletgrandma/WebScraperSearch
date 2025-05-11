@@ -61,9 +61,9 @@ def check_user_token():
             # Log for debugging:
             logging.info(f"[AUTH:{auth_check_id}] Successfully auto-logged in user {user.username} using remember token")
         else:
-            logging.warning(f[AUTH:{auth_check_id}] No user found with the token {token[:10]}...)
+            logging.warning(f"[AUTH:{auth_check_id}] No user found with the token {token[:10]}...")
     else:
-        logging.debug(f"[AUTH:{auth_check_id}] No remember token found in cookies"")
+        logging.debug(f"[AUTH:{auth_check_id}] No remember token found in cookies")
 
 # Admin required decorator
 def admin_required(f):
@@ -85,9 +85,9 @@ def index():
         api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
         if api_key_count > 0:
             has_api_key = True
-            logging.info(f"Index page: Found {api_key_count} active SerpAPI keys in database"")
+            logging.info(f"Index page: Found {api_key_count} active SerpAPI keys in database")
     except Exception as e:
-        logging.error(fIndex page: Error checking database for API keys: {str(e)})
+        logging.error(f"Index page: Error checking database for API keys: {str(e)}")
 
     # If no keys in database, check environment variable
     if not has_api_key:
