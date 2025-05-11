@@ -82,7 +82,7 @@ def index():
     """Route for the home page"""
     # Check if any API keys are available
     has_api_key = False
-    
+
     # First check for API keys in the database
     try:
         api_key_count = ApiKey.query.filter_by(service='serpapi', is_active=True).count()
@@ -91,7 +91,7 @@ def index():
             logging.info(f"Index page: Found {api_key_count} active SerpAPI keys in database")
     except Exception as e:
         logging.error(f"Index page: Error checking database for API keys: {str(e)}")
-    
+
     # If no keys in database, check environment variable
     if not has_api_key:
         has_api_key = bool(os.environ.get("SERPAPI_KEY"))
@@ -146,7 +146,7 @@ def search():
 
     # Check if any API keys are available
     has_api_key = False
-    
+
     # First check for API keys in the database
     try:
         from models import ApiKey
@@ -156,7 +156,7 @@ def search():
             logging.info(f"[SEARCH_REQ:{search_request_id}] Found {api_key_count} active SerpAPI keys in database")
     except Exception as e:
         logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(e)}")
-    
+
     # If no keys in database, check environment variable
     if not has_api_key:
         api_key = os.environ.get("SERPAPI_KEY")
@@ -316,13 +316,13 @@ def search():
             # Check for API keys in both database and environment variables
             api_key_env = os.environ.get("SERPAPI_KEY")
             api_key_count = 0
-            
+
             try:
                 # Check database for active API keys
                 api_key_count = db.session.query(ApiKey).filter_by(service='serpapi', is_active=True).count()
             except Exception as db_err:
                 logging.error(f"[SEARCH_REQ:{search_request_id}] Error checking database for API keys: {str(db_err)}")
-            
+
             if not api_key_env and api_key_count == 0:
                 logging.error(f"[SEARCH_REQ:{search_request_id}] CRITICAL: No SerpAPI keys available! Env: {bool(api_key_env)}, DB: {api_key_count} keys")
                 flash("Search API key is not configured. Please contact the administrator.", "danger")
@@ -522,7 +522,7 @@ def search():
                               show_feedback=not show_feedback,
                               wikipedia_popup=has_wikipedia_results,
                               generate_summaries=generate_summaries,
-                              enable_suggestions=current_user.enable_suggestions if current_user.is_authenticated and current_user.enable_suggestions is not None else True)
+                              enable_suggestions=current_user.enable_suggestions if current_user.is_authenticated else True)
 
     except Exception as e:
         error_details = traceback.format_exc()
@@ -809,11 +809,11 @@ def view_feedback():
 def manage_api_keys():
     """Admin interface for managing API keys"""
     from models import ApiKey
-    
+
     # Handle form submission for adding a new key
     if request.method == "POST":
         action = request.form.get("action")
-        
+
         if action == "add":
             # Add a new API key
             service = request.form.get("service")
@@ -821,7 +821,7 @@ def manage_api_keys():
             name = request.form.get("name")
             is_active = True if request.form.get("is_active") else False
             priority = int(request.form.get("priority", 0))
-            
+
             if not service or not key:
                 flash("Service and Key are required fields.", "danger")
             else:
@@ -835,7 +835,7 @@ def manage_api_keys():
                 db.session.add(new_key)
                 db.session.commit()
                 flash(f"API Key added successfully: {name if name else key[:8]}...", "success")
-                
+
         elif action == "update":
             # Update an existing API key
             key_id = request.form.get("key_id")
@@ -849,7 +849,7 @@ def manage_api_keys():
                     flash(f"API Key updated successfully: {key.name if key.name else key.key[:8]}...", "success")
                 else:
                     flash("API Key not found", "danger")
-                    
+
         elif action == "delete":
             # Delete an API key
             key_id = request.form.get("key_id")
@@ -861,19 +861,19 @@ def manage_api_keys():
                     flash(f"API Key deleted successfully", "success")
                 else:
                     flash("API Key not found", "danger")
-                    
+
         return redirect(url_for("manage_api_keys"))
-    
+
     # Get all API keys for display
     api_keys = ApiKey.query.order_by(ApiKey.service, ApiKey.priority).all()
-    
+
     # Group keys by service
     keys_by_service = {}
     for key in api_keys:
         if key.service not in keys_by_service:
             keys_by_service[key.service] = []
         keys_by_service[key.service].append(key)
-    
+
     return render_template("api_keys.html", api_keys=api_keys, keys_by_service=keys_by_service)
 
 @app.route('/login', methods=['GET', 'POST'])
