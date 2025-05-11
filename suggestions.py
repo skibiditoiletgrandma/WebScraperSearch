@@ -34,15 +34,12 @@ try:
 except LookupError:
     nltk.download('stopwords')
 
-try:
-    nltk.data.find('taggers/averaged_perceptron_tagger')
-except LookupError:
-    nltk.download('punkt')
-    nltk.download('wordnet')
-    nltk.download('stopwords')
-    nltk.download('averaged_perceptron_tagger')
-    nltk.download('maxent_ne_chunker')
-    nltk.download('words')
+# Download required NLTK data
+for package in ['punkt', 'wordnet', 'stopwords', 'averaged_perceptron_tagger', 'maxent_ne_chunker', 'words']:
+    try:
+        nltk.data.find(f'tokenizers/{package}')
+    except LookupError:
+        nltk.download(package, quiet=True)
 
 # Load English stopwords
 STOPWORDS = set(stopwords.words('english'))
