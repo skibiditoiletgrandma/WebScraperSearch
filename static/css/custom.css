@@ -416,14 +416,29 @@ img {
     margin-top: 0.25rem;
 }
 
-/* Light theme specific styles for suggestions */
+/* Theme-specific styling for suggestions */
 [data-bs-theme="light"] #suggestions-container .card {
     border-color: rgba(0, 0, 0, 0.125);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+[data-bs-theme="dark"] #suggestions-container .card {
+    border-color: rgba(255, 255, 255, 0.125);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background: rgba(33, 37, 41, 0.95);
+}
+
 [data-bs-theme="light"] #suggestions-list .list-group-item:hover {
     background-color: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+[data-bs-theme="dark"] #suggestions-list .list-group-item:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.15);
+}
+
+[data-bs-theme="dark"] .list-group-item {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.125);
 }
 
 /* Share functionality */
@@ -533,70 +548,70 @@ img {
         padding-left: 0.5rem;
         padding-right: 0.5rem;
     }
-    
+
     /* Typography scaling for mobile only */
     body {
         font-size: 0.85rem;
     }
-    
+
     h1 {
         font-size: 1.5rem;
     }
-    
+
     h2 {
         font-size: 1.25rem;
     }
-    
+
     h3 {
         font-size: 1.1rem;
     }
-    
+
     h4, h5, h6 {
         font-size: 1rem;
     }
-    
+
     .card-title {
         font-size: 1rem;
     }
-    
+
     .card-subtitle {
         font-size: 0.85rem;
     }
-    
+
     /* Mobile-only tight component spacing */
     .card {
         margin-bottom: 0.5rem;
     }
-    
+
     .card-body {
         padding: 0.6rem;
     }
-    
+
     .card-header {
         padding: 0.4rem 0.6rem;
     }
-    
+
     /* Input and form elements on mobile */
     .form-control {
         font-size: 0.85rem;
         padding: 0.3rem 0.4rem;
         height: auto;
     }
-    
+
     .btn {
         font-size: 0.8rem;
         padding: 0.3rem 0.5rem;
     }
-    
+
     /* Theme toggle mobile simplification */
     #theme-toggle span {
         display: none;
     }
-    
+
     #theme-toggle {
         padding: 0.2rem 0.4rem;
     }
-    
+
     /* Settings page mobile optimization */
     .summary-controls .form-control,
     #search_pages_limit {
@@ -605,33 +620,33 @@ img {
         padding-right: 0.2rem;
         text-align: center;
     }
-    
+
     .summary-controls .d-flex {
         gap: 0.25rem;
     }
-    
+
     .summary-controls span.text-muted {
         font-size: 0.75rem;
     }
-    
+
     /* Result cards mobile optimization */
     .summary-content {
         font-size: 0.8rem;
         line-height: 1.4;
     }
-    
+
     /* Adjust mobile spacing for description text */
     .text-muted {
         font-size: 0.75rem;
         line-height: 1.3;
     }
-    
+
     /* Navbar mobile compacting */
     .navbar-brand {
         font-size: 1rem;
         padding: 0.2rem 0;
     }
-    
+
     .nav-link {
         padding: 0.2rem 0.4rem;
         font-size: 0.85rem;
@@ -645,25 +660,25 @@ img {
         padding-left: 0.75rem;
         padding-right: 0.75rem;
     }
-    
+
     h1 {
         font-size: 1.75rem;
     }
-    
+
     h2 {
         font-size: 1.4rem;
     }
-    
+
     .card-body {
         padding: 0.75rem;
     }
-    
+
     /* Settings page tablet optimization */
     .summary-controls .form-control,
     #search_pages_limit {
         max-width: 45px !important;
     }
-    
+
     .summary-controls span.text-muted {
         font-size: 0.85rem;
     }
@@ -675,24 +690,24 @@ img {
     #theme-toggle span {
         display: none;
     }
-    
+
     /* Stack share buttons */
     .share-buttons {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
-    
+
     .share-buttons .badge {
         margin-left: 0 !important;
         margin-top: 0.25rem;
     }
-    
+
     /* Dropdown menus */
     .dropdown-menu {
         min-width: auto;
     }
-    
+
     /* Form inputs */
     .input-group {
         flex-wrap: nowrap;

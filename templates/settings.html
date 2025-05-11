@@ -15,9 +15,6 @@
 
                     <h3 class="h5 mt-3 mb-3 border-bottom pb-2"><i class="fas fa-search me-2"></i>Search Settings</h3>
 
-                    
-                    
-
                     <div class="mb-3 form-check">
                         {{ form.hide_wikipedia(class="form-check-input") }}
                         {{ form.hide_wikipedia.label(class="form-check-label") }}
@@ -198,15 +195,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const summaryDepth = document.getElementById('summary_depth');
     const summaryComplexityRange = document.getElementById('summary_complexity_range');
     const summaryComplexity = document.getElementById('summary_complexity');
-    
+
     if (searchPagesRange && searchPagesLimit) {
         searchPagesRange.value = searchPagesLimit.value;
     }
-    
+
     if (summaryDepthRange && summaryDepth) {
         summaryDepthRange.value = summaryDepth.value;
     }
-    
+
     if (summaryComplexityRange && summaryComplexity) {
         summaryComplexityRange.value = summaryComplexity.value;
     }
@@ -269,11 +266,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.addEventListener('DOMContentLoaded', function() {
                             const summaryDepth = document.getElementById('summary_depth');
                             const summaryComplexity = document.getElementById('summary_complexity');
-                            
+
                             if (summaryDepth) {
                                 updateDepthGuide(summaryDepth.value);
                             }
-                            
+
                             if (summaryComplexity) {
                                 updateComplexityGuide(summaryComplexity.value);
                             }
