@@ -12,4 +12,4 @@ content = content.replace('if has_db and db is not None:\n\n                    
 with open('scraper.py', 'w') as file:
     file.write(content)
 
-print("Fixed formatting issues in scraper.py")
+print("Fixed for matting issues  in scraper.py")
