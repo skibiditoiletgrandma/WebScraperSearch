@@ -1,0 +1,69 @@
+import logging
+import traceback
+import time
+import os
+import uuid
+import io
+import requests
+from datetime import datetime, timedelta
+from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session, send_file, make_response
+from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
+import concurrent.futures
+from concurrent.futures import TimeoutError
+from flask_login import login_user, logout_user, current_user, login_required
+from app import app, db
+from models import User, SearchQuery, SearchResult, ApiKey
+from forms import LoginForm, RegistrationForm
+
+# Function to handle timeout errors
+@app.errorhandler(TimeoutError)
+def timeout_error_handler(e):
+    error_msg = str(e) or "The operation timed out"
+    logging.error(f"Timeout error: {error_msg}")
+    return render_template("error.html", error=error_msg, status_code=408), 408
+
+# Handle all other exceptions
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logging.error(f"Unhandled exception: {str(e)}")
+
+    # Pass through HTTP errors
+    if isinstance(e, HTTPException):
+        return e
+
+    # Handle timeout errors with a specific template and status code
+    if isinstance(e, TimeoutError) or "timeout" in str(e).lower() or "time out" in str(e).lower():
+        return timeout_error_handler(e)
+
+    # Handle API key errors with a specific template
+    if "api key" in str(e).lower() or "authentication" in str(e).lower():
+        return render_template("error.html", error=f"API Configuration Error: {str(e)}", status_code=503), 503
+
+    # Try to handle database schema errors
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+    if isinstance(e, (OperationalError, ProgrammingError)):
+        try:
+            # Import update functions
+            from fix_missing_columns import fix_missing_columns
+            from update_schema import update_database_schema
+            
+            # Try to fix schema issues
+            if "column" in str(e).lower() and "not exist" in str(e).lower():
+                fix_missing_columns()
+                flash("Database schema has been updated. Please try again.", "info")
+            else:
+                update_database_schema()
+                flash("Database schema has been updated. Please try again.", "info")
+                
+            # Redirect to home page
+            return redirect(url_for("index"))
+        except Exception as fix_error:
+            logging.error(f"Failed to fix database error: {fix_error}")
+            
+    # Default error handling with full traceback for 500 errors
+    tb = traceback.format_exc()
+    logging.error(f"Exception traceback: {tb}")
+    return render_template("error.html", error=str(e), status_code=500), 500
+
+# Test that this code works
+print("Temporary error handler code loaded successfully!")
