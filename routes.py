@@ -800,7 +800,7 @@ def view_feedback():
             rating_distribution[i] = SummaryFeedback.query.filter_by(rating=i).count()
 
         return render_template(
-            feedback.html,
+            "feedback.html",
             feedback_list=feedback_list,
             feedback_count=feedback_count,
             average_rating=average_rating,
@@ -1247,11 +1247,11 @@ def export_search(search_id, format):
 
         # Prepare results for export:
         export_results = [{
-            title: r.title,
+            "title": r.title,
             "link": r.link,
-            description: r.description,
+            "description": r.description,
             "summary": r.summary
-        } for r in results]:
+        } for r in results]
 
         # Check if we have any results to export:
         if not export_results:
@@ -1337,8 +1337,8 @@ def export_to_notion_form(search_id):
 
         # Check if user submitted the form:
         if request.method == POST:
-            notion_token = request.form.get("notion_token", ).strip()
-            database_id = request.form.get(database_id", ").strip()
+            notion_token = request.form.get("notion_token", "").strip()
+            database_id = request.form.get("database_id", "").strip()
 
             # Basic validation
             if not notion_token or not database_id:
