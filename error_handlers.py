@@ -1,23 +1,14 @@
 import logging
 import traceback
-import time
-import os
-import uuid
-import io
-import requests
-from datetime import datetime, timedelta
-from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session, send_file, make_response
-from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
-import concurrent.futures
+from flask import render_template, request, redirect, url_for, flash
+from werkzeug.exceptions import HTTPException
 from concurrent.futures import TimeoutError
-from flask_login import login_user, logout_user, current_user, login_required
-from app import app, db
-from models import User, SearchQuery, SearchResult, ApiKey
-from forms import LoginForm, RegistrationForm
+from app import app
 
 # Function to handle timeout errors
 @app.errorhandler(TimeoutError)
 def timeout_error_handler(e):
+    """Handle timeout errors specifically"""
     error_msg = str(e) or "The operation timed out"
     logging.error(f"Timeout error: {error_msg}")
     return render_template("error.html", error=error_msg, status_code=408), 408
@@ -25,6 +16,7 @@ def timeout_error_handler(e):
 # Handle all other exceptions
 @app.errorhandler(Exception)
 def handle_exception(e):
+    """Handle all other exceptions"""
     logging.error(f"Unhandled exception: {str(e)}")
 
     # Pass through HTTP errors
@@ -64,6 +56,3 @@ def handle_exception(e):
     tb = traceback.format_exc()
     logging.error(f"Exception traceback: {tb}")
     return render_template("error.html", error=str(e), status_code=500), 500
-
-# Test that this code works
-print("Temporary error handler code loaded successfully!")

@@ -7,8 +7,8 @@ import io
 import requests
 from datetime import datetime, timedelta
 from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session, send_file, make_response
-from werkzeug.exceptions import HTTPException, NotFound, InternalServerError, Timeout as TimeoutError  # For error handling
-import concurrent.futures  # For TimeoutError
+from werkzeug.exceptions import HTTPException, NotFound, InternalServerError  # For error handling
+import concurrent.futures  # For concurrent execution
 from concurrent.futures import TimeoutError
 from flask_login import login_user, logout_user, current_user, login_required
 from exporters import export_to_pdf, export_to_markdown, export_to_notion
@@ -670,7 +670,7 @@ def page_not_found(e):
 def server_error(e):
     """Handle 500 errors and attempt automatic fixes"""
     logging.error(f"500 error: {str(e)}")
-"""
+    
     try:
         # Import and run the fix scripts
         from update_all_fixes import main as run_all_fixes
@@ -685,7 +685,7 @@ def server_error(e):
 
         if any(fix_results):
             # If any fix was successful, inform the user
-            flash("The system has attempted to fix the error automatically. Please try your request again., info")
+            flash("The system has attempted to fix the error automatically. Please try your request again.", "info")
             # Try to get the referrer URL, fallback to index
             referrer = request.referrer or url_for('index')
             return redirect(referrer)
@@ -697,7 +697,7 @@ def server_error(e):
     return render_template("error.html", error="Internal server error", status_code=500), 500
 
 @app.errorhandler(TimeoutError)
-def timeout_error(e):
+def timeout_error_handler(e):
     """Handle timeout errors specifically"""
     error_msg = str(e) or "The operation timed out"
     logging.error(f"Timeout error: {error_msg}")
@@ -714,7 +714,7 @@ def handle_exception(e):
 
     # Handle timeout errors with a specific template and status code
     if isinstance(e, TimeoutError) or "timeout" in str(e).lower() or "time out" in str(e).lower():
-        return timeout_error(e)
+        return timeout_error_handler(e)
 
     # Handle API key errors with a specific template
     if "api key" in str(e).lower() or "authentication" in str(e).lower():
@@ -727,17 +727,17 @@ def handle_exception(e):
         if handle_db_error(e):
             # If the error was successfully handled, redirect to the previous page
             logging.info("Database error was automatically fixed, redirecting...")
-            flash(The system has been updated. Please try again., "info")
+            flash("The system has been updated. Please try again.", "info")
             # Try to get the referrer URL
             referrer = request.referrer or url_for('index')
             return redirect(referrer)
 
     # Handle connection errors with a user-friendly message
-    if isinstance(e, ConnectionError) or connection in str(e).lower():
-        return render_template("error.html", error=Network connection error. Please check your internet connection., status_code=503), 503
+    if isinstance(e, ConnectionError) or "connection" in str(e).lower():
+        return render_template("error.html", error="Network connection error. Please check your internet connection.", status_code=503), 503
 
     # Handle non-HTTP exceptions with 500 error
-    return render_template("error.html", error=fServer error: {str(e)}, status_code=500), 500
+    return render_template("error.html", error=f"Server error: {str(e)}", status_code=500), 500
 
 @app.route("/feedback/<int:result_id>", methods=["POST"])
 def submit_feedback(result_id):
@@ -770,12 +770,14 @@ def submit_feedback(result_id):
     except Exception as e:
         logging.error(f"Error submitting feedback: {str(e)}")
         flash("Unable to submit feedback", "danger")
-        return redirect(url_for("history))
+        return redirect(url_for("history"))
 
-@app.route(/feedback")
+@app.route("/feedback")
+@login_required
 @admin_required
 def view_feedback():
-    ""View all feedback for developers - admin only""""""     try:
+    """View all feedback for developers - admin only"""
+    try:
         # Get all feedback with related search results
         feedback_list = SummaryFeedback.query.order_by(SummaryFeedback.timestamp.desc()).limit(50).all()
 
@@ -843,43 +845,43 @@ def manage_api_keys():
                 )
                 db.session.add(new_key)
                 db.session.commit()
-                flash(f"API Key added successfully: {name if name else key[:8]}..., success"")
+                flash(f"API Key added successfully: {name if name else key[:8]}...", "success")
 
-        elif action == "update:
+        elif action == "update":
             # Update an existing API key
-            key_id = request.form.get(key_id")
+            key_id = request.form.get("key_id")
             if key_id:
                 key = ApiKey.query.get(key_id)
                 if key:
-                    key.name = request.form.get("name)
-                    key.is_active = True if request.form.get(is_active") else False:
-                    key.priority = int(request.form.get("priority, 0))
+                    key.name = request.form.get("name")
+                    key.is_active = True if request.form.get("is_active") else False
+                    key.priority = int(request.form.get("priority", 0))
                     db.session.commit()
-                    flash(fAPI Key updated successfully: {key.name if key.name else key.key[:8]}...", "success)
+                    flash(f"API Key updated successfully: {key.name if key.name else key.key[:8]}...", "success")
                 else:
-                    flash(API Key not found", "danger)
+                    flash("API Key not found", "danger")
 
-        elif action == delete":
+        elif action == "delete":
             # Delete an API key
-            key_id = request.form.get("key_id)
+            key_id = request.form.get("key_id")
             if key_id:
                 key = ApiKey.query.get(key_id)
                 if key:
                     db.session.delete(key)
                     db.session.commit()
-                    flash(fAPI Key deleted successfully", "success)
+                    flash("API Key deleted successfully", "success")
                 else:
-                    flash(API Key not found", "danger)
+                    flash("API Key not found", "danger")
 
         # Return JSON response for AJAX requests:
-        if request.headers.get(X-Requested-With') == 'XMLHttpRequest':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             if action == "toggle" and key:
                 return jsonify({
-                    success: True,
+                    "success": True,
                     "is_active": key.is_active,
-                    message: "API key updated successfully"
+                    "message": "API key updated successfully"
                 })
-            return jsonify({success: False, "error": Operation failed})
+            return jsonify({"success": False, "error": "Operation failed"})
 
         return redirect(url_for("manage_api_keys"))
 
@@ -893,41 +895,42 @@ def manage_api_keys():
             keys_by_service[key.service] = []
         keys_by_service[key.service].append(key)
 
-    return render_template(api_keys.html, api_keys=api_keys, keys_by_service=keys_by_service)
+    return render_template("api_keys.html", api_keys=api_keys, keys_by_service=keys_by_service)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    ""User login route""     # Generate a unique ID for this login attempt:
+    """User login route"""
+    # Generate a unique ID for this login attempt:
     import uuid
     login_id = str(uuid.uuid4())[:8]
-    logging.info(f"[LOGIN:{login_id}] User login page accessed"")
+    logging.info(f"[LOGIN:{login_id}] User login page accessed")
 
     if current_user.is_authenticated:
-        logging.info(f[LOGIN:{login_id}] User already authenticated as {current_user.username}, redirecting to home)
+        logging.info(f"[LOGIN:{login_id}] User already authenticated as {current_user.username}, redirecting to home")
         return redirect(url_for('index'))
 
     form = LoginForm()
     if form.validate_on_submit():
-        logging.info(f"[LOGIN:{login_id}] Login form submitted with username: {form.username.data}"")
+        logging.info(f"[LOGIN:{login_id}] Login form submitted with username: {form.username.data}")
 
         user = User.query.filter_by(username=form.username.data).first()
 
         if user is None:
-            logging.warning(f[LOGIN:{login_id}] No user found with username: {form.username.data})
+            logging.warning(f"[LOGIN:{login_id}] No user found with username: {form.username.data}")
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
 
         if not user.check_password(form.password.data):
-            logging.warning(f"[LOGIN:{login_id}] Invalid password for user: {user.username}"")
+            logging.warning(f"[LOGIN:{login_id}] Invalid password for user: {user.username}")
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
 
-        logging.info(f[LOGIN:{login_id}] Valid credentials for user: {user.username} (ID: {user.id}))
+        logging.info(f"[LOGIN:{login_id}] Valid credentials for user: {user.username} (ID: {user.id})")
 
         try:
             # Generate a new auth token for the user:
             auth_token = user.get_auth_token()
-            logging.info(f"[LOGIN:{login_id}] Generated auth token for {user.username}: {auth_token[:15]}..."")
+            logging.info(f"[LOGIN:{login_id}] Generated auth token for {user.username}: {auth_token[:15]}...")
 
             # Update last login time and remember token in the database
             db.session.query(User).filter_by(id=user.id).update({
@@ -935,23 +938,26 @@ def login():
                 User.remember_token: auth_token
             })
 
-            logging.info(f[LOGIN:{login_id}] Updated last login time and remember token for {user.username}):
+            logging.info(f"[LOGIN:{login_id}] Updated last login time and remember token for {user.username}")
             db.session.commit()
 
             # Log in the user with remember=True and force cookie refresh
             login_user(user, remember=True, force=True, duration=timedelta(days=365))
-
+            
             # Make session permanent (365 days)
             session.permanent = True
             app.permanent_session_lifetime = timedelta(days=365)
 
             # Log the session and cookie details for debugging:
-            logging.debug(f"User {user.username} logged in with remember_token: {auth_token[:10]}..."")
-            logging.debug(fSession cookie set to permanent: {session.permanent})
-            logging.debug(f"Remember cookie duration: {app.config.get('REMEMBER_COOKIE_DURATION')}"")
+            logging.debug(f"User {user.username} logged in with remember_token: {auth_token[:10]}...")
+            logging.debug(f"Session cookie set to permanent: {session.permanent}")
+            logging.debug(f"Remember cookie duration: {app.config.get('REMEMBER_COOKIE_DURATION')}")
+            
         except Exception as e:
-            logging.error(fError during login persistence: {str(e)})
+            logging.error(f"[LOGIN:{login_id}] Error during login process: {str(e)}")
             db.session.rollback()
+            flash("An error occurred during login. Please try again.", "danger")
+            return redirect(url_for('login'))
 
         # Redirect to requested page or index
         next_page = request.args.get('next')
@@ -965,7 +971,8 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration route""""""     if current_user.is_authenticated:"""
+    """User registration route"""
+    if current_user.is_authenticated:
         return redirect(url_for('index'))
 
     form = RegistrationForm()
@@ -1032,20 +1039,21 @@ def share_summary(result_id):
         ).order_by(SearchResult.rank).limit(5).all()
 
         return render_template(
-            "share_summary.html, 
+            "share_summary.html", 
             result=result, 
             related_results=related_results
         )
 
     except Exception as e:
-        logging.error(fError retrieving shared summary: {str(e)}")
-        flash("Unable to retrieve the requested summary, warning")
-        return redirect(url_for("index))
+        logging.error(f"Error retrieving shared summary: {str(e)}")
+        flash("Unable to retrieve the requested summary", "warning")
+        return redirect(url_for("index"))
 
-@app.route(/api/share/<int:result_id>", methods=["POST])
+@app.route("/api/share/<int:result_id>", methods=["POST"])
 @login_required
 def api_share_summary(result_id):
-    ""API endpoint for sharing a summary""""""     try:
+    """API endpoint for sharing a summary"""
+    try:
         # Get the search result
         result = SearchResult.query.get_or_404(result_id)
 
@@ -1078,21 +1086,21 @@ def get_search_suggestions():
     # Get current user ID if authenticated:
     if current_user.is_authenticated:
         user_id = current_user.id
-        logging.info(f[SUGG:{request_id}] Getting personalized suggestions for user ID: {user_id})
+        logging.info(f"[SUGG:{request_id}] Getting personalized suggestions for user ID: {user_id}")
     else:
-        logging.info(f"[SUGG:{request_id}] Getting general suggestions for anonymous user""):
+        logging.info(f"[SUGG:{request_id}] Getting general suggestions for anonymous user")
 
     try:
         # Get suggestions using our suggestions module with user context
         suggestions = get_suggestions_for_ui(query, db, user_id)
 
         # Log suggestion count
-        logging.debug(f[{request_id}] Generated {len(suggestions)} suggestions)
+        logging.debug(f"[SUGG:{request_id}] Generated {len(suggestions)} suggestions")
 
         # Group suggestions by type for better organization in UI:
         grouped_suggestions = {}
         for suggestion in suggestions:
-            suggestion_type = suggestion.get("type", other)
+            suggestion_type = suggestion.get("type", "other")
             if suggestion_type not in grouped_suggestions:
                 grouped_suggestions[suggestion_type] = []
             grouped_suggestions[suggestion_type].append(suggestion)
@@ -1104,19 +1112,20 @@ def get_search_suggestions():
         })
 
     except Exception as e:
-        logging.error(f[{request_id}] Error generating suggestions: {str(e)})
+        logging.error(f"[SUGG:{request_id}] Error generating suggestions: {str(e)}")
         return jsonify({
             "success": False,
-            error: str(e),
+            "error": str(e),
             "suggestions": []
         })
 
 
-@app.route(/citations, methods=["GET", POST])
+@app.route("/citations", methods=["GET", "POST"])
 def citations():
-    """Citation generator page""""""     form = CitationForm()
+    """Citation generator page"""
+    form = CitationForm()
 
-    # Check if we have a previously stored citation in the session""":
+    # Check if we have a previously stored citation in the session
     citation_result = session.get('citation_result', None)
 
     if form.validate_on_submit():
@@ -1168,16 +1177,18 @@ def citations():
 
 @app.route("/clear-citation")
 def clear_citation():
-    ""Clear the citation from the session""     if 'citation_result' in session:
+    """Clear the citation from the session"""
+    if 'citation_result' in session:
         session.pop('citation_result')
-        flash("Citation cleared.", info)
+        flash("Citation cleared.", "info")
     return redirect(url_for('citations'))
 
 
-@app.route("/settings", methods=[GET, "POST"])
+@app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
-    ""User settings page""     form = SettingsForm()
+    """User settings page"""
+    form = SettingsForm()
 
     # When form is submitted
     if form.validate_on_submit():
@@ -1217,7 +1228,8 @@ def settings():
 
 @app.route("/export/<int:search_id>/<format>")
 def export_search(search_id, format):
-    ""Export search results in various formats (PDF, Markdown, Notion)""     try:
+    """Export search results in various formats (PDF, Markdown, Notion)"""
+    try:
         # Get the search query
         search = SearchQuery.query.get_or_404(search_id)
 

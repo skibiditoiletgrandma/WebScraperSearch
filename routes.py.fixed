@@ -1,0 +1,841 @@
+import logging
+import traceback
+import time
+import os
+import uuid
+import io
+import requests
+from datetime import datetime, timedelta
+from flask import render_template, request, jsonify, flash, redirect, url_for, current_app, session, send_file, make_response
+from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
+import concurrent.futures  # For concurrent execution
+from concurrent.futures import TimeoutError
+from flask_login import login_user, logout_user, current_user, login_required
+from exporters import export_to_pdf, export_to_markdown, export_to_notion
+from functools import wraps
+
+# Import models and forms
+from app import app, db
+from models import User, SearchHistory, SearchResult, ApiKey, SearchSummary, SummaryFeedback
+try:
+    from scraper import scrape_website, fetch_search_results
+except ImportError:
+    logging.error("Failed to import scraper module")
+
+# Import error handling utilities
+try:
+    from db_migrations import handle_db_error
+except ImportError:
+    def handle_db_error(e):
+        """Placeholder for handling database errors"""
+        logging.error(f"Database error: {str(e)}")
+        return False
+
+# Import forms
+try:
+    from forms import (
+        LoginForm, RegistrationForm, SearchForm, SettingsForm, 
+        APIKeyForm, FeedbackForm, ShareSummaryForm
+    )
+except ImportError:
+    logging.error("Failed to import forms")
+
+def generate_request_id():
+    """Generate a unique request ID for tracking"""
+    return str(uuid.uuid4())
+
+def check_user_token():
+    """Check if the user has a valid remember token in the cookie and log them in.
+    This allows for persistent sessions with the remember me functionality"""
+    if current_user.is_authenticated:
+        return
+
+    # Check if remember token exists in cookie
+    token = request.cookies.get('remember_token')
+    if not token:
+        return
+
+    # Try to find user by token
+    try:
+        user = User.query.filter_by(remember_token=token).first()
+        if user and user.token_expiration and user.token_expiration > datetime.utcnow():
+            login_user(user, remember=True)
+            logging.info(f"User {user.username} auto-logged in via remember token")
+    except Exception as e:
+        logging.error(f"Error checking user token: {str(e)}")
+
+def admin_required(f):
+    """Decorator for routes that require admin access"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash("You need admin privileges to access this page.", "error")
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.before_request
+def before_request():
+    """Run before each request"""
+    # Check user token for automatic login
+    check_user_token()
+    
+    # Store request start time for performance monitoring
+    session['request_start_time'] = time.time()
+    
+    # Generate and store a request ID for tracking
+    if 'request_id' not in session:
+        session['request_id'] = generate_request_id()
+
+@app.after_request
+def after_request(response):
+    """Run after each request"""
+    # Calculate and log request processing time
+    if 'request_start_time' in session:
+        duration = time.time() - session['request_start_time']
+        logging.info(f"Request processed in {duration:.4f}s")
+    
+    # Set security headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    return response
+
+@app.route('/')
+def index():
+    """Route for the home page"""
+    form = SearchForm()
+    
+    # Check if we need to display admin functionality
+    is_admin = current_user.is_authenticated and current_user.is_admin
+    
+    # Check API key status
+    api_key_status = False
+    try:
+        api_keys = ApiKey.query.filter_by(service="serpapi", is_active=True).count()
+        api_key_status = api_keys > 0
+    except Exception as e:
+        logging.error(f"Error checking API keys: {str(e)}")
+    
+    # Get current user settings for the form
+    user_settings = None
+    if current_user.is_authenticated:
+        try:
+            user_settings = User.get_search_settings(current_user.id)
+            if user_settings:
+                form.include_summary.data = user_settings.get('include_summary', True)
+                form.summary_type.data = user_settings.get('summary_type', 'concise')
+        except Exception as e:
+            logging.error(f"Error loading user settings: {str(e)}")
+    
+    return render_template('index.html', 
+                          form=form, 
+                          is_admin=is_admin,
+                          api_key_status=api_key_status)
+
+@app.route('/search', methods=['GET', 'POST'])
+def search():
+    """Handle search queries and return results"""
+    form = SearchForm()
+    
+    if request.method == 'POST' and form.validate_on_submit():
+        query = form.search_query.data
+        include_summary = form.include_summary.data
+        summary_type = form.summary_type.data
+        pages_to_read = form.pages_to_read.data if hasattr(form, 'pages_to_read') else 3
+        
+        # Save user preferences if authenticated
+        if current_user.is_authenticated:
+            try:
+                User.update_search_settings(
+                    current_user.id,
+                    {
+                        'include_summary': include_summary,
+                        'summary_type': summary_type,
+                        'pages_to_read': pages_to_read
+                    }
+                )
+            except Exception as e:
+                logging.error(f"Error saving user preferences: {str(e)}")
+        
+        # Create a search history entry
+        search_id = None
+        if current_user.is_authenticated:
+            try:
+                search_history = SearchHistory(
+                    user_id=current_user.id,
+                    query=query,
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(search_history)
+                db.session.commit()
+                search_id = search_history.id
+            except Exception as e:
+                db.session.rollback()
+                logging.error(f"Error creating search history: {str(e)}")
+        
+        # Execute the search and get results
+        try:
+            results = fetch_search_results(query)
+            
+            # Save results to database if we have a search history entry
+            if search_id and results:
+                try:
+                    for i, result in enumerate(results):
+                        search_result = SearchResult(
+                            search_id=search_id,
+                            title=result.get('title', ''),
+                            url=result.get('link', ''),
+                            snippet=result.get('snippet', ''),
+                            position=i+1
+                        )
+                        db.session.add(search_result)
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    logging.error(f"Error saving search results: {str(e)}")
+            
+            # Generate summary if requested
+            summary = None
+            if include_summary and results:
+                try:
+                    from summarizer import generate_summary
+                    summary = generate_summary(query, results, summary_type, pages_to_read)
+                    
+                    # Save summary to database if we have a search history entry
+                    if search_id and summary:
+                        try:
+                            search_summary = SearchSummary(
+                                search_id=search_id,
+                                summary_text=summary,
+                                summary_type=summary_type
+                            )
+                            db.session.add(search_summary)
+                            db.session.commit()
+                        except Exception as e:
+                            db.session.rollback()
+                            logging.error(f"Error saving search summary: {str(e)}")
+                except Exception as e:
+                    logging.error(f"Error generating summary: {str(e)}")
+                    summary = "Sorry, an error occurred while generating the summary."
+            
+            return render_template(
+                'results.html',
+                query=query,
+                results=results,
+                include_summary=include_summary,
+                summary=summary,
+                summary_type=summary_type,
+                search_id=search_id
+            )
+            
+        except Exception as e:
+            logging.error(f"Search error: {str(e)}")
+            error_message = str(e)
+            if "api key" in error_message.lower():
+                error_message = "API key error. Please check your SerpAPI configuration."
+            flash(f"Error: {error_message}", "error")
+            return redirect(url_for('index'))
+    
+    elif request.method == 'GET' and 'query' in request.args:
+        # Handle GET request with query parameter
+        form.search_query.data = request.args.get('query')
+        return render_template('index.html', form=form)
+    
+    # If form validation failed
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Error in {field}: {error}", "error")
+    
+    return redirect(url_for('index'))
+
+@app.route('/history')
+@login_required
+def history():
+    """Display search history"""
+    try:
+        search_history = SearchHistory.query.filter_by(user_id=current_user.id).order_by(SearchHistory.created_at.desc()).all()
+        return render_template('history.html', history=search_history)
+    except Exception as e:
+        logging.error(f"Error retrieving search history: {str(e)}")
+        flash("Error retrieving search history.", "error")
+        return redirect(url_for('index'))
+
+@app.route('/view_search/<int:search_id>')
+@login_required
+def view_search(search_id):
+    """View a specific search and its results"""
+    try:
+        # Retrieve the search history entry
+        search = SearchHistory.query.filter_by(id=search_id, user_id=current_user.id).first_or_404()
+        
+        # Retrieve the search results
+        results = SearchResult.query.filter_by(search_id=search_id).order_by(SearchResult.position).all()
+        
+        # Retrieve the summary if it exists
+        summary = SearchSummary.query.filter_by(search_id=search_id).first()
+        summary_text = summary.summary_text if summary else None
+        summary_type = summary.summary_type if summary else None
+        
+        # Format results for template
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                'title': result.title,
+                'link': result.url,
+                'snippet': result.snippet
+            })
+        
+        return render_template(
+            'results.html',
+            query=search.query,
+            results=formatted_results,
+            include_summary=summary is not None,
+            summary=summary_text,
+            summary_type=summary_type,
+            search_id=search_id,
+            from_history=True
+        )
+    except Exception as e:
+        logging.error(f"Error retrieving search details: {str(e)}")
+        flash("Error retrieving search details.", "error")
+        return redirect(url_for('history'))
+
+@app.route('/export_pdf/<int:search_id>')
+@login_required
+def export_pdf(search_id):
+    """Export search results to PDF"""
+    try:
+        # Retrieve the search history entry
+        search = SearchHistory.query.filter_by(id=search_id, user_id=current_user.id).first_or_404()
+        
+        # Retrieve the search results
+        results = SearchResult.query.filter_by(search_id=search_id).order_by(SearchResult.position).all()
+        
+        # Format results for export
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                'title': result.title,
+                'link': result.url,
+                'snippet': result.snippet
+            })
+        
+        # Retrieve the summary if it exists
+        summary = SearchSummary.query.filter_by(search_id=search_id).first()
+        include_summary = summary is not None
+        
+        # Generate PDF
+        pdf_content = export_to_pdf(search.query, formatted_results, include_summary)
+        
+        # Prepare the response
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        filename = f"search_results_{timestamp}.pdf"
+        
+        return send_file(
+            io.BytesIO(pdf_content),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        logging.error(f"Error exporting to PDF: {str(e)}")
+        flash("Error exporting to PDF.", "error")
+        return redirect(url_for('view_search', search_id=search_id))
+
+@app.route('/export_markdown/<int:search_id>')
+@login_required
+def export_markdown(search_id):
+    """Export search results to Markdown"""
+    try:
+        # Retrieve the search history entry
+        search = SearchHistory.query.filter_by(id=search_id, user_id=current_user.id).first_or_404()
+        
+        # Retrieve the search results
+        results = SearchResult.query.filter_by(search_id=search_id).order_by(SearchResult.position).all()
+        
+        # Format results for export
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                'title': result.title,
+                'link': result.url,
+                'snippet': result.snippet
+            })
+        
+        # Retrieve the summary if it exists
+        summary = SearchSummary.query.filter_by(search_id=search_id).first()
+        include_summary = summary is not None
+        
+        # Generate Markdown
+        markdown_content = export_to_markdown(search.query, formatted_results, include_summary)
+        
+        # Prepare the response
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        filename = f"search_results_{timestamp}.md"
+        
+        response = make_response(markdown_content)
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        response.headers["Content-Type"] = "text/markdown"
+        
+        return response
+    except Exception as e:
+        logging.error(f"Error exporting to Markdown: {str(e)}")
+        flash("Error exporting to Markdown.", "error")
+        return redirect(url_for('view_search', search_id=search_id))
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    """User settings page"""
+    form = SettingsForm()
+    
+    if request.method == 'GET':
+        # Populate form with current user settings
+        user_settings = User.get_search_settings(current_user.id)
+        if user_settings:
+            form.include_summary.data = user_settings.get('include_summary', True)
+            form.summary_type.data = user_settings.get('summary_type', 'concise')
+            if hasattr(form, 'search_pages_limit'):
+                form.search_pages_limit.data = user_settings.get('pages_to_read', 3)
+    
+    if form.validate_on_submit():
+        # Update user settings
+        try:
+            settings_data = {
+                'include_summary': form.include_summary.data,
+                'summary_type': form.summary_type.data
+            }
+            
+            if hasattr(form, 'search_pages_limit'):
+                settings_data['pages_to_read'] = form.search_pages_limit.data
+            
+            User.update_search_settings(current_user.id, settings_data)
+            flash("Settings updated successfully.", "success")
+            return redirect(url_for('settings'))
+        except Exception as e:
+            logging.error(f"Error updating settings: {str(e)}")
+            flash("Error updating settings.", "error")
+    
+    return render_template('settings.html', form=form)
+
+@app.route('/api_keys', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def api_keys():
+    """API keys management page"""
+    form = APIKeyForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Create new API key
+            api_key = ApiKey(
+                service=form.service.data,
+                key=form.key.data,
+                name=form.name.data,
+                is_active=form.is_active.data
+            )
+            db.session.add(api_key)
+            db.session.commit()
+            flash("API key added successfully.", "success")
+            return redirect(url_for('api_keys'))
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error adding API key: {str(e)}")
+            flash(f"Error adding API key: {str(e)}", "error")
+    
+    # Get all API keys
+    try:
+        api_keys = ApiKey.query.all()
+    except Exception as e:
+        logging.error(f"Error retrieving API keys: {str(e)}")
+        api_keys = []
+        flash(f"Error retrieving API keys: {str(e)}", "error")
+    
+    return render_template('api_keys.html', form=form, api_keys=api_keys)
+
+@app.route('/toggle_api_key/<int:key_id>')
+@login_required
+@admin_required
+def toggle_api_key(key_id):
+    """Toggle API key active status"""
+    try:
+        api_key = ApiKey.query.get_or_404(key_id)
+        api_key.is_active = not api_key.is_active
+        db.session.commit()
+        flash(f"API key '{api_key.name}' {'activated' if api_key.is_active else 'deactivated'} successfully.", "success")
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error toggling API key: {str(e)}")
+        flash(f"Error toggling API key: {str(e)}", "error")
+    
+    return redirect(url_for('api_keys'))
+
+@app.route('/delete_api_key/<int:key_id>')
+@login_required
+@admin_required
+def delete_api_key(key_id):
+    """Delete API key"""
+    try:
+        api_key = ApiKey.query.get_or_404(key_id)
+        db.session.delete(api_key)
+        db.session.commit()
+        flash("API key deleted successfully.", "success")
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error deleting API key: {str(e)}")
+        flash(f"Error deleting API key: {str(e)}", "error")
+    
+    return redirect(url_for('api_keys'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """User login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = LoginForm()
+    
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=form.remember_me.data)
+            
+            # Set remember token if remember me was checked
+            if form.remember_me.data:
+                token = os.urandom(24).hex()
+                expiration = datetime.utcnow() + timedelta(days=30)
+                user.remember_token = token
+                user.token_expiration = expiration
+                db.session.commit()
+                
+                # Set cookie with token
+                response = redirect(url_for('index'))
+                response.set_cookie('remember_token', token, max_age=30*24*60*60)
+                return response
+            
+            flash("Logged in successfully.", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Invalid username or password.", "error")
+    
+    return render_template('login.html', form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+    """User logout"""
+    # Clear remember token
+    if current_user.is_authenticated:
+        current_user.remember_token = None
+        current_user.token_expiration = None
+        db.session.commit()
+    
+    logout_user()
+    
+    # Clear remember token cookie
+    response = redirect(url_for('index'))
+    response.delete_cookie('remember_token')
+    
+    flash("Logged out successfully.", "success")
+    return response
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """User registration page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = RegistrationForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Check if username or email already exists
+            if User.query.filter_by(username=form.username.data).first():
+                flash("Username already exists.", "error")
+                return render_template('register.html', form=form)
+            
+            if User.query.filter_by(email=form.email.data).first():
+                flash("Email already registered.", "error")
+                return render_template('register.html', form=form)
+            
+            # Create new user
+            user = User(
+                username=form.username.data,
+                email=form.email.data
+            )
+            user.set_password(form.password.data)
+            
+            # Set as admin if first user
+            if User.query.count() == 0:
+                user.is_admin = True
+            
+            db.session.add(user)
+            db.session.commit()
+            
+            flash("Registration successful. You can now log in.", "success")
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error registering user: {str(e)}")
+            flash(f"Error during registration: {str(e)}", "error")
+    
+    return render_template('register.html', form=form)
+
+@app.route('/feedback/<int:search_id>', methods=['GET', 'POST'])
+@login_required
+def feedback(search_id):
+    """Submit feedback for a search summary"""
+    # Verify the search belongs to the current user
+    search = SearchHistory.query.filter_by(id=search_id, user_id=current_user.id).first_or_404()
+    
+    # Get the summary
+    summary = SearchSummary.query.filter_by(search_id=search_id).first_or_404()
+    
+    form = FeedbackForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Check if feedback already exists
+            existing_feedback = SummaryFeedback.query.filter_by(
+                summary_id=summary.id,
+                user_id=current_user.id
+            ).first()
+            
+            if existing_feedback:
+                # Update existing feedback
+                existing_feedback.rating = form.rating.data
+                existing_feedback.comment = form.comment.data
+                db.session.commit()
+                flash("Your feedback has been updated.", "success")
+            else:
+                # Create new feedback
+                feedback = SummaryFeedback(
+                    summary_id=summary.id,
+                    user_id=current_user.id,
+                    rating=form.rating.data,
+                    comment=form.comment.data
+                )
+                db.session.add(feedback)
+                db.session.commit()
+                flash("Thank you for your feedback!", "success")
+            
+            return redirect(url_for('view_search', search_id=search_id))
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error submitting feedback: {str(e)}")
+            flash(f"Error submitting feedback: {str(e)}", "error")
+    
+    # Check if user already submitted feedback
+    existing_feedback = SummaryFeedback.query.filter_by(
+        summary_id=summary.id,
+        user_id=current_user.id
+    ).first()
+    
+    if existing_feedback:
+        form.rating.data = existing_feedback.rating
+        form.comment.data = existing_feedback.comment
+    
+    return render_template('feedback.html', form=form, search_id=search_id, summary=summary)
+
+@app.route('/share_summary/<int:search_id>', methods=['GET', 'POST'])
+@login_required
+def share_summary(search_id):
+    """Share a search summary"""
+    # Verify the search belongs to the current user
+    search = SearchHistory.query.filter_by(id=search_id, user_id=current_user.id).first_or_404()
+    
+    # Get the summary
+    summary = SearchSummary.query.filter_by(search_id=search_id).first_or_404()
+    
+    form = ShareSummaryForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Generate share link if it doesn't exist
+            if not summary.share_token:
+                summary.share_token = str(uuid.uuid4())
+                db.session.commit()
+            
+            share_url = url_for('view_shared_summary', token=summary.share_token, _external=True)
+            
+            # If email sharing is enabled and requested
+            if form.share_via_email.data and form.recipient_email.data:
+                # Code to send email would go here
+                flash(f"Summary shared with {form.recipient_email.data}", "success")
+            
+            return render_template(
+                'share_summary.html',
+                form=form,
+                search_id=search_id,
+                summary=summary,
+                share_url=share_url,
+                shared=True
+            )
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error sharing summary: {str(e)}")
+            flash(f"Error sharing summary: {str(e)}", "error")
+    
+    return render_template('share_summary.html', form=form, search_id=search_id, summary=summary)
+
+@app.route('/shared_summary/<token>')
+def view_shared_summary(token):
+    """View a shared summary"""
+    try:
+        summary = SearchSummary.query.filter_by(share_token=token).first_or_404()
+        search = SearchHistory.query.get_or_404(summary.search_id)
+        
+        return render_template(
+            'citations.html',
+            query=search.query,
+            summary=summary.summary_text,
+            token=token
+        )
+    except Exception as e:
+        logging.error(f"Error viewing shared summary: {str(e)}")
+        flash("This shared summary is not available.", "error")
+        return redirect(url_for('index'))
+
+@app.errorhandler(404)
+def page_not_found(e):
+    """Handle 404 errors"""
+    return render_template('error.html', error="Page not found", status_code=404), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    """Handle 500 errors and attempt automatic fixes"""
+    logging.error(f"500 error: {str(e)}")
+    
+    try:
+        # Import and run the fix scripts
+        from update_all_fixes import main as run_all_fixes
+        from fix_attribute_errors import main as fix_attributes
+        from update_schema import update_database_schema
+        
+        # Run fixes in sequence
+        fix_results = []
+        fix_results.append(run_all_fixes())
+        fix_results.append(fix_attributes())
+        fix_results.append(update_database_schema())
+        
+        if any(fix_results):
+            # If any fix was successful, inform the user
+            flash("The system has attempted to fix the error automatically. Please try your request again.", "info")
+            # Try to get the referrer URL, fallback to index
+            referrer = request.referrer or url_for('index')
+            return redirect(referrer)
+    
+    except Exception as fix_error:
+        logging.error(f"Error running automatic fixes: {str(fix_error)}")
+    
+    # If fixes failed or didn't resolve the issue, show error page
+    return render_template("error.html", error="Internal server error", status_code=500), 500
+
+@app.errorhandler(TimeoutError)
+def timeout_error_handler(e):
+    """Handle timeout errors specifically"""
+    error_msg = str(e) or "The operation timed out"
+    logging.error(f"Timeout error: {error_msg}")
+    return render_template("error.html", error=error_msg, status_code=408), 408
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all other exceptions"""
+    logging.error(f"Unhandled exception: {str(e)}")
+
+    # Pass through HTTP errors
+    if isinstance(e, HTTPException):
+        return e
+
+    # Handle timeout errors with a specific template and status code
+    if isinstance(e, TimeoutError) or "timeout" in str(e).lower() or "time out" in str(e).lower():
+        return timeout_error_handler(e)
+
+    # Handle API key errors with a specific template
+    if "api key" in str(e).lower() or "authentication" in str(e).lower():
+        return render_template("error.html", error=f"API Configuration Error: {str(e)}", status_code=503), 503
+
+    # Try to handle database schema errors
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+    if isinstance(e, (OperationalError, ProgrammingError)):
+        # Try to fix database errors
+        if handle_db_error(e):
+            # If the error was successfully handled, redirect to the previous page
+            logging.info("Database error was automatically fixed, redirecting...")
+            flash("The system has been updated. Please try again.", "info")
+            # Try to get the referrer URL
+            referrer = request.referrer or url_for('index')
+            return redirect(referrer)
+
+    # Handle connection errors with a user-friendly message
+    if isinstance(e, ConnectionError) or "connection" in str(e).lower():
+        return render_template("error.html", error="Network connection error. Please check your internet connection.", status_code=503), 503
+
+    # Handle non-HTTP exceptions with 500 error
+    return render_template("error.html", error=f"Server error: {str(e)}", status_code=500), 500
+
+@app.route('/submit_feedback', methods=['POST'])
+@login_required
+def submit_feedback():
+    """Handle summary feedback submission"""
+    try:
+        summary_id = request.form.get('summary_id')
+        rating = request.form.get('rating')
+        comment = request.form.get('comment')
+        
+        if not summary_id or not rating:
+            flash("Missing required fields", "error")
+            return redirect(url_for('index'))
+        
+        # Get the summary
+        summary = SearchSummary.query.get_or_404(summary_id)
+        
+        # Check if feedback already exists
+        existing_feedback = SummaryFeedback.query.filter_by(
+            summary_id=summary_id,
+            user_id=current_user.id
+        ).first()
+        
+        if existing_feedback:
+            # Update existing feedback
+            existing_feedback.rating = rating
+            existing_feedback.comment = comment
+            db.session.commit()
+            flash("Your feedback has been updated", "success")
+        else:
+            # Create new feedback
+            feedback = SummaryFeedback(
+                summary_id=summary_id,
+                user_id=current_user.id,
+                rating=rating,
+                comment=comment
+            )
+            db.session.add(feedback)
+            db.session.commit()
+            flash("Thank you for your feedback!", "success")
+        
+        # Redirect to the search results
+        return redirect(url_for('view_search', search_id=summary.search_id))
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error submitting feedback: {str(e)}")
+        flash(f"Error submitting feedback: {str(e)}", "error")
+        return redirect(url_for('index'))
+
+@app.route('/admin')
+@login_required
+@admin_required
+def admin_interface():
+    """Admin interface"""
+    stats = {
+        'total_users': User.query.count(),
+        'total_searches': SearchHistory.query.count(),
+        'total_summaries': SearchSummary.query.count(),
+        'active_api_keys': ApiKey.query.filter_by(is_active=True).count()
+    }
+    
+    return render_template('admin.html', stats=stats)
