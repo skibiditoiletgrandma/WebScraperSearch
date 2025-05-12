@@ -5,9 +5,9 @@ Automatic Code Fixer
 
 This script automatically scans Python files for common issues and fixes them:
 - Syntax errors
-- String literal errors
+- String literal errors 
 - Import errors
-- Docstring issues
+- Route import issues
 """
 
 import os
@@ -17,6 +17,7 @@ import re
 import ast
 import traceback
 from typing import Dict, List, Tuple, Optional, Set
+import importlib
 
 # Configure logging
 logging.basicConfig(
@@ -42,25 +43,55 @@ def find_python_files(directory: str = '.', max_depth: int = 2) -> List[str]:
                     
     return python_files
 
+def fix_import_statements(content: str, filename: str) -> Tuple[str, bool]:
+    """Fix common import statement issues."""
+    fixes = [
+        # Fix from imports missing 'import' keyword
+        (r'from\s+([^\s]+)\s+([^\s]+)', r'from \1 import \2'),
+        
+        # Fix multiple imports on same line
+        (r'import\s+([^,\s]+),\s*([^\s]+)', r'import \1\nimport \2'),
+        
+        # Fix relative imports
+        (r'from\s+\.+([^\s]+)\s+import', r'from \1 import'),
+        
+        # Fix common typos in import statements
+        (r'impotr\s+', 'import '),
+        (r'from\s+([^\s]+)\s+improt\s+', r'from \1 import '),
+    ]
+    
+    fixed = content
+    for pattern, replacement in fixes:
+        fixed = re.sub(pattern, replacement, fixed)
+    
+    # Special handling for routes.py
+    if filename.endswith('routes.py'):
+        if 'from app import app' in fixed and 'from app import db' not in fixed:
+            fixed = fixed.replace('from app import app', 'from app import app, db')
+    
+    return fixed, fixed != content
+
 def fix_syntax_errors(content: str) -> Tuple[str, bool]:
     """Fix common syntax errors in Python code."""
     fixes = [
-        # Missing colons
-        (r'(if\s+[^:\n]+)(\s*\n)', r'\1:\2'),
-        (r'(elif\s+[^:\n]+)(\s*\n)', r'\1:\2'),
-        (r'(else\s*)(\n)', r'\1:\2'),
-        (r'(for\s+[^:\n]+)(\s*\n)', r'\1:\2'),
-        (r'(while\s+[^:\n]+)(\s*\n)', r'\1:\2'),
-        (r'(def\s+[^:\n]+\))(\s*\n)', r'\1:\2'),
-        (r'(class\s+[^:\n(]+)(\s*\n)', r'\1:\2'),
+        # Fix list comprehension syntax
+        (r'\[\s*for\s+', '[ item for '),
+        (r'\[\s*([^\]]+?)\s+for\s+([^\]]+?)\s+in\s+([^\]]+?)\s*\]', r'[\1 for \2 in \3]'),
         
-        # Fix list comprehensions
-        (r'\[([^]\n]+)for', r'[ \1 for'),
-        (r'for([^]\n]+)in', r'for \1 in'),
-        (r'if([^]\n]+)\]', r'if \1 ]'),
+        # Fix dictionary comprehension syntax
+        (r'\{\s*([^}]+?):\s*([^}]+?)\s+for\s+([^}]+?)\s+in\s+([^}]+?)\s*\}', r'{\1: \2 for \3 in \4}'),
         
-        # Fix parentheses
-        (r'(\w+)\s*\(\s*([^()]*?)\s*$', r'\1(\2)'),
+        # Fix missing colons
+        (r'(if|elif|else|for|while|def|class|try|except|finally)\s+([^:\n]+)(\s*\n)', r'\1 \2:\3'),
+        
+        # Fix missing parentheses
+        (r'print\s+([^(].+)', r'print(\1)'),
+        
+        # Fix trailing commas in lists/dicts
+        (r',\s*([}\]])', r'\1'),
+        
+        # Fix missing quotes in strings
+        (r'=\s*([^"\'{\[\d][^,}\]\n]+)\s*[,}\]]', r'="\1",'),
     ]
     
     fixed = content
@@ -68,67 +99,6 @@ def fix_syntax_errors(content: str) -> Tuple[str, bool]:
         fixed = re.sub(pattern, replacement, fixed)
     
     return fixed, fixed != content
-
-def fix_string_literals(content: str) -> Tuple[str, bool]:
-    """Fix string literal issues."""
-    fixes = [
-        # Fix quotes
-        (r'""([^"]*)"', r'"\1"'),
-        (r'"([^"]*)""\s', r'"\1" '),
-        (r'"([^"]*)["\']([^"\']*)["\']([^"]*)"', r'"\1\2\3"'),
-        
-        # Fix f-strings
-        (r'f"([^"]*){([^}]*)}([^"]*)"', r'f"\1{\2}\3"'),
-        (r'f"([^"]*){\s*([^}]*?)\s*}([^"]*)"', r'f"\1{\2}\3"'),
-        
-        # Fix docstrings
-        (r'"{6,}([^"]*)"{6,}', r'"""\1"""'),
-        (r'"{3}([^"]*)"([^"]*)"{3}', r'"""\1\2"""'),
-    ]
-    
-    fixed = content
-    for pattern, replacement in fixes:
-        fixed = re.sub(pattern, replacement, fixed)
-    
-    return fixed, fixed != content
-
-def fix_imports(content: str, filename: str) -> Tuple[str, bool]:
-    """Fix common import issues."""
-    imports = set()
-    import_section = []
-    code_section = []
-    in_imports = True
-    
-    # Split imports from code
-    for line in content.split('\n'):
-        if line.strip().startswith(('import ', 'from ')):
-            import_section.append(line)
-            imports.add(line.strip())
-        elif line.strip() and in_imports:
-            in_imports = False
-            code_section.append(line)
-        else:
-            code_section.append(line)
-    
-    # Sort and deduplicate imports
-    sorted_imports = sorted(list(imports))
-    
-    # Recombine with proper spacing
-    new_content = '\n'.join(sorted_imports)
-    if sorted_imports and code_section:
-        new_content += '\n\n'
-    new_content += '\n'.join(code_section)
-    
-    return new_content, new_content != content
-
-def validate_fixes(content: str, filename: str) -> bool:
-    """Validate that the fixes didn't break the code."""
-    try:
-        ast.parse(content)
-        return True
-    except SyntaxError as e:
-        logger.error(f"Validation failed for {filename}: {str(e)}")
-        return False
 
 def fix_file(filename: str) -> bool:
     """Fix all issues in a single file."""
@@ -140,25 +110,26 @@ def fix_file(filename: str) -> bool:
         fixed = content
         
         # Apply fixes in sequence
+        fixed, import_changed = fix_import_statements(fixed, filename)
         fixed, syntax_changed = fix_syntax_errors(fixed)
-        fixed, literal_changed = fix_string_literals(fixed)
-        fixed, import_changed = fix_imports(fixed, filename)
         
         # Validate the changes
         if fixed != original_content:
-            if validate_fixes(fixed, filename):
+            try:
+                ast.parse(fixed)  # Validate syntax
                 with open(filename, 'w', encoding='utf-8') as f:
                     f.write(fixed)
                 logger.info(f"Fixed {filename}")
+                if import_changed:
+                    logger.info(f"  - Fixed import statements")
                 if syntax_changed:
                     logger.info(f"  - Fixed syntax errors")
-                if literal_changed:
-                    logger.info(f"  - Fixed string literals")
-                if import_changed:
-                    logger.info(f"  - Fixed imports")
                 return True
-            else:
-                logger.warning(f"Fixes for {filename} failed validation, skipping")
+            except SyntaxError as e:
+                logger.warning(f"Fixes for {filename} failed validation: {str(e)}")
+                # Restore original content if validation fails
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(original_content)
                 return False
         else:
             logger.info(f"No issues found in {filename}")
@@ -168,6 +139,41 @@ def fix_file(filename: str) -> bool:
         logger.error(f"Error processing {filename}: {str(e)}")
         logger.debug(traceback.format_exc())
         return False
+
+def check_imports(filename: str) -> List[str]:
+    """Check if all imports in a file are valid."""
+    issues = []
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        try:
+            tree = ast.parse(content)
+        except SyntaxError as e:
+            issues.append(f"Syntax error: {str(e)}")
+            return issues
+        
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                try:
+                    if isinstance(node, ast.Import):
+                        for name in node.names:
+                            try:
+                                importlib.import_module(name.name)
+                            except ImportError as e:
+                                issues.append(f"Cannot import {name.name}: {str(e)}")
+                    elif isinstance(node, ast.ImportFrom):
+                        try:
+                            importlib.import_module(node.module)
+                        except ImportError as e:
+                            issues.append(f"Cannot import from {node.module}: {str(e)}")
+                except Exception as e:
+                    issues.append(f"Import error: {str(e)}")
+                    
+    except Exception as e:
+        issues.append(f"Error checking imports: {str(e)}")
+        
+    return issues
 
 def main():
     """Main entry point."""
@@ -186,6 +192,13 @@ def main():
     for file in files:
         if fix_file(file):
             fixed_count += 1
+            
+        # Check for import issues
+        import_issues = check_imports(file)
+        if import_issues:
+            logger.warning(f"Import issues in {file}:")
+            for issue in import_issues:
+                logger.warning(f"  - {issue}")
             
     logger.info(f"Fixed {fixed_count} out of {len(files)} files")
     return 0 if fixed_count > 0 or len(files) > 0 else 1
