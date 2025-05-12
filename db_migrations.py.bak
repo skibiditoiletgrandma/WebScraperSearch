@@ -1,5 +1,5 @@
 """
-Database migration utility for handling schema changes:
+Database migration utility for handling schema changes
 """
 import logging
 from sqlalchemy.exc import OperationalError
@@ -14,14 +14,14 @@ def fix_missing_columns():
     try:
         logging.info("Checking and fixing database schema...")
         
-        # Create missing tables if they don't exist:
+        # Create missing tables if they don't exist
         with db.engine.connect() as conn:
             # Get existing tables
             inspector = db.inspect(db.engine)
             existing_tables = inspector.get_table_names()
             
             # Create missing tables using SQLAlchemy's create_all
-            missing_tables = [table for table in ['users', 'search_query', 'search_result', 'summary_feedback', 'anonymous_search_limit', 'citations']
+            missing_tables = [table for table in ['users', 'search_query', 'search_result', 'summary_feedback', 'anonymous_search_limit', 'citations'] 
                              if table not in existing_tables]
             
             if missing_tables:
@@ -68,15 +68,15 @@ def fix_missing_columns():
 
 def handle_db_error(error):
     """
-    Handle database errors by checking for schema issues and fixing them:
+    Handle database errors by checking for schema issues and fixing them
     
     Args:
         error: The exception that was raised
         
     Returns:
-        bool: True if the error was handled, False otherwise:
+        bool: True if the error was handled, False otherwise
     """
-    # Check if it's a missing column error:
+    # Check if it's a missing column error
     error_str = str(error).lower()
     is_column_error = ('no such column' in error_str or 
                        'column does not exist' in error_str or

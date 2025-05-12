@@ -24,7 +24,7 @@ try:
     from models import ApiKey
     HAS_DB = True
 except ImportError:
-    # Mock ApiKey for when models is not available (e.g., during imports):
+    # Mock ApiKey for when models is not available (e.g., during imports)
     class ApiKey:
         @classmethod
         def get_next_active_key(cls, service, current_key_id=None):
