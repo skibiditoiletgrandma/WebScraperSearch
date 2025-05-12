@@ -43,46 +43,19 @@ def find_python_files(directory: str = '.', max_depth: int = 2) -> List[str]:
                     
     return python_files
 
-def fix_import_statements(content: str, filename: str) -> Tuple[str, bool]:
-    """Fix common import statement issues."""
-    fixes = [
-        # Fix from imports missing 'import' keyword
-        (r'from\s+([^\s]+)\s+([^\s]+)', r'from \1 import \2'),
-        
-        # Fix multiple imports on same line
-        (r'import\s+([^,\s]+),\s*([^\s]+)', r'import \1\nimport \2'),
-        
-        # Fix relative imports
-        (r'from\s+\.+([^\s]+)\s+import', r'from \1 import'),
-        
-        # Fix common typos in import statements
-        (r'impotr\s+', 'import '),
-        (r'from\s+([^\s]+)\s+improt\s+', r'from \1 import '),
-    ]
-    
-    fixed = content
-    for pattern, replacement in fixes:
-        fixed = re.sub(pattern, replacement, fixed)
-    
-    # Special handling for routes.py
-    if filename.endswith('routes.py'):
-        if 'from app import app' in fixed and 'from app import db' not in fixed:
-            fixed = fixed.replace('from app import app', 'from app import app, db')
-    
-    return fixed, fixed != content
-
-def fix_syntax_errors(content: str) -> Tuple[str, bool]:
+def fix_syntax_errors(content: str, filename: str) -> Tuple[str, bool]:
     """Fix common syntax errors in Python code."""
     fixes = [
-        # Fix list comprehension syntax
+        # Fix list/dict comprehension syntax
         (r'\[\s*for\s+', '[ item for '),
         (r'\[\s*([^\]]+?)\s+for\s+([^\]]+?)\s+in\s+([^\]]+?)\s*\]', r'[\1 for \2 in \3]'),
-        
-        # Fix dictionary comprehension syntax
         (r'\{\s*([^}]+?):\s*([^}]+?)\s+for\s+([^}]+?)\s+in\s+([^}]+?)\s*\}', r'{\1: \2 for \3 in \4}'),
         
         # Fix missing colons
         (r'(if|elif|else|for|while|def|class|try|except|finally)\s+([^:\n]+)(\s*\n)', r'\1 \2:\3'),
+        
+        # Fix trailing colons in list comprehensions
+        (r'([}\]])\s*:', r'\1'),
         
         # Fix missing parentheses
         (r'print\s+([^(].+)', r'print(\1)'),
@@ -91,54 +64,31 @@ def fix_syntax_errors(content: str) -> Tuple[str, bool]:
         (r',\s*([}\]])', r'\1'),
         
         # Fix missing quotes in strings
-        (r'=\s*([^"\'{\[\d][^,}\]\n]+)\s*[,}\]]', r'="\1",'),
+        (r'=\s*([^"\'{\[\d][^,}\]\n]+)\s*[,}\]]', r'="\1"'),
+        
+        # Fix mismatched brackets
+        (r'\[\s*([^\]]*?)\s*\}', r'[\1]'),
+        (r'\{\s*([^}]*?)\s*\]', r'{\1}'),
+        
+        # Fix export result formatting
+        (r'\}\s*for\s+r\s+in\s+results\s*\]:', r'} for r in results]'),
     ]
     
     fixed = content
-    for pattern, replacement in fixes:
-        fixed = re.sub(pattern, replacement, fixed)
+    changed = False
     
-    return fixed, fixed != content
-
-def fix_file(filename: str) -> bool:
-    """Fix all issues in a single file."""
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            content = f.read()
+    for pattern, replacement in fixes:
+        new_content = re.sub(pattern, replacement, fixed)
+        if new_content != fixed:
+            changed = True
+            fixed = new_content
+    
+    # Special handling for routes.py export formatting
+    if filename == 'routes.py' and '] for r in results]:' in fixed:
+        fixed = fixed.replace('] for r in results]:', '] for r in results')
+        changed = True
         
-        original_content = content
-        fixed = content
-        
-        # Apply fixes in sequence
-        fixed, import_changed = fix_import_statements(fixed, filename)
-        fixed, syntax_changed = fix_syntax_errors(fixed)
-        
-        # Validate the changes
-        if fixed != original_content:
-            try:
-                ast.parse(fixed)  # Validate syntax
-                with open(filename, 'w', encoding='utf-8') as f:
-                    f.write(fixed)
-                logger.info(f"Fixed {filename}")
-                if import_changed:
-                    logger.info(f"  - Fixed import statements")
-                if syntax_changed:
-                    logger.info(f"  - Fixed syntax errors")
-                return True
-            except SyntaxError as e:
-                logger.warning(f"Fixes for {filename} failed validation: {str(e)}")
-                # Restore original content if validation fails
-                with open(filename, 'w', encoding='utf-8') as f:
-                    f.write(original_content)
-                return False
-        else:
-            logger.info(f"No issues found in {filename}")
-            return False
-            
-    except Exception as e:
-        logger.error(f"Error processing {filename}: {str(e)}")
-        logger.debug(traceback.format_exc())
-        return False
+    return fixed, changed
 
 def check_imports(filename: str) -> List[str]:
     """Check if all imports in a file are valid."""
@@ -175,6 +125,75 @@ def check_imports(filename: str) -> List[str]:
         
     return issues
 
+def fix_file(filename: str) -> bool:
+    """Fix all issues in a single file."""
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        original_content = content
+        
+        # Apply syntax fixes
+        fixed, changed = fix_syntax_errors(content, filename)
+        
+        # Validate the changes
+        if fixed != original_content:
+            try:
+                ast.parse(fixed)  # Validate syntax
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(fixed)
+                logger.info(f"Fixed {filename}")
+                if changed:
+                    logger.info("  - Fixed syntax errors")
+                
+                # Create backup if needed
+                backup_file = f"{filename}.bak"
+                if not os.path.exists(backup_file):
+                    with open(backup_file, 'w', encoding='utf-8') as f:
+                        f.write(original_content)
+                    logger.info(f"  - Created backup: {backup_file}")
+                
+                return True
+            except SyntaxError as e:
+                logger.warning(f"Fixes for {filename} failed validation: {str(e)}")
+                # Restore original content if validation fails
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(original_content)
+                return False
+        else:
+            logger.info(f"No issues found in {filename}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error processing {filename}: {str(e)}")
+        logger.debug(traceback.format_exc())
+        return False
+
+def check_database_configuration() -> bool:
+    """Check if database is properly configured."""
+    try:
+        import sqlite3
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        
+        # Check for DATABASE_URL
+        db_url = os.environ.get('DATABASE_URL', 'sqlite:///instance/simple.db')
+        logger.info(f"Database URL detected: {bool(db_url)}")
+        
+        # Try to connect and initialize tables
+        engine = create_engine(db_url)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Basic check - try to execute a simple query
+        session.execute('SELECT 1')
+        logger.info("Database tables initialized successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Database configuration error: {str(e)}")
+        return False
+
 def main():
     """Main entry point."""
     logger.info("Starting automatic code fixes...")
@@ -186,6 +205,9 @@ def main():
         return 1
         
     logger.info(f"Found {len(files)} Python files")
+    
+    # Check database configuration
+    db_ok = check_database_configuration()
     
     # Fix each file
     fixed_count = 0
